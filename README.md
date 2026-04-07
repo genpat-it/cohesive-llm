@@ -8,6 +8,7 @@ This platform integrates two upstream projects originally developed by master st
 
 - **Martinus Grady** — [@mgradyn](https://github.com/mgradyn) — backend & frontend
 - **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan) — frontend
+- **Zeynal Mardanli** — [@Lshiroc](https://github.com/Lshiroc)
 
 Upstream repositories:
 
