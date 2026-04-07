@@ -1,0 +1,143 @@
+###############################################################################
+#  IZS Bioinformatics AI Platform                                              #
+#                                                                              #
+#  Services:                                                                   #
+#    - ngsmanager-init: clones the cohesive-ngsmanager framework on first run  #
+#    - backend:         FastAPI + LangGraph LLM pipeline generator             #
+#    - frontend:        static chat UI (nginx)                                 #
+#    - caddy:           reverse proxy + HTTPS (auto / internal / off)          #
+#    - authelia:        optional auth (file / LDAP), enabled via profile       #
+#                                                                              #
+#  Quick start:                                                                #
+#    cp .env.example .env                                                      #
+#    ./scripts/render-caddyfile.sh                                             #
+#    ./scripts/render-authelia.sh   # only if AUTH_MODE != none                #
+#    docker compose up -d                                                      #
+#                                                                              #
+#  With auth:                                                                  #
+#    docker compose --profile auth up -d                                       #
+###############################################################################
+
+services:
+
+  # ─── Init: clones / updates the ngsmanager framework ──────────────────────
+  ngsmanager-init:
+    image: alpine/git:latest
+    container_name: izs_ngsmanager_init
+    volumes:
+      - ngsmanager:/ngsmanager
+    environment:
+      - NGSMANAGER_REPO=${NGSMANAGER_REPO:-https://github.com/genpat-it/cohesive-ngsmanager.git}
+      - NGSMANAGER_BRANCH=${NGSMANAGER_BRANCH:-main}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        if [ ! -d /ngsmanager/.git ]; then
+          echo "[ngsmanager-init] Cloning ${NGSMANAGER_REPO} (branch=${NGSMANAGER_BRANCH})..."
+          git clone --depth 1 --branch "$$NGSMANAGER_BRANCH" "$$NGSMANAGER_REPO" /ngsmanager
+        else
+          echo "[ngsmanager-init] Pulling latest..."
+          cd /ngsmanager && git pull --ff-only || true
+        fi
+        echo "[ngsmanager-init] Done."
+    restart: "no"
+
+  # ─── Backend: FastAPI + LangGraph ─────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: izs_backend
+    restart: unless-stopped
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - NGSMANAGER_DIR=/ngsmanager
+    volumes:
+      - ngsmanager:/ngsmanager:ro
+    expose:
+      - "8080"
+    depends_on:
+      ngsmanager-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # ─── Frontend: static chat UI ─────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: izs_frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  # ─── Caddy: reverse proxy + HTTPS ─────────────────────────────────────────
+  # CADDY_HOST_PORT (default 80) is the host port where Caddy is exposed.
+  # Set to e.g. 10000 when sitting behind another reverse proxy that handles TLS.
+  # CADDY_HOST_HTTPS_PORT (default 443) — same idea for HTTPS.
+  caddy:
+    image: caddy:2-alpine
+    container_name: izs_caddy
+    restart: unless-stopped
+    ports:
+      - "${CADDY_HOST_PORT:-80}:80"
+      - "${CADDY_HOST_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+
+  # ─── Authelia: optional auth (file or LDAP) ───────────────────────────────
+  # Enabled with: docker compose --profile auth up
+  authelia:
+    image: authelia/authelia:latest
+    container_name: izs_authelia
+    restart: unless-stopped
+    profiles: ["auth"]
+    expose:
+      - "9091"
+    volumes:
+      - ./auth/authelia/configuration.yml:/config/configuration.yml:ro
+      - ./auth/authelia/users.yml:/config/users.yml:ro
+      - authelia_data:/data
+    environment:
+      - TZ=Europe/Rome
+      - X_AUTHELIA_CONFIG_FILTERS=template
+
+  # ─── LLDAP: lightweight LDAP server for LOCAL TESTING ─────────────────────
+  # Enabled with: docker compose --profile dev-ldap up
+  # Web UI: http://localhost:17170 (admin / ${LLDAP_ADMIN_PASSWORD})
+  # LDAP:   ldap://lldap:3890 from inside Docker network
+  lldap:
+    image: lldap/lldap:stable
+    container_name: izs_lldap
+    restart: unless-stopped
+    profiles: ["dev-ldap"]
+    ports:
+      - "17170:17170"   # web UI
+    expose:
+      - "3890"          # LDAP
+    volumes:
+      - lldap_data:/data
+    environment:
+      - TZ=Europe/Rome
+      - LLDAP_JWT_SECRET=${LLDAP_JWT_SECRET:-changeme_jwt_secret}
+      - LLDAP_LDAP_USER_PASS=${LLDAP_ADMIN_PASSWORD:-admin}
+      - LLDAP_LDAP_BASE_DN=${LLDAP_BASE_DN:-dc=example,dc=com}
+
+volumes:
+  ngsmanager:
+    name: izs_ngsmanager
+  caddy_data:
+    name: izs_caddy_data
+  caddy_config:
+    name: izs_caddy_config
+  lldap_data:
+    name: izs_lldap_data
+  authelia_data:
+    name: izs_authelia_data

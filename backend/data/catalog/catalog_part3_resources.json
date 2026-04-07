@@ -1,0 +1,407 @@
+{
+  "metadata": {
+    "version": "2.0"
+  },
+  "helper_functions": [
+    {
+      "name": "logHeader",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "flattenPath",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "parseMetadata",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "parseMetadataFromFileName",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "executionMetadata",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "csv2map",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "extractKey",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "extractDsRef",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "getBaseName",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "getGB",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "getEmpty",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "parseRISCD",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "taskMemory",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "taskTime",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "getRisCd",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "stepInputs",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "isFastqRiscd",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "isFastaRiscd",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "isSpeciesSupported",
+      "file": "functions/common.nf",
+      "description": "Helper function from common.nf"
+    },
+    {
+      "name": "getSampleSheetMetadata",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isRunningFromSampleSheet",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isVirus",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isWNV",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isNGSMG16S",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isNegativeControl",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isNegativeControlSarsCov2",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isPositiveControlSarsCov2",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isBacterium",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isAmpliseq",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "isSarsCov2",
+      "file": "functions/sampletypes.nf",
+      "description": "Helper function from sampletypes.nf"
+    },
+    {
+      "name": "getTrimmedReads",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getAssembly",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getDepletedReads",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getReferenceCodes",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getNCBICodes",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getReferences",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getReference",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getReferenceUnkeyed",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getReferenceOptional",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getHost",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getHostOptional",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getHostUnkeyed",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getGenusSpeciesOptionalUnkeyed",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getGenusSpeciesOptional",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getGenusSpecies",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getSpecies",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getModule",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getAbricateDatabase",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getBlastDatabase",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getBlastDatabaseUnkeyed",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getKingdom",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getTaxIdsUnkeyed",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getParamTaxaId",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getParamIncludeParents",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getParamIncludeChildren",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getDS",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "isFullOutput",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getResult",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getKrakenResults",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getParam",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getInputOf",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getInput",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getInputFolders",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getVCFs",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getSingleInput",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "hasEnoughFastqData",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "hasFastqData",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "param",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "optional",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "optionalOrDefault",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "isIonTorrent",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "isNanopore",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "isIlluminaPaired",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "isCompatibleWithSeqType",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "isSegmentedMapping",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "checkEnum",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getHostReference",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "getLongReads",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "paramWrap",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    },
+    {
+      "name": "optWrap",
+      "file": "functions/parameters.nf",
+      "description": "Helper function from parameters.nf"
+    }
+  ]
+}

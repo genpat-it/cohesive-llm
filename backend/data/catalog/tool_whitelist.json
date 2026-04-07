@@ -1,0 +1,674 @@
+{
+  "steps": [
+    {
+      "id": "step_0SQ_rawreads__fastq",
+      "tool": "fastq",
+      "domain": "Quality Control",
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "id": "step_1PP_downsampling__bbnorm",
+      "tool": "bbnorm",
+      "domain": "Preprocessing",
+      "inputs": [
+        "reads",
+        "k",
+        "target"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_1PP_filtering__bowtie",
+      "tool": "bowtie",
+      "domain": "Preprocessing",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": [
+        "samtools.out.filtered"
+      ]
+    },
+    {
+      "id": "step_1PP_filtering__krakentools",
+      "tool": "krakentools",
+      "domain": "Preprocessing",
+      "inputs": [
+        "kraken",
+        "trimmed",
+        "taxaid",
+        "include_children",
+        "include_parents"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_1PP_filtering__minimap2",
+      "tool": "minimap2",
+      "domain": "Preprocessing",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": [
+        "samtools.out.filtered"
+      ]
+    },
+    {
+      "id": "step_1PP_generated__fasta2fastq",
+      "tool": "fasta2fastq",
+      "domain": "Preprocessing",
+      "inputs": [
+        "reads"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_1PP_hostdepl__bowtie",
+      "tool": "bowtie",
+      "domain": "Preprocessing",
+      "inputs": [
+        "trimmedAndHost"
+      ],
+      "outputs": [
+        "samtools.out.depleted"
+      ]
+    },
+    {
+      "id": "step_1PP_hostdepl__minimap2",
+      "tool": "minimap2",
+      "domain": "Preprocessing",
+      "inputs": [
+        "reads",
+        "host"
+      ],
+      "outputs": [
+        "samtools.out.depleted"
+      ]
+    },
+    {
+      "id": "step_1PP_trimming__chopper",
+      "tool": "chopper",
+      "domain": "Preprocessing",
+      "inputs": [
+        "rawreads"
+      ],
+      "outputs": [
+        "trimmed"
+      ]
+    },
+    {
+      "id": "step_1PP_trimming__fastp",
+      "tool": "fastp",
+      "domain": "Preprocessing",
+      "inputs": [
+        "rawreads"
+      ],
+      "outputs": [
+        "trimmed"
+      ]
+    },
+    {
+      "id": "step_1PP_trimming__trimmomatic",
+      "tool": "trimmomatic",
+      "domain": "Preprocessing",
+      "inputs": [],
+      "outputs": [
+        "trimmed"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__flye",
+      "tool": "flye",
+      "domain": "Assembly & Mapping",
+      "inputs": [],
+      "outputs": [
+        "assembly"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__plasmidspades",
+      "tool": "plasmidspades",
+      "domain": "Assembly & Mapping",
+      "inputs": [],
+      "outputs": [
+        "assembled"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__shovill",
+      "tool": "shovill",
+      "domain": "Assembly & Mapping",
+      "inputs": [],
+      "outputs": [
+        "assembly"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__spades",
+      "tool": "spades",
+      "domain": "Assembly & Mapping",
+      "inputs": [],
+      "outputs": [
+        "assembled"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__unicycler",
+      "tool": "unicycler",
+      "domain": "Assembly & Mapping",
+      "inputs": [],
+      "outputs": [
+        "assembled"
+      ]
+    },
+    {
+      "id": "step_2AS_filtering__seqio",
+      "tool": "seqio",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "calls",
+        "assembly",
+        "reference"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_2AS_hybrid__unicycler",
+      "tool": "unicycler",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "short_reads",
+        "long_reads"
+      ],
+      "outputs": [
+        "scaffolds"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__bowtie",
+      "tool": "bowtie",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": [
+        "consensus"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__ivar",
+      "tool": "ivar",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": [
+        "consensus",
+        "coverage_depth"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__medaka",
+      "tool": "medaka",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": [
+        "consensus"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__minimap2",
+      "tool": "minimap2",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": [
+        "consensus"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__snippy",
+      "tool": "snippy",
+      "domain": "Assembly & Mapping",
+      "inputs": [
+        "reads",
+        "reference"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_2MG_denovo__metaspades",
+      "tool": "metaspades",
+      "domain": "Metagenomics",
+      "inputs": [],
+      "outputs": [
+        "assembled"
+      ]
+    },
+    {
+      "id": "step_3TX_class__centrifuge",
+      "tool": "centrifuge",
+      "domain": "Taxonomy",
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "id": "step_3TX_class__confindr",
+      "tool": "confindr",
+      "domain": "Taxonomy",
+      "inputs": [
+        "reads",
+        "genus_species"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_3TX_class__kraken",
+      "tool": "kraken",
+      "domain": "Taxonomy",
+      "inputs": [],
+      "outputs": [
+        "genus_report"
+      ]
+    },
+    {
+      "id": "step_3TX_class__kraken2",
+      "tool": "kraken2",
+      "domain": "Taxonomy",
+      "inputs": [],
+      "outputs": [
+        "genus_report"
+      ]
+    },
+    {
+      "id": "step_3TX_species__kmerfinder",
+      "tool": "kmerfinder",
+      "domain": "Taxonomy",
+      "inputs": [],
+      "outputs": [
+        "assigned_species"
+      ]
+    },
+    {
+      "id": "step_3TX_species__mash",
+      "tool": "mash",
+      "domain": "Taxonomy",
+      "inputs": [
+        "reads"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_3TX_species__vdabricate",
+      "tool": "vdabricate",
+      "domain": "Taxonomy",
+      "inputs": [],
+      "outputs": [
+        "calls"
+      ]
+    },
+    {
+      "id": "step_4AN_AMR__abricate",
+      "tool": "abricate",
+      "domain": "Annotation & AMR",
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "id": "step_4AN_AMR__filtering",
+      "tool": "filtering",
+      "domain": "Annotation & AMR",
+      "inputs": [
+        "data",
+        "coverage",
+        "identity"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4AN_AMR__resfinder",
+      "tool": "resfinder",
+      "domain": "Annotation & AMR",
+      "inputs": [
+        "reads",
+        "genus_species"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4AN_AMR__staramr",
+      "tool": "staramr",
+      "domain": "Annotation & AMR",
+      "inputs": [
+        "assembly",
+        "genus_species"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4AN_genes__prokka",
+      "tool": "prokka",
+      "domain": "Annotation & AMR",
+      "inputs": [
+        "data"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4TY_MLST__mlst",
+      "tool": "mlst",
+      "domain": "Typing",
+      "inputs": [
+        "assembly"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4TY_cgMLST__chewbbaca",
+      "tool": "chewbbaca",
+      "domain": "Typing",
+      "inputs": [
+        "assembly",
+        "genus_species",
+        "schema"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4TY_flaA__flaA",
+      "tool": "flaA",
+      "domain": "Typing",
+      "inputs": [
+        "assembly",
+        "genus_species"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4TY_lineage__pangolin",
+      "tool": "pangolin",
+      "domain": "Typing",
+      "inputs": [
+        "consensus"
+      ],
+      "outputs": []
+    },
+    {
+      "id": "step_4TY_lineage__westnile",
+      "tool": "westnile",
+      "domain": "Typing",
+      "inputs": [
+        "reads"
+      ],
+      "outputs": [
+        "lineage"
+      ]
+    },
+    {
+      "id": "step_4TY_plasmid__mobsuite",
+      "tool": "mobsuite",
+      "domain": "Typing",
+      "inputs": [
+        "reads"
+      ],
+      "outputs": [
+        "plasmids"
+      ]
+    },
+    {
+      "id": "step_TEST_custom__kmer",
+      "tool": "",
+      "domain": "",
+      "inputs": [],
+      "outputs": []
+    }
+  ],
+  "modules": [
+    {
+      "id": "module_augur",
+      "steps_used": []
+    },
+    {
+      "id": "module_cfsan",
+      "steps_used": []
+    },
+    {
+      "id": "module_covid_emergency",
+      "steps_used": [
+        "step_2AS_mapping__ivar",
+        "step_4TY_lineage__pangolin"
+      ]
+    },
+    {
+      "id": "module_denovo",
+      "steps_used": [
+        "step_1PP_hostdepl__bowtie",
+        "step_2AS_denovo__spades"
+      ]
+    },
+    {
+      "id": "module_draft_genome",
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_2AS_mapping__ivar",
+        "step_4AN_genes__prokka",
+        "step_4TY_lineage__pangolin"
+      ]
+    },
+    {
+      "id": "module_enterotoxin_saureus_finder",
+      "steps_used": [
+        "step_2AS_denovo__unicycler",
+        "step_4AN_AMR__blast"
+      ]
+    },
+    {
+      "id": "module_filtered_denovo",
+      "steps_used": [
+        "step_1PP_filtering__bowtie",
+        "step_2AS_denovo__spades"
+      ]
+    },
+    {
+      "id": "module_grapetree",
+      "steps_used": []
+    },
+    {
+      "id": "module_ksnp3",
+      "steps_used": []
+    },
+    {
+      "id": "module_ngsmanager",
+      "steps_used": [
+        "step_4TY_lineage__pangolin"
+      ]
+    },
+    {
+      "id": "module_panaroo",
+      "steps_used": []
+    },
+    {
+      "id": "module_plasmids",
+      "steps_used": [
+        "step_4TY_plasmid__mobsuite"
+      ]
+    },
+    {
+      "id": "module_qc_fastqc",
+      "steps_used": []
+    },
+    {
+      "id": "module_qc_nanoplot",
+      "steps_used": []
+    },
+    {
+      "id": "module_qc_quast",
+      "steps_used": []
+    },
+    {
+      "id": "module_reads_processing",
+      "steps_used": [
+        "step_0SQ_rawreads__fastq",
+        "step_1PP_trimming__trimmomatic",
+        "step_1PP_trimming__fastp",
+        "step_3TX_class__kraken"
+      ]
+    },
+    {
+      "id": "module_reportree",
+      "steps_used": []
+    },
+    {
+      "id": "module_scaffolds_filtering",
+      "steps_used": [
+        "step_2AS_filtering__seqio",
+        "step_3TX_species__vdabricate"
+      ]
+    },
+    {
+      "id": "module_segmented",
+      "steps_used": [
+        "step_2AS_mapping__ivar"
+      ]
+    },
+    {
+      "id": "module_snippycore",
+      "steps_used": []
+    },
+    {
+      "id": "module_surveillance",
+      "steps_used": []
+    },
+    {
+      "id": "module_test_llm",
+      "steps_used": [
+        "step_1PP_trimming__fastp"
+      ]
+    },
+    {
+      "id": "module_typing_bacteria",
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4AN_genes__prokka",
+        "step_4AN_AMR__abricate",
+        "step_4AN_AMR__staramr",
+        "step_4TY_cgMLST__chewbbaca",
+        "step_4TY_MLST__mlst",
+        "step_4TY_flaA__flaA"
+      ]
+    },
+    {
+      "id": "module_variant_lineage",
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ]
+    },
+    {
+      "id": "module_variant_lineage_FIXED",
+      "steps_used": [
+        "step_2AS_mapping__ivar",
+        "step_4TY_lineage__pangolin"
+      ]
+    },
+    {
+      "id": "module_variant_lineage_MINIMAL",
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ]
+    },
+    {
+      "id": "module_variant_lineage_MINIMAL_FIX",
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ]
+    },
+    {
+      "id": "module_variant_lineage_ONE_LINE_FIX",
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ]
+    },
+    {
+      "id": "module_vcf2mst",
+      "steps_used": []
+    },
+    {
+      "id": "module_vdraft",
+      "steps_used": []
+    },
+    {
+      "id": "module_vdraft_light",
+      "steps_used": [
+        "step_1PP_hostdepl__bowtie",
+        "step_2AS_mapping__bowtie"
+      ]
+    },
+    {
+      "id": "module_westnile",
+      "steps_used": [
+        "step_2AS_mapping__ivar"
+      ]
+    },
+    {
+      "id": "module_wgs_bacteria",
+      "steps_used": [
+        "step_2AS_denovo__shovill"
+      ]
+    }
+  ],
+  "not_available": [
+    {
+      "tool": "BWA",
+      "alternative": "bowtie or minimap2"
+    },
+    {
+      "tool": "STAR",
+      "alternative": null
+    },
+    {
+      "tool": "HISAT2",
+      "alternative": null
+    },
+    {
+      "tool": "Canu",
+      "alternative": "flye for long reads"
+    },
+    {
+      "tool": "Hifiasm",
+      "alternative": null
+    },
+    {
+      "tool": "Salmon",
+      "alternative": null
+    },
+    {
+      "tool": "Kallisto",
+      "alternative": null
+    },
+    {
+      "tool": "GATK",
+      "alternative": null
+    },
+    {
+      "tool": "FreeBayes",
+      "alternative": null
+    }
+  ]
+}

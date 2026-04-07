@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IZS BIOINFORMATICS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@300;400&display=swap" rel="stylesheet">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+    <div class="main-container split-layout">
+        <!-- Chat Section -->
+        <div class="chat-section full-width" id="chatSection">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <img src="logo_izs.png" alt="IZS Logo" style="height: 24px; border-radius: 4px; object-fit: contain;"> 
+                    <span>Bioinformatics Pipeline Assistant</span>
+                </div>
+                <div class="examples-container">
+                    <button class="example-btn" data-example="Design a sequential bioinformatics workflow for the Covid Emergency pipeline that starts with trimmed FASTQ reads and the SARS-CoV-2 reference genome (NC_045512.2, Wuhan-Hu-1). The pipeline should: 1. Map the reads to the reference and call variants using iVar, producing a consensus FASTA sequence. 2. Pass that consensus FASTA directly to Pangolin to assign a viral lineage. 3. Output the final Pangolin lineage report (CSV) and retain the consensus FASTA.">Covid Emergency</button>
+                    <button class="example-btn" data-example="Design a Nextflow workflow for segmented viruses that takes pre-processed FASTQ reads and user-provided reference genomes, maps reads to each reference using iVar, and outputs per-segment consensus FASTA files plus a consolidated multifasta. The workflow should pair each sample with all references using and be structured as a reusable module.">Mapping for Segmented Viruses</button>
+                    <button class="example-btn" data-example="Design a Nextflow workflow for a 'Depletion & de novo' pipeline that starts with trimmed FASTQ reads and an optional host reference genome. The workflow first removes host reads using Bowtie, then performs de novo assembly of the depleted (or original, if no host provided) reads with SPAdes. The pipeline supports samples with or without a host reference and emits both the depleted reads and final assemblies.">Depletion and de novo</button>
+                    <button class="example-btn" data-example="Design a Nextflow workflow for the 'Genome Draft' pipeline that processes depleted FASTQ reads against a provided reference genome in parallel:1. Run Bowtie2 mapping to produce a coverage-checked consensus FASTA. 2. Simultaneously run iVar-based mapping to generate another consensus FASTA, which is then passed—along with an optional GenBank reference—to Prokka for structural gene annotation (configured for viral genomes). The workflow accepts FASTA reference(s) for mapping and an optional GenBank reference for annotation, and executes both mapping branches concurrently before proceeding to annotation.">Genome Draft</button>
+                    <button class="example-btn" data-example="Design a Nextflow DSL2 workflow for the WNV Lineage Calculation and Mapping pipeline that starts with trimmed FASTQ reads and: 1. Determines the West Nile virus lineage using the Westnile tool. 2. Uses the inferred lineage to dynamically select the matching reference genome via getReferenceForLineage. 3. Performs read mapping and variant calling with iVar using the lineage-specific reference. The workflow outputs a consensus sequence (FASTA) and a VCF file, enabling lineage-aware, reference-guided analysis of WNV samples in a fully automated, sequential manner.">West Nile Virus</button>
+                    <button class="example-btn" data-example="Design a Nextflow DSL2 workflow for the 'Filtering & de novo' pipeline that starts with trimmed FASTQ reads and a user-provided reference genome: 1. Filters reads using Bowtie to retain only those aligning to the reference. 2. Performs de novo assembly of the filtered reads with SPAdes. The workflow outputs both the filtered reads and the final assembled contigs, enabling reference-guided enrichment followed by assembly.">Filtering and de novo</button>
+                </div>
+            </div>
+
+            <div class="chat-history" id="chatHistory">
+                <!-- Welcome Message -->
+                <div class="chat-bubble ai mt-auto">
+                    Welcome! I am your Bioinformatics Pipeline Assistant. Describe the pipeline you'd like to build, or choose one of the examples above.
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="quick-actions" id="quickActions" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <button class="action-badge" id="quickYesBtn"><i class="fas fa-check"></i> Yes/Approved</button>
+                    <div style="flex-grow: 1;"></div>
+                    <button class="action-badge reset" id="resetChatBtn" title="Reset Context">
+                        <i class="fas fa-sync-alt"></i> Reset
+                    </button>
+                </div>
+                <div class="input-wrapper">
+                    <textarea id="userInput" placeholder="Message your Bioinformatics Pipeline Assistant..."></textarea>
+                    <button id="sendMessageBtn">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+                <div class="error-message" id="errorMessage" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i> <span id="errorText"></span>
+                </div>
+                <div class="chat-footer">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="statusDot"></div>
+                        <span id="statusText">Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="result-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Mermaid Diagram</span>
+                    </div>
+                    <div class="panel-controls">
+                        <div class="panel-status">
+                            <div class="status-dot active" id="mermaidStatus"></div>
+                            <span>Generated</span>
+                        </div>
+                        <button class="control-btn" id="toggleMermaidBtn" title="Toggle Diagram/Code">
+                            <i class="fas fa-code"></i>
+                        </button>
+                        <button class="control-btn" id="copyMermaidBtn" title="Copy Mermaid Code">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <div style="width: 1px; height: 24px; background: var(--border); margin: 0 4px;"></div>
+                        <button class="control-btn" id="closeResultsBtn" title="Close Panel">
+                            <i class="fas fa-times" style="font-size: 18px;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="empty-state" id="mermaidEmpty" style="display: none;">
+                        <i class="fas fa-diagram-project"></i>
+                        <h3>Mermaid Diagram</h3>
+                        <p>Workflow visualization will appear here</p>
+                    </div>
+                    <div id="mermaidContainer" style="display: flex;">
+                        <div id="mermaidDiagram"></div>
+                    </div>
+                    <pre class="code-view" id="mermaidCodeContainer" style="display: none;"><code class="language-bash" id="mermaidCodeBlock"></code></pre>
+                </div>
+            </div>
+
+            <div class="result-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fas fa-code"></i>
+                        <span>Nextflow Code</span>
+                    </div>
+                    <div class="panel-controls">
+                        <div class="panel-status">
+                            <div class="status-dot active" id="nextflowStatus"></div>
+                            <span>Generated</span>
+                        </div>
+                        <button class="control-btn" id="copyNextflowBtn" title="Copy Nextflow Code">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="empty-state" id="nextflowEmpty" style="display: none;">
+                        <i class="fas fa-file-code"></i>
+                        <h3>Nextflow Code</h3>
+                        <p>Generated code will appear here</p>
+                    </div>
+                    <pre class="code-view" id="nextflowCodeContainer" style="display: block;"><code class="language-groovy" id="nextflowCodeBlock"></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Switch to ES module entrypoint -->
+    <script type="module" src="js/main.js?v=3"></script>
+</body>
+</html>

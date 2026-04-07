@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# Generated configs
+caddy/Caddyfile
+auth/authelia/configuration.yml
+auth/authelia/users.yml
+auth/authelia/db.sqlite3
+auth/authelia/notification.txt
+
+# Python
+__pycache__/
+*.pyc
+backend/venv/
+
+# OS
+.DS_Store

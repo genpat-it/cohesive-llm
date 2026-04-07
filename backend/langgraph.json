@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "izs-llm": "./app/services/graph.py:app_graph"
+  },
+  "env": ".env"
+}

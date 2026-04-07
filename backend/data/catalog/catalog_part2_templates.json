@@ -1,0 +1,604 @@
+{
+  "metadata": {
+    "version": "2.0"
+  },
+  "templates": [
+    {
+      "id": "module_augur",
+      "file_path": "modules/module_augur.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "augur"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "reference",
+        "raw_metadata",
+        "geodata",
+        "ref2"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_cfsan",
+      "file_path": "modules/module_cfsan.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "cfsan"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "input",
+        "reference",
+        "metadata",
+        "geodata"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_covid_emergency",
+      "file_path": "modules/module_covid_emergency.nf",
+      "description": "Pipeline module using: step_2AS_mapping__ivar, step_4TY_lineage__pangolin.",
+      "keywords": [
+        "covid emergency",
+        "pangolin",
+        "ivar"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__ivar",
+        "step_4TY_lineage__pangolin"
+      ],
+      "input_channels": [
+        "trimmed"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_denovo",
+      "file_path": "modules/module_denovo.nf",
+      "description": "Pipeline module using: step_1PP_hostdepl__bowtie, step_2AS_denovo__spades.",
+      "keywords": [
+        "spades",
+        "bowtie",
+        "denovo"
+      ],
+      "steps_used": [
+        "step_1PP_hostdepl__bowtie",
+        "step_2AS_denovo__spades"
+      ],
+      "input_channels": [
+        "trimmedReads",
+        "host"
+      ],
+      "output_channels": [
+        "assembled",
+        "depleted"
+      ]
+    },
+    {
+      "id": "module_draft_genome",
+      "file_path": "modules/module_draft_genome.nf",
+      "description": "Pipeline module using: step_2AS_mapping__bowtie, step_2AS_mapping__ivar, step_4AN_genes__prokka, step_4TY_lineage__pangolin.",
+      "keywords": [
+        "ivar",
+        "draft genome",
+        "pangolin",
+        "bowtie",
+        "prokka"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_2AS_mapping__ivar",
+        "step_4AN_genes__prokka",
+        "step_4TY_lineage__pangolin"
+      ],
+      "input_channels": [
+        "reads",
+        "reference",
+        "referenceGB"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_enterotoxin_saureus_finder",
+      "file_path": "modules/module_enterotoxin_saureus_finder.nf",
+      "description": "Pipeline module using: step_2AS_denovo__unicycler, step_4AN_AMR__blast.",
+      "keywords": [
+        "enterotoxin saureus finder",
+        "blast",
+        "unicycler"
+      ],
+      "steps_used": [
+        "step_2AS_denovo__unicycler",
+        "step_4AN_AMR__blast"
+      ],
+      "input_channels": [
+        "trimmed",
+        "genus_species"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_filtered_denovo",
+      "file_path": "modules/module_filtered_denovo.nf",
+      "description": "Pipeline module using: step_1PP_filtering__bowtie, step_2AS_denovo__spades.",
+      "keywords": [
+        "spades",
+        "bowtie",
+        "filtered denovo"
+      ],
+      "steps_used": [
+        "step_1PP_filtering__bowtie",
+        "step_2AS_denovo__spades"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "assembled",
+        "filtered"
+      ]
+    },
+    {
+      "id": "module_grapetree",
+      "file_path": "modules/module_grapetree.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "grapetree"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "input",
+        "metadata",
+        "geodata"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_ksnp3",
+      "file_path": "modules/module_ksnp3.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "ksnp3"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "input",
+        "kmers_size",
+        "analysis_type",
+        "metadata",
+        "geodata"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_ngsmanager",
+      "file_path": "modules/module_ngsmanager.nf",
+      "description": "Pipeline module using: step_4TY_lineage__pangolin.",
+      "keywords": [
+        "pangolin",
+        "ngsmanager"
+      ],
+      "steps_used": [
+        "step_4TY_lineage__pangolin"
+      ],
+      "input_channels": [
+        "rawReads"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_panaroo",
+      "file_path": "modules/module_panaroo.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "panaroo"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "input"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_plasmids",
+      "file_path": "modules/module_plasmids.nf",
+      "description": "Pipeline module using: step_4TY_plasmid__mobsuite.",
+      "keywords": [
+        "mobsuite",
+        "plasmids"
+      ],
+      "steps_used": [
+        "step_4TY_plasmid__mobsuite"
+      ],
+      "input_channels": [
+        "assembly",
+        "genus_species"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_qc_fastqc",
+      "file_path": "modules/module_qc_fastqc.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "qc fastqc"
+      ],
+      "steps_used": [],
+      "input_channels": [],
+      "output_channels": []
+    },
+    {
+      "id": "module_qc_nanoplot",
+      "file_path": "modules/module_qc_nanoplot.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "qc nanoplot"
+      ],
+      "steps_used": [],
+      "input_channels": [],
+      "output_channels": []
+    },
+    {
+      "id": "module_qc_quast",
+      "file_path": "modules/module_qc_quast.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "qc quast"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "input"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_reads_processing",
+      "file_path": "modules/module_reads_processing.nf",
+      "description": "Pipeline module using: step_0SQ_rawreads__fastq, step_1PP_trimming__trimmomatic, step_1PP_trimming__fastp, step_3TX_class__kraken.",
+      "keywords": [
+        "trimmomatic",
+        "kraken",
+        "fastp",
+        "fastq",
+        "reads processing"
+      ],
+      "steps_used": [
+        "step_0SQ_rawreads__fastq",
+        "step_1PP_trimming__trimmomatic",
+        "step_1PP_trimming__fastp",
+        "step_3TX_class__kraken"
+      ],
+      "input_channels": [
+        "rawReads"
+      ],
+      "output_channels": [
+        "no_reads",
+        "trimmed_with_data",
+        "insufficient_number_of_reads"
+      ]
+    },
+    {
+      "id": "module_reportree",
+      "file_path": "modules/module_reportree.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "reportree"
+      ],
+      "steps_used": [],
+      "input_channels": [],
+      "output_channels": []
+    },
+    {
+      "id": "module_scaffolds_filtering",
+      "file_path": "modules/module_scaffolds_filtering.nf",
+      "description": "Pipeline module using: step_2AS_filtering__seqio, step_3TX_species__vdabricate.",
+      "keywords": [
+        "vdabricate",
+        "scaffolds filtering",
+        "seqio"
+      ],
+      "steps_used": [
+        "step_2AS_filtering__seqio",
+        "step_3TX_species__vdabricate"
+      ],
+      "input_channels": [
+        "assembled",
+        "reference",
+        "abricatedatabase"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_segmented",
+      "file_path": "modules/module_segmented.nf",
+      "description": "Pipeline module using: step_2AS_mapping__ivar.",
+      "keywords": [
+        "segmented",
+        "ivar"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__ivar"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "step_2AS_mapping__ivar.out.consensus"
+      ]
+    },
+    {
+      "id": "module_snippycore",
+      "file_path": "modules/module_snippycore.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "snippycore"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_surveillance",
+      "file_path": "modules/module_surveillance.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "surveillance"
+      ],
+      "steps_used": [],
+      "input_channels": [],
+      "output_channels": []
+    },
+    {
+      "id": "module_test_llm",
+      "file_path": "modules/module_test_llm.nf",
+      "description": "Pipeline module using: step_1PP_trimming__fastp.",
+      "keywords": [
+        "test llm",
+        "fastp"
+      ],
+      "steps_used": [
+        "step_1PP_trimming__fastp"
+      ],
+      "input_channels": [
+        "rawReads"
+      ],
+      "output_channels": [
+        "no_reads",
+        "trimmed_with_data",
+        "insufficient_number_of_reads",
+        "assembly_result",
+        "qc_result"
+      ]
+    },
+    {
+      "id": "module_typing_bacteria",
+      "file_path": "modules/module_typing_bacteria.nf",
+      "description": "Pipeline module using: step_2AS_mapping__bowtie, step_4AN_genes__prokka, step_4AN_AMR__abricate, step_4AN_AMR__staramr, step_4TY_cgMLST__chewbbaca, step_4TY_MLST__mlst, step_4TY_flaA__flaA.",
+      "keywords": [
+        "abricate",
+        "mlst",
+        "flaa",
+        "typing bacteria",
+        "chewbbaca",
+        "bowtie",
+        "prokka",
+        "staramr"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4AN_genes__prokka",
+        "step_4AN_AMR__abricate",
+        "step_4AN_AMR__staramr",
+        "step_4TY_cgMLST__chewbbaca",
+        "step_4TY_MLST__mlst",
+        "step_4TY_flaA__flaA"
+      ],
+      "input_channels": [
+        "trimmed",
+        "assembly"
+      ],
+      "output_channels": [
+        "genus_species"
+      ]
+    },
+    {
+      "id": "module_variant_lineage",
+      "file_path": "modules/module_variant_lineage.nf",
+      "description": "Pipeline module using: step_2AS_mapping__bowtie, step_4TY_lineage__pangolin, step_4AN_genes__prokka.",
+      "keywords": [
+        "bowtie",
+        "variant lineage",
+        "pangolin",
+        "prokka"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ],
+      "input_channels": [
+        "reads",
+        "reference",
+        "referenceGB"
+      ],
+      "output_channels": [
+        "lineage"
+      ]
+    },
+    {
+      "id": "module_variant_lineage_FIXED",
+      "file_path": "modules/module_variant_lineage_FIXED.nf",
+      "description": "Pipeline module using: step_2AS_mapping__ivar, step_4TY_lineage__pangolin.",
+      "keywords": [
+        "pangolin",
+        "ivar",
+        "variant lineage FIXED"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__ivar",
+        "step_4TY_lineage__pangolin"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_variant_lineage_MINIMAL",
+      "file_path": "modules/module_variant_lineage_MINIMAL.nf",
+      "description": "Pipeline module using: step_2AS_mapping__bowtie, step_4TY_lineage__pangolin, step_4AN_genes__prokka.",
+      "keywords": [
+        "bowtie",
+        "pangolin",
+        "variant lineage MINIMAL",
+        "prokka"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ],
+      "input_channels": [
+        "reads",
+        "reference",
+        "referenceGB"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_variant_lineage_MINIMAL_FIX",
+      "file_path": "modules/module_variant_lineage_MINIMAL_FIX.nf",
+      "description": "Pipeline module using: step_2AS_mapping__bowtie, step_4TY_lineage__pangolin, step_4AN_genes__prokka.",
+      "keywords": [
+        "prokka",
+        "bowtie",
+        "pangolin",
+        "variant lineage MINIMAL FIX"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "lineage"
+      ]
+    },
+    {
+      "id": "module_variant_lineage_ONE_LINE_FIX",
+      "file_path": "modules/module_variant_lineage_ONE_LINE_FIX.nf",
+      "description": "Pipeline module using: step_2AS_mapping__bowtie, step_4TY_lineage__pangolin, step_4AN_genes__prokka.",
+      "keywords": [
+        "bowtie",
+        "variant lineage ONE LINE FIX",
+        "pangolin",
+        "prokka"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__bowtie",
+        "step_4TY_lineage__pangolin",
+        "step_4AN_genes__prokka"
+      ],
+      "input_channels": [
+        "reads",
+        "reference",
+        "referenceGB"
+      ],
+      "output_channels": [
+        "lineage"
+      ]
+    },
+    {
+      "id": "module_vcf2mst",
+      "file_path": "modules/module_vcf2mst.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "vcf2mst"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "input"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_vdraft",
+      "file_path": "modules/module_vdraft.nf",
+      "description": "Pipeline module using: custom logic.",
+      "keywords": [
+        "vdraft"
+      ],
+      "steps_used": [],
+      "input_channels": [
+        "reads",
+        "host",
+        "reference",
+        "referenceGB",
+        "abricateDatabase"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_vdraft_light",
+      "file_path": "modules/module_vdraft_light.nf",
+      "description": "Pipeline module using: step_1PP_hostdepl__bowtie, step_2AS_mapping__bowtie.",
+      "keywords": [
+        "bowtie",
+        "vdraft light"
+      ],
+      "steps_used": [
+        "step_1PP_hostdepl__bowtie",
+        "step_2AS_mapping__bowtie"
+      ],
+      "input_channels": [
+        "trimmedReads",
+        "host",
+        "reference"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_westnile",
+      "file_path": "modules/module_westnile.nf",
+      "description": "Pipeline module using: step_2AS_mapping__ivar.",
+      "keywords": [
+        "ivar",
+        "westnile"
+      ],
+      "steps_used": [
+        "step_2AS_mapping__ivar"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": []
+    },
+    {
+      "id": "module_wgs_bacteria",
+      "file_path": "modules/module_wgs_bacteria.nf",
+      "description": "Pipeline module using: step_2AS_denovo__shovill.",
+      "keywords": [
+        "shovill",
+        "wgs bacteria"
+      ],
+      "steps_used": [
+        "step_2AS_denovo__shovill"
+      ],
+      "input_channels": [
+        "trimmedReads"
+      ],
+      "output_channels": [
+        "step_2AS_denovo__shovill.out"
+      ]
+    }
+  ]
+}
