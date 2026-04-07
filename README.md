@@ -4,7 +4,12 @@ Self-hostable platform that lets bioinformaticians describe a sequencing analysi
 
 ## Credits
 
-This platform integrates two upstream projects originally developed by [@mgradyn](https://github.com/mgradyn):
+This platform integrates two upstream projects originally developed by master students at IZS:
+
+- **Martinus Grady** — [@mgradyn](https://github.com/mgradyn) — backend & frontend
+- **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan) — frontend
+
+Upstream repositories:
 
 - **Backend** (LangGraph + FastAPI LLM agent) — [mgradyn/izs-llm](https://github.com/mgradyn/izs-llm)
 - **Frontend** (chat UI) — [mgradyn/izs-bioinformatics-AI-demo](https://github.com/mgradyn/izs-bioinformatics-AI-demo)
