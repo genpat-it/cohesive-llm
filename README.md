@@ -4,10 +4,10 @@ Self-hostable platform that lets bioinformaticians describe a sequencing analysi
 
 ## Credits
 
-This platform integrates two upstream projects originally developed by master students at IZS:
+This platform is based on the work of three master students at IZS:
 
-- **Martinus Grady** — [@mgradyn](https://github.com/mgradyn) — backend & frontend
-- **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan) — frontend
+- **Martinus Grady** — [@mgradyn](https://github.com/mgradyn)
+- **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan)
 - **Zeynal Mardanli** — [@Lshiroc](https://github.com/Lshiroc)
 
 Upstream repositories:
