@@ -1,5 +1,10 @@
 # Cohesive LLM — IZS Bioinformatics AI Platform
 
+> ⚠️ **Status: under active development.** APIs, the database schema, the
+> docker-compose layout and the configuration variables can all change between
+> commits without notice. Do **not** use this in production yet — it has no
+> stable release, no formal security audit and no upgrade story.
+
 Self-hostable platform that lets bioinformaticians describe a sequencing analysis in plain English and get back a valid Nextflow DSL2 pipeline for the [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) framework.
 
 ## Credits
@@ -22,8 +27,8 @@ The Nextflow framework being targeted is [genpat-it/cohesive-ngsmanager](https:/
 ```
 cohesive-llm/
 ├── backend/             FastAPI + LangGraph LLM (anti-hallucination, AST validation)
-├── frontend/            Static chat UI (HTML/CSS/JS)
-├── caddy/               Reverse proxy template
+├── frontend/            Static chat UI (HTML/CSS/JS) — served by Caddy
+├── caddy/               Caddy image (reverse proxy + static file server)
 ├── scripts/             Render configs and start the stack
 ├── docker-compose.yml   All services orchestrated
 └── .env.example         Configuration template

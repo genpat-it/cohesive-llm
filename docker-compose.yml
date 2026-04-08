@@ -5,8 +5,7 @@
 #    - ngsmanager-init: clones the cohesive-ngsmanager framework on first run  #
 #    - postgres:        application database (users, conversations, messages) #
 #    - backend:         FastAPI + LangGraph LLM pipeline generator             #
-#    - frontend:        static chat UI (nginx-unprivileged)                    #
-#    - caddy:           reverse proxy + HTTPS (auto / internal / off)          #
+#    - caddy:           reverse proxy + static frontend (HTML/CSS/JS)          #
 #                                                                              #
 #  Quick start:                                                                #
 #    cp .env.example .env   # then edit secrets                                #
@@ -91,40 +90,31 @@ services:
       retries: 3
       start_period: 60s
 
-  # ─── Frontend: static chat UI ─────────────────────────────────────────────
-  frontend:
-    build: ./frontend
-    container_name: izs_frontend
-    restart: unless-stopped
-    environment:
-      # Sub-path the app is exposed under (must end with a slash).
-      # "/" → site root (dev). "/llm/" → behind a reverse proxy at /llm.
-      - BASE_PATH=${BASE_PATH:-/}
-    expose:
-      - "8080"
-
-  # ─── Caddy: reverse proxy + HTTPS ─────────────────────────────────────────
-  # CADDY_HOST_PORT (default 80) is the host port where Caddy is exposed.
-  # Set to e.g. 10000 when sitting behind another reverse proxy that handles TLS.
-  # CADDY_HOST_HTTPS_PORT (default 443) — same idea for HTTPS.
+  # ─── Caddy: reverse proxy + static frontend ───────────────────────────────
+  # Single container that does both:
+  #   - serves the static HTML/JS/CSS frontend (file_server + templates)
+  #   - reverse-proxies /api/* to the backend
+  #   - handles HTTPS when HTTPS_MODE is internal/auto
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: caddy/Dockerfile
+    image: cohesive-llm-caddy
     container_name: izs_caddy
     restart: unless-stopped
+    environment:
+      # Sub-path the app is exposed under, e.g. "/" or "/llm/".
+      # Used by Caddy templates to inject the right <base href> in HTML.
+      - BASE_PATH=${BASE_PATH:-/}
     ports:
       - "${CADDY_HOST_PORT:-80}:80"
       - "${CADDY_HOST_HTTPS_PORT:-443}:443"
-      # Optional extra HTTP port (e.g. 10000) for upstream reverse proxies
-      # that prefer talking HTTP on a non-standard port. Only active when
-      # CADDY_EXTRA_HTTP_PORT is set in .env.
-      - "${CADDY_EXTRA_HTTP_PORT:-10000}:10000"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - backend
-      - frontend
 
 volumes:
   ngsmanager:

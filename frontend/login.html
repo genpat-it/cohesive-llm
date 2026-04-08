@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- See index.html for the BASE_PATH explanation. -->
-    <base href="__BASE_PATH__">
+    <base href="{{env "BASE_PATH"}}">
     <script>
-        window.IZS_BASE_PATH = "__BASE_PATH__".replace(/\/$/, '');
+        window.IZS_BASE_PATH = "{{env "BASE_PATH"}}".replace(/\/$/, '');
     </script>
 
     <title>Login — Cohesive LLM</title>
@@ -97,7 +97,7 @@
         <div class="logo">
             <img src="logo-izs-blue.jpg" alt="IZS">
         </div>
-        <h1>Bioinformatics AI Platform</h1>
+        <h1>Cohesive LLM</h1>
         <div id="error" class="error"></div>
         <form id="loginForm">
             <label for="username">Username</label>

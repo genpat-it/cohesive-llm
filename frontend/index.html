@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Base path for the app. The literal string __BASE_PATH__ is replaced
+    <!-- Base path for the app. The literal string {{env "BASE_PATH"}} is replaced
          by nginx (sub_filter) at request time with the BASE_PATH env var.
          BASE_PATH must end with a slash, e.g. "/" for site root or "/llm/"
          when the app lives behind a reverse-proxy sub-path. -->
-    <base href="__BASE_PATH__">
+    <base href="{{env "BASE_PATH"}}">
     <script>
         // Same value, without trailing slash, exposed to ES modules.
-        window.IZS_BASE_PATH = "__BASE_PATH__".replace(/\/$/, '');
+        window.IZS_BASE_PATH = "{{env "BASE_PATH"}}".replace(/\/$/, '');
     </script>
 
     <title>Cohesive LLM</title>
@@ -184,6 +184,6 @@
     </div>
 
     <!-- Switch to ES module entrypoint -->
-    <script type="module" src="js/main.js?v=9"></script>
+    <script type="module" src="js/main.js?v=10"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@ const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH) || '';
 const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || (BASE_PATH + '/api');
 
 function redirectToLogin() {
-    window.location.href = BASE_PATH + '/login.html';
+    window.location.href = BASE_PATH + '/login';
 }
 
 async function apiFetch(path, options = {}) {
