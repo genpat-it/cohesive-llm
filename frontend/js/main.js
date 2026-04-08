@@ -1,8 +1,34 @@
-import { sendChatMessage } from './api.js?v=6';
-import { initChatUi } from './chat.js?v=5';
+import { sendChatMessage, checkSession, logout } from './api.js?v=7';
+import { initChatUi } from './chat.js?v=7';
 import { initResultsUi } from './results.js?v=4';
+import { initSidebar } from './sidebar.js?v=1';
 
-// Generate session ID once per page load
+// Auth guard: redirect to /login.html if no valid session.
+// The <html> element has the `auth-pending` class set very early in <head>,
+// which keeps the body invisible until we know the user is authenticated.
+const currentUser = await checkSession();
+if (!currentUser) {
+    // checkSession already triggered the redirect; keep the body hidden.
+    throw new Error('Not authenticated');
+}
+document.documentElement.classList.remove('auth-pending');
+
+// Wire logout button
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        logout();
+    });
+}
+
+// Show username
+const userLabel = document.getElementById('userLabel');
+if (userLabel) {
+    userLabel.textContent = currentUser.username;
+}
+
+// --- Session/conversation state ---
 const generateSessionId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
@@ -10,10 +36,11 @@ const generateSessionId = () => {
     return Math.random().toString(36).substring(2, 15);
 };
 
-const sessionId = generateSessionId();
+let currentSessionId = generateSessionId();
+let currentConversationId = null;
+const WELCOME = "Welcome! I am your Bioinformatics Pipeline Assistant. Describe the pipeline you'd like to build, or choose one of the examples above.";
 
 const resultsContainer = document.getElementById('resultsContainer');
-const chatSection = document.getElementById('chatSection');
 const closeResultsBtn = document.getElementById('closeResultsBtn');
 
 // Initialize UI Modules
@@ -28,34 +55,44 @@ if (closeResultsBtn) {
 const handleSendMessage = async (text) => {
     chatUi.showTypingIndicator();
     chatUi.setStatus('active', 'Thinking...');
-    
+
     try {
-        const response = await sendChatMessage(sessionId, text);
-        chatUi.removeTypingIndicator();
-        
+        const response = await sendChatMessage(currentSessionId, text);
+        const elapsedMs = chatUi.removeTypingIndicator();
+
         if (response.status === 'failed') {
             chatUi.appendErrorMessage(response.error || 'An unknown error occurred');
             chatUi.setStatus('error', 'API Error');
             return;
         }
-        
+
+        // Track the conversation id returned by the backend so the sidebar can highlight it
+        if (response.conversation_id && response.conversation_id !== currentConversationId) {
+            currentConversationId = response.conversation_id;
+            sidebar.setActive(currentConversationId);
+        }
+
         if (response.status === 'CHATTING') {
-            chatUi.appendAiMessage(response.reply);
+            chatUi.appendAiMessage(response.reply, {
+                elapsedMs,
+                showApproveButton: true,
+            });
             chatUi.setStatus('active', 'Ready');
         } else if (response.status === 'APPROVED') {
             chatUi.appendAiMessage(response.reply || 'Pipeline generated successfully!', {
-                text: 'Open Pipeline Result',
-                onClick: () => {
-                    resultsContainer.classList.add('open');
-                }
+                elapsedMs,
+                openResultButton: {
+                    text: 'Open Pipeline Result',
+                    onClick: () => { resultsContainer.classList.add('open'); },
+                },
             });
-            
-            // Render Nextflow and Mermaid
             resultsUi.renderNextflow(response.nextflow_code);
             resultsUi.renderMermaid(response.mermaid_code);
-            
             chatUi.setStatus('active', 'Pipeline Generated');
         }
+
+        // Refresh sidebar so a brand-new conversation appears (or title updates)
+        sidebar.refresh();
     } catch (error) {
         chatUi.removeTypingIndicator();
         chatUi.appendErrorMessage('Failed to connect to Bioinformatics Pipeline Assistant: ' + error.message);
@@ -66,4 +103,24 @@ const handleSendMessage = async (text) => {
 const chatUi = initChatUi(handleSendMessage);
 chatUi.setStatus('', 'Ready');
 
-console.log('IZS AI chat generator loaded with session ID:', sessionId);
+// --- Sidebar wiring ---
+const sidebar = initSidebar({
+    onNewChat: () => {
+        currentSessionId = generateSessionId();
+        currentConversationId = null;
+        chatUi.clearHistory(WELCOME);
+        chatUi.setStatus('', 'Ready');
+        resultsContainer.classList.remove('open');
+    },
+    onSelect: (conv) => {
+        currentSessionId = conv.session_id;
+        currentConversationId = conv.id;
+        chatUi.loadMessages(conv.messages || []);
+        chatUi.setStatus('active', 'Loaded');
+        resultsContainer.classList.remove('open');
+    },
+});
+
+await sidebar.refresh();
+
+console.log('IZS AI chat generator loaded for user:', currentUser.username);

@@ -13,30 +13,11 @@ fi
 # Render Caddyfile from template
 ./scripts/render-caddyfile.sh
 
-# Render Authelia config (no-op if AUTH_MODE=none)
-./scripts/render-authelia.sh || true
-
-# Pick profile based on AUTH_MODE
 set -a
 . ./.env
 set +a
-AUTH_MODE="${AUTH_MODE:-none}"
-LDAP_URL="${LDAP_URL:-}"
 
-PROFILES=""
-if [ "$AUTH_MODE" != "none" ]; then
-    PROFILES="--profile auth"
-fi
-
-# Auto-enable test LLDAP if AUTH_MODE=ldap and LDAP_URL points at local lldap container
-case "$LDAP_URL" in
-    *lldap:*)
-        PROFILES="$PROFILES --profile dev-ldap"
-        echo "[up] LDAP_URL points at local lldap, enabling dev-ldap profile."
-        ;;
-esac
-
-docker compose $PROFILES up -d "$@"
+docker compose up -d "$@"
 
 PORT="${CADDY_HOST_PORT:-80}"
 HTTPS_PORT="${CADDY_HOST_HTTPS_PORT:-443}"

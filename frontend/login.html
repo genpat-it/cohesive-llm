@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — IZS Bioinformatics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1f2937;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+            width: 100%;
+            max-width: 380px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .logo img { max-width: 140px; }
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #1e3a8a;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.35rem;
+            color: #374151;
+        }
+        input {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            margin-bottom: 1rem;
+            transition: border-color 0.15s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #1e40af;
+            box-shadow: 0 0 0 3px rgba(30,64,175,0.15);
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1e40af;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+        button:hover { background: #1e3a8a; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.65rem 0.85rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .error.visible { display: block; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">
+            <img src="logo-izs-blue.jpg" alt="IZS">
+        </div>
+        <h1>Bioinformatics AI Platform</h1>
+        <div id="error" class="error"></div>
+        <form id="loginForm">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+            <button type="submit" id="submitBtn">Sign in</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const errorBox = document.getElementById('error');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.classList.add('visible');
+        }
+        function clearError() {
+            errorBox.textContent = '';
+            errorBox.classList.remove('visible');
+        }
+
+        // If already authenticated, skip login
+        fetch('/api/auth/me', { credentials: 'same-origin' })
+            .then(r => { if (r.ok) window.location.href = '/'; })
+            .catch(() => {});
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing in...';
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ username, password })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    showError(data.detail || 'Invalid credentials');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign in';
+                    return;
+                }
+                window.location.href = '/';
+            } catch (err) {
+                showError('Network error: ' + err.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign in';
+            }
+        });
+    </script>
+</body>
+</html>

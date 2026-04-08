@@ -28,11 +28,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 6. Permissions Fix for Restricted Environments
-# Some platforms run containers as a random user ID. We need to make sure
-# that user can read/execute our files.
+# Some platforms (e.g. OpenShift) run containers as a random user ID belonging
+# to the root group. We make /app readable/executable by the root group so it
+# works both with our explicit non-root user and with random-UID schedulers.
 RUN chgrp -R 0 /app && \
     chmod -R g=u /app
 
-# 7. Start the Server
-# We use the PORT environment variable which orchestrators often set automatically
+# 7. Create a dedicated non-root user and switch to it.
+# Hugging Face cache lives under /tmp (HF_HOME above) which is world-writable,
+# so the non-root user can still download models on first start.
+RUN groupadd -r app && useradd -r -g app -u 1000 -m -d /home/app app && \
+    chown -R app:app /app
+USER 1000
+
+# 8. Start the Server
 CMD ["sh", "-c", "uvicorn app.api:app --host 0.0.0.0 --port 8080"]

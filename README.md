@@ -1,4 +1,4 @@
-# IZS Bioinformatics AI Platform
+# Cohesive LLM — IZS Bioinformatics AI Platform
 
 Self-hostable platform that lets bioinformaticians describe a sequencing analysis in plain English and get back a valid Nextflow DSL2 pipeline for the [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) framework.
 
@@ -20,33 +20,29 @@ The Nextflow framework being targeted is [genpat-it/cohesive-ngsmanager](https:/
 ## What's inside
 
 ```
-izs-bioinformatics-platform/
+cohesive-llm/
 ├── backend/             FastAPI + LangGraph LLM (anti-hallucination, AST validation)
 ├── frontend/            Static chat UI (HTML/CSS/JS)
 ├── caddy/               Reverse proxy template
-├── auth/authelia/       Optional auth (file-based or LDAP)
 ├── scripts/             Render configs and start the stack
 ├── docker-compose.yml   All services orchestrated
 └── .env.example         Configuration template
 ```
 
-## Quick start for developers — local, no auth, plain HTTP
-
-This is the fastest way to get the stack running on your laptop without any login or HTTPS hassle.
+## Quick start (local development)
 
 ```bash
 git clone <this-repo>
-cd izs-bioinformatics-platform
+cd cohesive-llm
 cp .env.example .env
 ```
 
-Open `.env` and make sure you have:
+Open `.env` and at minimum set:
 
 ```env
-DOMAIN=localhost
-HTTPS_MODE=off
-AUTH_MODE=none
 MISTRAL_API_KEY=your_real_key_here
+JWT_SECRET=$(openssl rand -hex 32)
+DEMO_PASSWORD=pick_something_strong
 ```
 
 Then start the stack:
@@ -58,9 +54,9 @@ Then start the stack:
 The first run will:
 1. Clone `cohesive-ngsmanager` into a Docker volume (one-time, ~1 min)
 2. Build the backend image (downloads Python deps and embeddings, ~5 min)
-3. Start backend, frontend, and Caddy reverse proxy
+3. Start Postgres, the backend, the frontend and Caddy
 
-When it's done, open **http://localhost** in your browser. You should land directly on the chat — no login required.
+Open **http://localhost:9000** and log in with `demo` / the password you set in `DEMO_PASSWORD`.
 
 To stop everything:
 
@@ -68,7 +64,7 @@ To stop everything:
 docker compose down
 ```
 
-To wipe state and start fresh (re-clones ngsmanager, rebuilds FAISS):
+To wipe state and start fresh (re-clones ngsmanager, drops the DB, rebuilds FAISS):
 
 ```bash
 docker compose down -v
@@ -84,114 +80,96 @@ docker compose logs -f caddy
 ### Test the API directly (bypass the frontend)
 
 ```bash
-curl http://localhost/api/health
-curl -X POST http://localhost/api/chat \
+curl -c cookies.txt -X POST http://localhost:9000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"demo","password":"<your password>"}'
+
+curl -b cookies.txt http://localhost:9000/api/health
+curl -b cookies.txt -X POST http://localhost:9000/api/chat \
   -H "Content-Type: application/json" \
   -d '{"session_id":"dev","message":"I want to trim with fastp"}'
 ```
 
+## Authentication
+
+Login is built into the backend itself: a single demo user is seeded automatically
+on first start with the credentials taken from `DEMO_USER` / `DEMO_PASSWORD` in `.env`.
+
+The session uses a stateless JWT stored in an `HttpOnly` cookie. Requests with no
+valid cookie get a 401 from any `/api/*` route except `/api/auth/login`. The frontend
+intercepts that 401 and redirects the browser to `/login.html`.
+
+Failed login attempts are rate-limited per real client IP via `slowapi`
+(default `5/minute`, tunable with `LOGIN_RATE_LIMIT`).
+
+> Multi-user / corporate SSO (LDAP, OIDC) is **not** included on purpose — drop in
+> a proxy-level auth layer (Authelia, oauth2-proxy, ...) in front of Caddy if you
+> need it for production.
+
 ## Deployment modes
 
-### Local development (HTTP, no domain)
+### Local development (HTTP, single demo user)
 ```env
 DOMAIN=localhost
 HTTPS_MODE=off
-AUTH_MODE=none
+COOKIE_SECURE=false
 ```
 
-### IZS intranet (internal hostname, no public domain)
+### Behind a corporate reverse proxy (e.g. `https://cohesive.izs.it/llm`)
+
+When you can't expose ports 80/443 directly and an upstream proxy
+(nginx, F5, Caddy, IIS, …) handles TLS for a public URL like
+`https://cohesive.izs.it/llm`, run the platform on a custom HTTP port and
+let the upstream proxy forward to it.
+
+```env
+DOMAIN=cohesive.izs.it
+HTTPS_MODE=off                # upstream proxy handles TLS
+CADDY_HOST_PORT=9000          # host port Caddy listens on (HTTP)
+TRUSTED_PROXIES=10.0.0.0/8    # CIDR of the upstream proxy network
+CORS_ORIGINS=https://cohesive.izs.it
+COOKIE_SECURE=true            # cookie sent only over HTTPS
+COOKIE_PATH=/llm              # scope cookie to the sub-path
+COOKIE_SAMESITE=lax
+```
+
+Then ask the sysadmins to configure the upstream proxy to:
+
+1. Forward `https://cohesive.izs.it/llm/*` → `http://your-server:9000/*`
+2. **Strip the `/llm` path prefix** before forwarding
+3. Set the headers: `X-Forwarded-Proto: https`, `X-Forwarded-Host: cohesive.izs.it`, `X-Real-IP`, `X-Forwarded-For`
+4. Allow body sizes up to ~10 MB
+5. Tell you the proxy IP/CIDR so you can set `TRUSTED_PROXIES` correctly
+
+### Self-signed HTTPS (no upstream proxy)
 ```env
 DOMAIN=ai.izs.intra
-HTTPS_MODE=internal     # self-signed cert
-AUTH_MODE=ldap          # corporate login
+HTTPS_MODE=internal
+COOKIE_SECURE=true
 ```
-Browser will warn about self-signed cert on first visit (one click to accept).
+Browser will warn about the self-signed cert on first visit (one click to accept).
 
 ### Public deployment (real domain, Let's Encrypt)
 ```env
 DOMAIN=ai.example.com
-HTTPS_MODE=auto         # automatic Let's Encrypt
-AUTH_MODE=ldap
+HTTPS_MODE=auto
 ACME_EMAIL=ops@example.com
+COOKIE_SECURE=true
 ```
 Requires ports 80 and 443 reachable from the internet and DNS pointing at the server.
-
-### Behind another reverse proxy (e.g. corporate ingress)
-
-When you can't expose ports 80/443 directly and an upstream proxy
-(nginx, F5, Caddy, IIS, ...) handles TLS for a public URL like
-`https://cohesive.example.com/llm`, run the platform on a custom HTTP
-port and let the upstream proxy forward to it.
-
-```env
-DOMAIN=cohesive.example.com
-HTTPS_MODE=off                # upstream proxy handles TLS
-AUTH_MODE=file                # or 'ldap'
-CADDY_HOST_PORT=10000         # host port Caddy listens on (HTTP)
-CADDY_HOST_HTTPS_PORT=10443   # host port for HTTPS (unused in this mode)
-TRUSTED_PROXIES=10.0.0.0/8    # CIDR of the upstream proxy network
-```
-
-Then ask your sysadmins to configure the upstream proxy to:
-
-1. Forward `https://cohesive.example.com/llm/*` → `http://your-server:10000/*`
-2. **Strip the `/llm` path prefix** before forwarding
-3. Set the headers: `X-Forwarded-Proto: https`, `X-Forwarded-Host: cohesive.example.com`, `X-Real-IP`
-4. Allow body sizes up to 10 MB
-5. Tell you the proxy IP/CIDR so you can set `TRUSTED_PROXIES` correctly
-
-Once configured, login flows (Authelia file/LDAP) work end-to-end because
-Caddy trusts the upstream's `X-Forwarded-Proto` header and treats the
-request as if it were HTTPS.
-
-## Authentication modes
-
-Set `AUTH_MODE` in `.env`:
-
-| Mode | Use case | Setup |
-|------|----------|-------|
-| `none` | Demo, internal trusted network | Nothing — open access |
-| `file` | Small team, no LDAP | Edit `auth/authelia/users.yml` (created from `users.example.yml` on first run) |
-| `ldap` | Corporate (e.g. IZS Active Directory) | Set `LDAP_*` variables in `.env` |
-
-For `file` and `ldap`, generate three secrets in `.env`:
-```bash
-openssl rand -hex 32  # AUTHELIA_JWT_SECRET
-openssl rand -hex 32  # AUTHELIA_SESSION_SECRET
-openssl rand -hex 32  # AUTHELIA_STORAGE_KEY
-```
-
-Generate a password hash for file mode:
-```bash
-docker run --rm authelia/authelia:latest \
-  authelia crypto hash generate argon2 --password 'your-password'
-```
-
-Then paste the resulting `$argon2id$...` string into `auth/authelia/users.yml`.
-
-### Notes on Authelia and HTTPS
-
-Authelia requires HTTPS for session cookies in production.
-For local testing without TLS:
-- Use `HTTPS_MODE=internal` to get a self-signed cert via Caddy local CA, or
-- Use `HTTPS_MODE=off` only when sitting behind an upstream HTTPS-terminating proxy
-  (the upstream's `X-Forwarded-Proto: https` header is what Authelia trusts)
-
-Authelia rejects `localhost` as a cookie domain. Use a real FQDN or a development
-TLD like `.localhost` (e.g. `app.localhost`).
 
 ## How it works
 
 1. `ngsmanager-init` (init container) clones [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) into a Docker volume on first start.
-2. `backend` reads the framework from `/ngsmanager` and uses it to:
+2. `postgres` stores users, conversations and messages.
+3. `backend` reads the framework from `/ngsmanager` and uses it to:
    - Build the RAG knowledge base (FAISS + Qwen embeddings)
    - Validate every generated pipeline against the real `.nf` files
-3. `frontend` (static HTML/JS) sends prompts to `/api/chat`.
-4. `caddy` routes requests:
+   - Serve `/api/auth/*`, `/api/chat`, `/api/conversations/*`
+4. `frontend` (static HTML/JS) shows the login page, the chat UI and a ChatGPT-style sidebar with conversation history.
+5. `caddy` routes requests:
    - `/api/*` → `backend:8080`
-   - `/*` → `frontend:80`
-   - Optionally enforces auth via Authelia
-5. `authelia` (optional) checks user credentials before letting requests through.
+   - `/*`     → `frontend:8080`
 
 ## Updating the ngsmanager framework
 
@@ -202,9 +180,14 @@ docker compose restart backend
 
 ## Scripts
 
-- `scripts/up.sh` — render configs, pick auth profile, start everything
-- `scripts/render-caddyfile.sh` — generate Caddyfile from template + .env
-- `scripts/render-authelia.sh` — generate Authelia config from template + .env
+- `scripts/up.sh` — render Caddyfile and start the stack
+- `scripts/render-caddyfile.sh` — generate the Caddyfile from `.env`
+- `scripts/check-secrets.sh` — secret scanner, run before `git push`
+
+Install `check-secrets.sh` as a pre-push hook:
+```bash
+ln -sf ../../scripts/check-secrets.sh .git/hooks/pre-push
+```
 
 ## Configuration reference
 
@@ -212,16 +195,20 @@ docker compose restart backend
 |----------|---------|-------------|
 | `DOMAIN` | `localhost` | Hostname users access the platform with |
 | `HTTPS_MODE` | `off` | `off` / `internal` / `auto` |
-| `AUTH_MODE` | `none` | `none` / `file` / `ldap` |
-| `CADDY_HOST_PORT` | `80` | Host port for HTTP listener |
-| `CADDY_HOST_HTTPS_PORT` | `443` | Host port for HTTPS listener |
+| `CADDY_HOST_PORT` | `9000` | Host port for the HTTP listener |
+| `CADDY_HOST_HTTPS_PORT` | `9443` | Host port for the HTTPS listener |
 | `TRUSTED_PROXIES` | `private_ranges` | CIDR(s) of upstream proxies |
 | `MISTRAL_API_KEY` | _required_ | API key for the LLM provider |
 | `NGSMANAGER_REPO` | github.com/genpat-it/cohesive-ngsmanager | Framework repo to clone |
 | `NGSMANAGER_BRANCH` | `main` | Framework branch |
-| `AUTHELIA_JWT_SECRET` | _required if auth_ | 32+ char random string |
-| `AUTHELIA_SESSION_SECRET` | _required if auth_ | 32+ char random string |
-| `AUTHELIA_STORAGE_KEY` | _required if auth_ | 32+ char random string |
-| `LDAP_*` | _required if ldap_ | See [`.env.example`](.env.example) |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `cohesive` / dev / `cohesive` | Database credentials |
+| `DATABASE_URL` | `postgresql+psycopg2://...` | Connection string for SQLAlchemy |
+| `JWT_SECRET` | _required_ | 32-byte random string for signing JWTs |
+| `DEMO_USER` / `DEMO_PASSWORD` | `demo` / placeholder | Initial seed user |
+| `CORS_ORIGINS` | `http://localhost:9000,...` | Comma-separated allowed origins |
+| `COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
+| `COOKIE_PATH` | `/` | Set to `/llm` if behind a path-prefix proxy |
+| `COOKIE_SAMESITE` | `lax` | `lax` / `strict` / `none` |
+| `LOGIN_RATE_LIMIT` | `5/minute` | Per-IP rate limit on `/auth/login` |
 
 Full reference with comments: [`.env.example`](.env.example)

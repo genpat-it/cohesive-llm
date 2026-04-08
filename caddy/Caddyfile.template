@@ -2,13 +2,12 @@
 # Variables substituted by scripts/render-caddyfile.sh from .env values.
 
 {
-    # Disable auto HTTPS when HTTPS_MODE=off
     auto_https ${CADDY_AUTO_HTTPS}
     email ${ACME_EMAIL}
 
-    # Trust upstream reverse proxy headers (X-Forwarded-Proto, X-Real-IP)
-    # when sitting behind another proxy. Set TRUSTED_PROXIES in .env to the
-    # upstream proxy IP/CIDR, e.g. "10.10.0.0/16".
+    # Trust upstream reverse proxy headers (X-Forwarded-Proto, X-Real-IP) when
+    # sitting behind another proxy. Set TRUSTED_PROXIES in .env to the upstream
+    # proxy IP/CIDR, e.g. "10.10.0.0/16".
     servers {
         trusted_proxies static ${TRUSTED_PROXIES}
     }
@@ -17,23 +16,17 @@
 ${SITE_ADDRESS} {
     ${TLS_DIRECTIVE}
 
-    # Authelia login UI - NO auth check on this path (otherwise infinite redirect loop)
-    ${AUTHELIA_PORTAL_BLOCK}
-
-    # Backend API - protected by auth check
+    # Backend API
     handle /api/* {
-        ${AUTH_DIRECTIVE}
         uri strip_prefix /api
         reverse_proxy backend:8080
     }
 
-    # Frontend (static site) - protected by auth check
+    # Frontend (static site)
     handle {
-        ${AUTH_DIRECTIVE}
-        reverse_proxy frontend:80
+        reverse_proxy frontend:8080
     }
 
-    # Logging
     log {
         output stdout
         format console

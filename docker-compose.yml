@@ -1,21 +1,17 @@
 ###############################################################################
-#  IZS Bioinformatics AI Platform                                              #
+#  Cohesive LLM — IZS Bioinformatics AI Platform                               #
 #                                                                              #
 #  Services:                                                                   #
 #    - ngsmanager-init: clones the cohesive-ngsmanager framework on first run  #
+#    - postgres:        application database (users, conversations, messages) #
 #    - backend:         FastAPI + LangGraph LLM pipeline generator             #
-#    - frontend:        static chat UI (nginx)                                 #
+#    - frontend:        static chat UI (nginx-unprivileged)                    #
 #    - caddy:           reverse proxy + HTTPS (auto / internal / off)          #
-#    - authelia:        optional auth (file / LDAP), enabled via profile       #
 #                                                                              #
 #  Quick start:                                                                #
-#    cp .env.example .env                                                      #
+#    cp .env.example .env   # then edit secrets                                #
 #    ./scripts/render-caddyfile.sh                                             #
-#    ./scripts/render-authelia.sh   # only if AUTH_MODE != none                #
 #    docker compose up -d                                                      #
-#                                                                              #
-#  With auth:                                                                  #
-#    docker compose --profile auth up -d                                       #
 ###############################################################################
 
 services:
@@ -43,6 +39,25 @@ services:
         echo "[ngsmanager-init] Done."
     restart: "no"
 
+  # ─── Postgres: app database (users, conversations, messages) ─────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: izs_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-cohesive}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cohesive_dev_password}
+      - POSTGRES_DB=${POSTGRES_DB:-cohesive}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cohesive} -d ${POSTGRES_DB:-cohesive}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ─── Backend: FastAPI + LangGraph ─────────────────────────────────────────
   backend:
     build: ./backend
@@ -51,6 +66,15 @@ services:
     environment:
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - NGSMANAGER_DIR=/ngsmanager
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEMO_USER=${DEMO_USER:-demo}
+      - DEMO_PASSWORD=${DEMO_PASSWORD}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:9000,http://127.0.0.1:9000}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - COOKIE_PATH=${COOKIE_PATH:-/}
+      - COOKIE_SAMESITE=${COOKIE_SAMESITE:-lax}
+      - LOGIN_RATE_LIMIT=${LOGIN_RATE_LIMIT:-5/minute}
     volumes:
       - ngsmanager:/ngsmanager:ro
     expose:
@@ -58,6 +82,8 @@ services:
     depends_on:
       ngsmanager-init:
         condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 30s
@@ -71,7 +97,7 @@ services:
     container_name: izs_frontend
     restart: unless-stopped
     expose:
-      - "80"
+      - "8080"
 
   # ─── Caddy: reverse proxy + HTTPS ─────────────────────────────────────────
   # CADDY_HOST_PORT (default 80) is the host port where Caddy is exposed.
@@ -96,44 +122,6 @@ services:
       - backend
       - frontend
 
-  # ─── Authelia: optional auth (file or LDAP) ───────────────────────────────
-  # Enabled with: docker compose --profile auth up
-  authelia:
-    image: authelia/authelia:latest
-    container_name: izs_authelia
-    restart: unless-stopped
-    profiles: ["auth"]
-    expose:
-      - "9091"
-    volumes:
-      - ./auth/authelia/configuration.yml:/config/configuration.yml:ro
-      - ./auth/authelia/users.yml:/config/users.yml:ro
-      - authelia_data:/data
-    environment:
-      - TZ=Europe/Rome
-      - X_AUTHELIA_CONFIG_FILTERS=template
-
-  # ─── LLDAP: lightweight LDAP server for LOCAL TESTING ─────────────────────
-  # Enabled with: docker compose --profile dev-ldap up
-  # Web UI: http://localhost:17170 (admin / ${LLDAP_ADMIN_PASSWORD})
-  # LDAP:   ldap://lldap:3890 from inside Docker network
-  lldap:
-    image: lldap/lldap:stable
-    container_name: izs_lldap
-    restart: unless-stopped
-    profiles: ["dev-ldap"]
-    ports:
-      - "17170:17170"   # web UI
-    expose:
-      - "3890"          # LDAP
-    volumes:
-      - lldap_data:/data
-    environment:
-      - TZ=Europe/Rome
-      - LLDAP_JWT_SECRET=${LLDAP_JWT_SECRET:-changeme_jwt_secret}
-      - LLDAP_LDAP_USER_PASS=${LLDAP_ADMIN_PASSWORD:-admin}
-      - LLDAP_LDAP_BASE_DN=${LLDAP_BASE_DN:-dc=example,dc=com}
-
 volumes:
   ngsmanager:
     name: izs_ngsmanager
@@ -141,7 +129,5 @@ volumes:
     name: izs_caddy_data
   caddy_config:
     name: izs_caddy_config
-  lldap_data:
-    name: izs_lldap_data
-  authelia_data:
-    name: izs_authelia_data
+  postgres_data:
+    name: izs_postgres_data
