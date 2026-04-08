@@ -154,11 +154,17 @@ COOKIE_SAMESITE=lax
 BASE_PATH=/llm/               # MUST end with a trailing slash
 ```
 
-`BASE_PATH` is the only thing that makes the app sub-path-aware: the
-frontend nginx container substitutes the literal `__BASE_PATH__` placeholder
-in `index.html` and `login.html` at request time, so all relative URLs and
-fetch calls resolve under `/llm/...`. Set it once in `.env`, restart the
-frontend, done. No code changes.
+`BASE_PATH` is what makes the app sub-path-aware: Caddy substitutes the
+`{{env "BASE_PATH"}}` placeholder in `index.html` and `login.html` at
+request time (via the built-in Go `templates` directive), so all relative
+URLs and fetch calls resolve under `/llm/...`. Set it once in `.env`,
+restart Caddy, done. No code changes.
+
+`PROXY_PREFIX` is **only** needed if you want to test the sub-path
+locally without an upstream proxy: set `PROXY_PREFIX=/llm` and Caddy
+itself handles `/llm/*` so `http://localhost:9000/llm/` works
+end-to-end. In production, leave it empty — the corporate proxy strips
+the prefix before reaching Caddy.
 
 Then ask the sysadmins to configure the upstream proxy to:
 
@@ -187,34 +193,285 @@ Requires ports 80 and 443 reachable from the internet and DNS pointing at the se
 
 ## How it works
 
-1. `ngsmanager-init` (init container) clones [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) into a Docker volume on first start.
-2. `postgres` stores users, conversations and messages.
-3. `backend` reads the framework from `/ngsmanager` and uses it to:
-   - Build the RAG knowledge base (FAISS + Qwen embeddings)
-   - Validate every generated pipeline against the real `.nf` files
-   - Serve `/api/auth/*`, `/api/chat`, `/api/conversations/*`
-4. `frontend` (static HTML/JS) shows the login page, the chat UI and a ChatGPT-style sidebar with conversation history.
-5. `caddy` routes requests:
-   - `/api/*` → `backend:8080`
-   - `/*`     → `frontend:8080`
+The container layout is intentionally minimal (3 services + 1 init container):
 
-## Updating the ngsmanager framework
+1. `ngsmanager-init` clones [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) into a Docker volume on first start.
+2. `postgres` stores users, conversations and messages.
+3. `backend` (FastAPI + LangGraph) reads the framework from `/ngsmanager`, builds the RAG knowledge base on first start, and serves `/api/auth/*`, `/api/chat`, `/api/conversations/*`.
+4. `caddy` is the single entry point: serves the static frontend (HTML/JS/CSS) from `/srv` via `file_server` + `templates`, and reverse-proxies `/api/*` to the backend.
+
+```
+                  ┌──────────┐
+   browser   ───▶ │  caddy   │  serves frontend at /llm/* (file_server)
+                  │  :9000   │  proxies /llm/api/* → backend:8080
+                  └────┬─────┘
+                       │
+              ┌────────┴────────┐
+              ▼                 ▼
+        ┌──────────┐      ┌──────────┐
+        │ backend  │      │ postgres │
+        │  :8080   │◀────▶│  :5432   │
+        └──────────┘      └──────────┘
+              │
+              │ reads (read-only)
+              ▼
+        ┌──────────────┐
+        │ /ngsmanager  │  (Docker volume, cloned by ngsmanager-init)
+        └──────────────┘
+```
+
+## LLM architecture
+
+The "AI" of the platform is a **LangGraph state machine** with grounded RAG.
+The whole point is to make it impossible for the LLM to hallucinate tools
+that don't exist in the cohesive-ngsmanager framework.
+
+### The agent graph
+
+```
+         ┌──────────────┐
+         │   /api/chat  │
+         └──────┬───────┘
+                ▼
+       ┌──────────────────┐
+       │ planner subgraph │
+       │  ┌────────────┐  │
+       │  │ consultant │  │  ← natural-language conversation,
+       │  └────────────┘  │    builds the design plan with
+       │  ┌────────────┐  │    RAG-validated component IDs
+       │  │  trim msgs │  │
+       │  └────────────┘  │
+       └────────┬─────────┘
+                │ status == APPROVED?
+        ┌───────┴───────┐
+        │ no            │ yes
+        ▼               ▼
+       END    ┌─────────────────────┐
+              │ executor subgraph   │
+              │  ┌─────────────┐    │
+              │  │  hydrator   │    │  ← injects the actual .nf source
+              │  └──────┬──────┘    │    code for every selected step
+              │         ▼           │
+              │  ┌─────────────┐    │
+              │  │  architect  │◀──┐│  ← generates a strict Pydantic AST
+              │  └──────┬──────┘   ││    (NextflowPipelineAST)
+              │         │ valid?   ││
+              │      ┌──┴──┐       ││
+              │      │ no  │ yes   ││
+              │      ▼     │       ││
+              │   ┌──────┐ │       ││
+              │   │repair├─┘       ││  ← max 8 retries with the
+              │   └──┬───┘         ││    validation error injected
+              │      │             ││
+              │      └─────────────┘│
+              │         ▼           │
+              │  ┌─────────────┐    │
+              │  │  renderer   │    │  ← AST → Nextflow Groovy via Jinja2
+              │  └──────┬──────┘    │
+              │         ▼           │
+              │  ┌─────────────┐    │
+              │  │   diagram   │    │  ← AST → Mermaid (deterministic)
+              │  └─────────────┘    │
+              └─────────────────────┘
+                         │
+                         ▼
+                 nextflow_code, mermaid_code, ast_json
+```
+
+Source: `backend/app/services/graph.py` and `backend/app/services/agents.py`.
+
+### Models
+
+| Role | Model | Provider |
+|---|---|---|
+| Main LLM (consultant + architect) | `labs-devstral-small-2512` | Mistral (`langchain-mistralai`) |
+| Embeddings (RAG semantic search) | `Qwen/Qwen3-Embedding-0.6B` | local (`langchain-huggingface`) |
+| Judge LLM (eval / `test_consultant_rag.py` only) | `llama-3.3-70b-versatile` | Groq (optional, only for evaluation) |
+
+Configured in `backend/app/services/llm.py` and `backend/app/core/config.py`.
+The Mistral key is **required** at runtime; the Groq key is only needed for the evaluation suite.
+
+### Knowledge base
+
+Lives in `backend/data/`:
+
+| File / dir | What it is | Generated by |
+|---|---|---|
+| `data/catalog/catalog_part1_components.json` | Per-step metadata: tool, domain, inputs, outputs, keywords | `sync_framework.py` |
+| `data/catalog/catalog_part2_templates.json` | Per-pipeline-template metadata + `logic_flow` | `sync_framework.py` |
+| `data/catalog/catalog_part3_resources.json` | Helper Groovy functions extracted from the framework | `sync_framework.py` |
+| `data/catalog/tool_whitelist.json` | Flat allow-list of every tool the LLM is allowed to mention | `sync_framework.py` |
+| `data/code_store_hollow.jsonl` | The **actual** Groovy source of every step / template, indexed by ID | `sync_framework.py` |
+| `data/faiss_index/` | Binary FAISS index built from the catalog text, used for semantic search | `rebuild_faiss_index.py` |
+
+The two-stage retrieval inside `backend/app/services/tools.py` first does
+**keyword + metadata scoring** over the JSON catalogs, then falls back to a
+**FAISS semantic search** with relative-distance pruning, and finally
+**hydrates** every selected ID with the verbatim Groovy source from
+`code_store_hollow.jsonl` so the architect LLM never has to invent tool flags.
+
+A diagram of the same flow lives in [`backend/data/README.md`](backend/data/README.md).
+
+## Updating the framework and rebuilding the knowledge base
+
+The catalog and FAISS index are derived artifacts that must be regenerated
+whenever the upstream `cohesive-ngsmanager` framework changes (new step,
+renamed module, updated params, …).
+
+### Update only the framework checkout
 
 ```bash
-docker compose run --rm ngsmanager-init
+docker compose run --rm ngsmanager-init   # git pull inside the volume
 docker compose restart backend
+```
+
+This refreshes the source files under `/ngsmanager` but **does not** rebuild
+the catalog or the embeddings — the backend keeps using the previously
+generated `data/catalog/*.json` and `data/faiss_index/`.
+
+### Full sync (catalog + whitelist + FAISS)
+
+When the framework changed in a meaningful way, run the full sync. It walks
+`/ngsmanager`, regenerates all catalog files, the tool whitelist, and the
+FAISS index:
+
+```bash
+# inside the backend container, with the framework already mounted at /ngsmanager
+docker compose exec backend python sync_framework.py
+
+# or, if you want to skip the (slower) FAISS rebuild during iteration:
+docker compose exec backend python sync_framework.py --skip-faiss
+
+# from the host, pointing at any local checkout:
+docker compose exec backend python sync_framework.py --ngsmanager-dir /ngsmanager
+```
+
+After it finishes, **restart the backend** so the new index is loaded into memory:
+
+```bash
+docker compose restart backend
+```
+
+### Only rebuild the FAISS index
+
+If you tweaked one of the `catalog_part*.json` files by hand and just want
+to refresh the embeddings (no framework re-scan):
+
+```bash
+docker compose exec backend python rebuild_faiss_index.py
+docker compose restart backend
+```
+
+The first run downloads the `Qwen/Qwen3-Embedding-0.6B` model (~1.2 GB)
+into `HF_HOME=/tmp/huggingface`, so it takes a couple of minutes; subsequent
+rebuilds reuse the cached model and finish in seconds.
+
+## Testing the LLM pipeline
+
+The backend ships with several test/eval scripts under `backend/`. They are
+**not** wired into the runtime container and use `subprocess` against the
+real Nextflow CLI for validation, so they're meant to be run manually
+(typically from a host with `nextflow` installed and the framework cloned
+side-by-side).
+
+### Quick smoke test of the LangGraph state machine
+
+`backend/test_graph.py` runs a single in-process invocation, useful to
+verify the graph compiles and can produce a Nextflow string:
+
+```bash
+docker compose exec backend python test_graph.py
+```
+
+### Mermaid renderer unit tests
+
+`backend/test_mermaid.py` validates the deterministic AST → Mermaid renderer
+in isolation (no LLM call, no Mistral key required):
+
+```bash
+docker compose exec backend python test_mermaid.py
+```
+
+### End-to-end pipeline validation against the real framework
+
+`backend/test_e2e.py` is the heavy one: it sends a curated list of
+user prompts (`L1` simple → `L4` complex) to `POST /api/chat`, extracts the
+generated `.nf` code, drops it into the framework's `pipelines/` dir as
+`_llm_e2e_test.nf`, and runs `nextflow -preview` on it to make sure the
+generated workflow is syntactically and semantically valid against the
+actual cohesive-ngsmanager modules.
+
+```bash
+# all scenarios
+python backend/test_e2e.py
+
+# only the L1 + L2 levels
+python backend/test_e2e.py --levels 1 2
+
+# single ad-hoc prompt
+python backend/test_e2e.py --prompt "Trim Illumina paired-end reads with fastp"
+```
+
+Requires:
+- The backend reachable at `http://localhost:8080` (override with `API_URL`)
+- A working `nextflow` binary on the host
+- The `cohesive-ngsmanager` repo cloned locally and pointed at via `NGSMANAGER_DIR`
+
+### LLM-as-judge academic evaluation
+
+`backend/test_consultant_rag.py` uses **pytest** plus a Groq-hosted Llama-3.3
+"strict academic reviewer" to score the consultant, architect and diagram
+nodes on faithfulness, relevance, syntax, logic and mapping. Needs both
+`MISTRAL_API_KEY` and `GROQ_API_KEY` in the environment:
+
+```bash
+docker compose exec -e GROQ_API_KEY=... backend pytest -v test_consultant_rag.py
+```
+
+### Full evaluation report
+
+`backend/evaluate_llm.py` is the most exhaustive: it walks every prompt
+scenario, validates every generated pipeline against a hard-coded allow-list
+of valid framework components, and writes a full markdown report.
+
+```bash
+docker compose exec backend python evaluate_llm.py --output report.md
+```
+
+### Single-pipeline validator
+
+`backend/validate_pipeline.py` takes one `.nf` file (or one prompt) and runs
+just the `nextflow -preview` validation step against the framework. Handy
+when iterating on a single failing scenario:
+
+```bash
+python backend/validate_pipeline.py path/to/pipeline.nf
 ```
 
 ## Scripts
 
-- `scripts/up.sh` — render Caddyfile and start the stack
-- `scripts/render-caddyfile.sh` — generate the Caddyfile from `.env`
-- `scripts/check-secrets.sh` — secret scanner, run before `git push`
+### Repo-level (`scripts/`)
+- `up.sh` — render Caddyfile from `.env` and `docker compose up -d`
+- `render-caddyfile.sh` — generate `caddy/Caddyfile` from the env vars
+- `check-secrets.sh` — secret scanner, runs as a git pre-push hook
 
-Install `check-secrets.sh` as a pre-push hook:
+Install the pre-push hook:
 ```bash
 ln -sf ../../scripts/check-secrets.sh .git/hooks/pre-push
 ```
+
+### Backend-level (`backend/`, run inside the container)
+- `sync_framework.py` — full sync from cohesive-ngsmanager: code store, catalog, whitelist, FAISS
+- `rebuild_faiss_index.py` — only rebuild the FAISS index from the existing catalog JSONs
+- `generate_catalog.py` — only regenerate the catalog (sub-step of `sync_framework.py`)
+- `test_graph.py` — quick LangGraph smoke test
+- `test_mermaid.py` — unit tests for the AST → Mermaid renderer
+- `test_e2e.py` — end-to-end pipeline generation + `nextflow -preview` validation
+- `test_consultant_rag.py` — pytest + Groq-judged academic evaluation
+- `evaluate_llm.py` — full markdown evaluation report
+- `validate_pipeline.py` — single-`.nf`/single-prompt validator
+- `generate_report.py` — assemble a report from previously cached results
+- `generate_catalog.py` — regenerate catalog files from the framework
 
 ## Configuration reference
 
