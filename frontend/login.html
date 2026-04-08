@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — IZS Bioinformatics</title>
+
+    <!-- See index.html for the BASE_PATH explanation. -->
+    <base href="__BASE_PATH__">
+    <script>
+        window.IZS_BASE_PATH = "__BASE_PATH__".replace(/\/$/, '');
+    </script>
+
+    <title>Login — Cohesive LLM</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -104,6 +111,10 @@
     </div>
 
     <script>
+        const BASE = window.IZS_BASE_PATH || '';
+        const API_BASE = BASE + '/api';
+        const APP_HOME = BASE + '/';
+
         const form = document.getElementById('loginForm');
         const errorBox = document.getElementById('error');
         const submitBtn = document.getElementById('submitBtn');
@@ -118,8 +129,8 @@
         }
 
         // If already authenticated, skip login
-        fetch('/api/auth/me', { credentials: 'same-origin' })
-            .then(r => { if (r.ok) window.location.href = '/'; })
+        fetch(API_BASE + '/auth/me', { credentials: 'same-origin' })
+            .then(r => { if (r.ok) window.location.href = APP_HOME; })
             .catch(() => {});
 
         form.addEventListener('submit', async (e) => {
@@ -132,7 +143,7 @@
             const password = document.getElementById('password').value;
 
             try {
-                const res = await fetch('/api/auth/login', {
+                const res = await fetch(API_BASE + '/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
@@ -145,7 +156,7 @@
                     submitBtn.textContent = 'Sign in';
                     return;
                 }
-                window.location.href = '/';
+                window.location.href = APP_HOME;
             } catch (err) {
                 showError('Network error: ' + err.message);
                 submitBtn.disabled = false;

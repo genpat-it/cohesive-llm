@@ -1,4 +1,4 @@
-import { sendChatMessage, checkSession, logout } from './api.js?v=8';
+import { sendChatMessage, checkSession, logout } from './api.js?v=9';
 import { initChatUi } from './chat.js?v=8';
 import { initResultsUi } from './results.js?v=4';
 import { initSidebar } from './sidebar.js?v=2';

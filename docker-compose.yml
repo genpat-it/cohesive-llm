@@ -96,6 +96,10 @@ services:
     build: ./frontend
     container_name: izs_frontend
     restart: unless-stopped
+    environment:
+      # Sub-path the app is exposed under (must end with a slash).
+      # "/" → site root (dev). "/llm/" → behind a reverse proxy at /llm.
+      - BASE_PATH=${BASE_PATH:-/}
     expose:
       - "8080"
 

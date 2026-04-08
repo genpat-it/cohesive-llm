@@ -10,16 +10,13 @@ COPY --chown=nginx:nginx js /usr/share/nginx/html/js
 COPY --chown=nginx:nginx logo_izs.png /usr/share/nginx/html/
 COPY --chown=nginx:nginx logo-izs-blue.jpg /usr/share/nginx/html/
 
-# Minimal nginx config: serve files, fall back to index.html.
-# Unprivileged image listens on 8080 by default (cannot bind <1024 as non-root).
-USER root
-RUN echo 'server { \
-    listen 8080; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { try_files $uri $uri/ /index.html; } \
-}' > /etc/nginx/conf.d/default.conf
-USER nginx
+# Use the nginx-unprivileged template mechanism: any file in
+# /etc/nginx/templates/*.template is processed with envsubst at container
+# start, with output written to /etc/nginx/conf.d/<name>. This lets us inject
+# the BASE_PATH env var into the sub_filter directive.
+COPY --chown=nginx:nginx nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Default to site root; override at runtime by setting BASE_PATH=/llm/ etc.
+ENV BASE_PATH=/
 
 EXPOSE 8080

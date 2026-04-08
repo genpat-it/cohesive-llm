@@ -129,9 +129,16 @@ CADDY_HOST_PORT=9000          # host port Caddy listens on (HTTP)
 TRUSTED_PROXIES=10.0.0.0/8    # CIDR of the upstream proxy network
 CORS_ORIGINS=https://cohesive.izs.it
 COOKIE_SECURE=true            # cookie sent only over HTTPS
-COOKIE_PATH=/llm              # scope cookie to the sub-path
+COOKIE_PATH=/llm              # scope the session cookie to the sub-path
 COOKIE_SAMESITE=lax
+BASE_PATH=/llm/               # MUST end with a trailing slash
 ```
+
+`BASE_PATH` is the only thing that makes the app sub-path-aware: the
+frontend nginx container substitutes the literal `__BASE_PATH__` placeholder
+in `index.html` and `login.html` at request time, so all relative URLs and
+fetch calls resolve under `/llm/...`. Set it once in `.env`, restart the
+frontend, done. No code changes.
 
 Then ask the sysadmins to configure the upstream proxy to:
 
@@ -210,5 +217,6 @@ ln -sf ../../scripts/check-secrets.sh .git/hooks/pre-push
 | `COOKIE_PATH` | `/` | Set to `/llm` if behind a path-prefix proxy |
 | `COOKIE_SAMESITE` | `lax` | `lax` / `strict` / `none` |
 | `LOGIN_RATE_LIMIT` | `5/minute` | Per-IP rate limit on `/auth/login` |
+| `BASE_PATH` | `/` | Sub-path the app is served under (must end with `/`) |
 
 Full reference with comments: [`.env.example`](.env.example)

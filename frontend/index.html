@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IZS BIOINFORMATICS</title>
+
+    <!-- Base path for the app. The literal string __BASE_PATH__ is replaced
+         by nginx (sub_filter) at request time with the BASE_PATH env var.
+         BASE_PATH must end with a slash, e.g. "/" for site root or "/llm/"
+         when the app lives behind a reverse-proxy sub-path. -->
+    <base href="__BASE_PATH__">
+    <script>
+        // Same value, without trailing slash, exposed to ES modules.
+        window.IZS_BASE_PATH = "__BASE_PATH__".replace(/\/$/, '');
+    </script>
+
+    <title>Cohesive LLM</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@300;400&display=swap" rel="stylesheet">
     
@@ -173,6 +184,6 @@
     </div>
 
     <!-- Switch to ES module entrypoint -->
-    <script type="module" src="js/main.js?v=8"></script>
+    <script type="module" src="js/main.js?v=9"></script>
 </body>
 </html>

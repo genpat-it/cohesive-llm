@@ -3,7 +3,7 @@ import {
     getConversation,
     deleteConversation,
     renameConversation,
-} from './api.js?v=8';
+} from './api.js?v=9';
 import { confirmDialog, promptDialog } from './modal.js?v=2';
 
 export function initSidebar({ onSelect, onNewChat }) {

@@ -1,9 +1,13 @@
-// API base path. Same-origin via reverse proxy by default.
-// Override at runtime with window.IZS_API_BASE if needed.
-const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || '/api';
+// Base path is set by the inline script in <head> based on window.location.
+// Empty string at site root, "/llm" when served under a sub-path proxy, etc.
+const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH) || '';
+
+// API base path. Defaults to "<base>/api". Override at runtime by setting
+// window.IZS_API_BASE before the module loads.
+const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || (BASE_PATH + '/api');
 
 function redirectToLogin() {
-    window.location.href = '/login.html';
+    window.location.href = BASE_PATH + '/login.html';
 }
 
 async function apiFetch(path, options = {}) {
