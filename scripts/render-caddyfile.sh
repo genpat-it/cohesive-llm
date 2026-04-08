@@ -25,9 +25,15 @@ TRUSTED_PROXIES="${TRUSTED_PROXIES:-private_ranges}"
 # --- HTTPS_MODE -> Caddy directives ---
 case "$HTTPS_MODE" in
     off)
-        # HTTP only on port 80
-        SITE_ADDRESS="http://${DOMAIN}"
-        [ "$DOMAIN" = "localhost" ] && SITE_ADDRESS=":80"
+        # HTTP only.
+        # Without auth, accept any Host header (more flexible for port forwarding,
+        # different DNS aliases, behind reverse proxies that rewrite Host, etc).
+        # With auth, use the specific domain (Authelia needs it for cookies).
+        if [ "$AUTH_MODE" = "none" ] || [ "$DOMAIN" = "localhost" ]; then
+            SITE_ADDRESS=":80"
+        else
+            SITE_ADDRESS="http://${DOMAIN}"
+        fi
         TLS_DIRECTIVE=""
         CADDY_AUTO_HTTPS="off"
         ;;
