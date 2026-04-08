@@ -128,8 +128,9 @@
             errorBox.classList.remove('visible');
         }
 
-        // If already authenticated, skip login
-        fetch(API_BASE + '/auth/me', { credentials: 'same-origin' })
+        // If already authenticated, skip login. cache:no-store avoids the
+        // browser reusing a stale 401 from a previous visit.
+        fetch(API_BASE + '/auth/me', { credentials: 'same-origin', cache: 'no-store' })
             .then(r => { if (r.ok) window.location.href = APP_HOME; })
             .catch(() => {});
 

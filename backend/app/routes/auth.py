@@ -80,5 +80,10 @@ def logout(response: Response):
 
 
 @router.get("/me", response_model=UserResponse)
-def me(user: User = Depends(get_current_user)):
+def me(response: Response, user: User = Depends(get_current_user)):
+    # /auth/me is the auth check the frontend hits on every page load.
+    # Browsers can otherwise cache its response and reuse a stale 401 from
+    # the previous visit, making login appear to "fail the first time".
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
     return user

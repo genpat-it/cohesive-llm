@@ -24,7 +24,13 @@ async function apiFetch(path, options = {}) {
 
 export async function checkSession() {
     try {
-        const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'same-origin' });
+        const res = await fetch(`${API_BASE}/auth/me`, {
+            credentials: 'same-origin',
+            // Never let the browser cache the auth check — otherwise a stale
+            // 401 from before the login flow can make login appear to fail
+            // on the first try.
+            cache: 'no-store',
+        });
         if (!res.ok) {
             redirectToLogin();
             return null;
