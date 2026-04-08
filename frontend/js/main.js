@@ -1,7 +1,7 @@
-import { sendChatMessage, checkSession, logout } from './api.js?v=7';
-import { initChatUi } from './chat.js?v=7';
+import { sendChatMessage, checkSession, logout } from './api.js?v=8';
+import { initChatUi } from './chat.js?v=8';
 import { initResultsUi } from './results.js?v=4';
-import { initSidebar } from './sidebar.js?v=1';
+import { initSidebar } from './sidebar.js?v=2';
 
 // Auth guard: redirect to /login.html if no valid session.
 // The <html> element has the `auth-pending` class set very early in <head>,
@@ -115,7 +115,13 @@ const sidebar = initSidebar({
     onSelect: (conv) => {
         currentSessionId = conv.session_id;
         currentConversationId = conv.id;
-        chatUi.loadMessages(conv.messages || []);
+        chatUi.loadMessages(conv.messages || [], {
+            onOpenResults: (msg) => {
+                if (msg.nextflow_code) resultsUi.renderNextflow(msg.nextflow_code);
+                if (msg.mermaid_code) resultsUi.renderMermaid(msg.mermaid_code);
+                resultsContainer.classList.add('open');
+            },
+        });
         chatUi.setStatus('active', 'Loaded');
         resultsContainer.classList.remove('open');
     },

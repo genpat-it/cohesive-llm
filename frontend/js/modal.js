@@ -1,5 +1,6 @@
-// Lightweight stylized confirm/alert modal — drop-in replacement for window.confirm.
-// Returns a promise that resolves to true (confirmed) or false (cancelled).
+// Lightweight stylized confirm/prompt modals — drop-in replacements for window.confirm/prompt.
+// confirmDialog → resolves to true/false
+// promptDialog  → resolves to the entered string, or null if cancelled
 
 let modalRoot = null;
 
@@ -77,5 +78,91 @@ export function confirmDialog({
         // Focus the safer (cancel) button by default for destructive ops,
         // the confirm one otherwise.
         setTimeout(() => (danger ? cancelBtn : confirmBtn).focus(), 50);
+    });
+}
+
+export function promptDialog({
+    title = 'Enter value',
+    message = '',
+    placeholder = '',
+    initialValue = '',
+    confirmText = 'Save',
+    cancelText = 'Cancel',
+    icon = null,
+    maxLength = 255,
+} = {}) {
+    return new Promise((resolve) => {
+        const root = ensureRoot();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+
+        const card = document.createElement('div');
+        card.className = 'modal-card';
+
+        const iconHtml = icon
+            ? `<div class="modal-icon"><i class="fas ${icon}"></i></div>`
+            : '';
+        const messageHtml = message ? `<p class="modal-message">${message}</p>` : '';
+
+        card.innerHTML = `
+            ${iconHtml}
+            <div class="modal-body">
+                <h3 class="modal-title">${title}</h3>
+                ${messageHtml}
+                <input type="text" class="modal-input" maxlength="${maxLength}" />
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" type="button">${cancelText}</button>
+                <button class="modal-btn modal-btn-primary" type="button">${confirmText}</button>
+            </div>
+        `;
+
+        overlay.appendChild(card);
+        root.appendChild(overlay);
+
+        const input = card.querySelector('.modal-input');
+        input.value = initialValue;
+        input.placeholder = placeholder;
+
+        requestAnimationFrame(() => overlay.classList.add('visible'));
+
+        const cancelBtn = card.querySelector('.modal-btn-cancel');
+        const confirmBtn = card.querySelector('.modal-btn-primary');
+
+        const cleanup = (result) => {
+            overlay.classList.remove('visible');
+            setTimeout(() => {
+                overlay.remove();
+                document.removeEventListener('keydown', onKey);
+            }, 180);
+            resolve(result);
+        };
+
+        const submit = () => {
+            const v = input.value.trim();
+            if (!v) {
+                input.focus();
+                return;
+            }
+            cleanup(v);
+        };
+
+        const onKey = (e) => {
+            if (e.key === 'Escape') cleanup(null);
+            if (e.key === 'Enter' && document.activeElement === input) submit();
+        };
+
+        cancelBtn.addEventListener('click', () => cleanup(null));
+        confirmBtn.addEventListener('click', submit);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) cleanup(null);
+        });
+        document.addEventListener('keydown', onKey);
+
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 80);
     });
 }

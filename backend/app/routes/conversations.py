@@ -1,9 +1,9 @@
 """Conversation history endpoints."""
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -19,9 +19,16 @@ class MessageOut(BaseModel):
     role: str
     content: str
     created_at: datetime
+    nextflow_code: Optional[str] = None
+    mermaid_code: Optional[str] = None
+    ast_json: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
+
+
+class ConversationRename(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
 
 
 class ConversationOut(BaseModel):
@@ -69,6 +76,27 @@ def get_conversation(
     return conv
 
 
+@router.patch("/{conversation_id}", response_model=ConversationOut)
+def rename_conversation(
+    conversation_id: int,
+    payload: ConversationRename,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    conv = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id, Conversation.user_id == user.id)
+        .first()
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv.title = payload.title.strip()[:255]
+    conv.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(conv)
+    return conv
+
+
 @router.delete("/{conversation_id}")
 def delete_conversation(
     conversation_id: int,
@@ -106,8 +134,23 @@ def get_or_create_conversation(
     return conv
 
 
-def append_message(db: Session, conversation: Conversation, role: str, content: str) -> Message:
-    msg = Message(conversation_id=conversation.id, role=role, content=content)
+def append_message(
+    db: Session,
+    conversation: Conversation,
+    role: str,
+    content: str,
+    nextflow_code: Optional[str] = None,
+    mermaid_code: Optional[str] = None,
+    ast_json: Optional[Dict[str, Any]] = None,
+) -> Message:
+    msg = Message(
+        conversation_id=conversation.id,
+        role=role,
+        content=content,
+        nextflow_code=nextflow_code,
+        mermaid_code=mermaid_code,
+        ast_json=ast_json,
+    )
     db.add(msg)
     conversation.updated_at = datetime.utcnow()
     db.commit()

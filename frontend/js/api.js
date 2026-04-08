@@ -63,6 +63,16 @@ export async function deleteConversation(id) {
     return res.ok;
 }
 
+export async function renameConversation(id, title) {
+    const res = await apiFetch(`/conversations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+}
+
 export async function sendChatMessage(sessionId, message) {
     try {
         const payload = {

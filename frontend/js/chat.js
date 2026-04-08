@@ -223,13 +223,22 @@ export function initChatUi(onSendMessage) {
         }
     }
 
-    function loadMessages(messages) {
+    function loadMessages(messages, opts = {}) {
         chatHistory.innerHTML = '';
         for (const m of messages) {
             if (m.role === 'user') {
                 appendUserMessage(m.content);
             } else {
-                appendAiMessage(m.content);
+                const options = {};
+                // Reattach the "Open Pipeline Result" button on assistant
+                // messages that produced pipeline artifacts.
+                if (m.nextflow_code || m.mermaid_code) {
+                    options.openResultButton = {
+                        text: 'Open Pipeline Result',
+                        onClick: () => opts.onOpenResults && opts.onOpenResults(m),
+                    };
+                }
+                appendAiMessage(m.content, options);
             }
         }
         scrollToBottom();

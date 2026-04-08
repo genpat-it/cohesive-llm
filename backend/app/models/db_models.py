@@ -1,6 +1,7 @@
 """Database models: User, Conversation, Message."""
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -50,5 +51,12 @@ class Message(Base):
     role = Column(String(16), nullable=False)  # "user" | "assistant"
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Optional pipeline artifacts attached to assistant messages produced when
+    # the consultant returned status APPROVED. Persisted so the "Open Pipeline
+    # Result" button keeps working when the conversation is reloaded later.
+    nextflow_code = Column(Text, nullable=True)
+    mermaid_code = Column(Text, nullable=True)
+    ast_json = Column(JSONB, nullable=True)
 
     conversation = relationship("Conversation", back_populates="messages")

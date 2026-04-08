@@ -43,8 +43,22 @@ class ChatResponse(BaseModel):
 
 # --- 2. STARTUP HELPERS ---
 def init_db_and_seed():
-    """Create tables and seed the demo user (idempotent)."""
+    """Create tables, run small in-place migrations and seed the demo user."""
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight migrations (idempotent). Used instead of Alembic because the
+    # schema is small and only ever grows by adding nullable columns.
+    from sqlalchemy import text as _sql_text
+    with engine.begin() as conn:
+        conn.execute(_sql_text(
+            "ALTER TABLE messages ADD COLUMN IF NOT EXISTS nextflow_code TEXT"
+        ))
+        conn.execute(_sql_text(
+            "ALTER TABLE messages ADD COLUMN IF NOT EXISTS mermaid_code TEXT"
+        ))
+        conn.execute(_sql_text(
+            "ALTER TABLE messages ADD COLUMN IF NOT EXISTS ast_json JSONB"
+        ))
 
     from app.db import SessionLocal
     db: Session = SessionLocal()
@@ -163,8 +177,13 @@ async def chat_with_agent(
         ast_json = result.get("ast_json")
         mermaid = result.get("mermaid_code")
 
-        # Persist assistant reply
-        append_message(db, conv, "assistant", ai_reply)
+        # Persist assistant reply (with pipeline artifacts when available)
+        append_message(
+            db, conv, "assistant", ai_reply,
+            nextflow_code=nf_code,
+            mermaid_code=mermaid,
+            ast_json=ast_json,
+        )
 
         return ChatResponse(
             status=status,

@@ -2,8 +2,9 @@ import {
     listConversations,
     getConversation,
     deleteConversation,
-} from './api.js?v=7';
-import { confirmDialog } from './modal.js?v=1';
+    renameConversation,
+} from './api.js?v=8';
+import { confirmDialog, promptDialog } from './modal.js?v=2';
 
 export function initSidebar({ onSelect, onNewChat }) {
     const listEl = document.getElementById('conversationsList');
@@ -67,8 +68,31 @@ export function initSidebar({ onSelect, onNewChat }) {
             title.textContent = conv.title || 'Untitled chat';
             title.title = title.textContent;
 
+            const actions = document.createElement('div');
+            actions.className = 'conv-actions';
+
+            const rename = document.createElement('button');
+            rename.className = 'conv-action-btn rename';
+            rename.title = 'Rename conversation';
+            rename.innerHTML = '<i class="fas fa-pen"></i>';
+            rename.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const newTitle = await promptDialog({
+                    title: 'Rename conversation',
+                    message: 'Enter a new label for this chat:',
+                    placeholder: 'My pipeline draft',
+                    initialValue: conv.title || '',
+                    confirmText: 'Save',
+                    icon: 'fa-pen',
+                    maxLength: 255,
+                });
+                if (!newTitle) return;
+                const updated = await renameConversation(conv.id, newTitle);
+                if (updated) await refresh();
+            });
+
             const del = document.createElement('button');
-            del.className = 'conv-delete';
+            del.className = 'conv-action-btn delete';
             del.title = 'Delete conversation';
             del.innerHTML = '<i class="fas fa-trash"></i>';
             del.addEventListener('click', async (e) => {
@@ -92,9 +116,12 @@ export function initSidebar({ onSelect, onNewChat }) {
                 }
             });
 
+            actions.appendChild(rename);
+            actions.appendChild(del);
+
             item.appendChild(icon);
             item.appendChild(title);
-            item.appendChild(del);
+            item.appendChild(actions);
 
             item.addEventListener('click', async () => {
                 try {
