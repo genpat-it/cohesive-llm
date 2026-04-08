@@ -1,6 +1,7 @@
 # Cohesive LLM — IZS Bioinformatics AI Platform
 
 [![Status](https://img.shields.io/badge/status-under%20development-orange?style=flat-square)](#)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.0-1c3c3c?style=flat-square)](https://langchain-ai.github.io/langgraph/)
@@ -20,7 +21,10 @@ Self-hostable platform that lets bioinformaticians describe a sequencing analysi
 
 ## Credits
 
-This platform is based on the work of three master students at IZS:
+This platform was started as a master thesis project by three students of the
+[**EDISS — European Master in Digital Innovation for Sustainable Society**](https://www.master-ediss.eu/),
+during their internship at the **Istituto Zooprofilattico Sperimentale dell'Abruzzo
+e del Molise (IZS Teramo)**:
 
 - **Martinus Grady** — [@mgradyn](https://github.com/mgradyn)
 - **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan)
