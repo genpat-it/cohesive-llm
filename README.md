@@ -1,5 +1,16 @@
 # Cohesive LLM — IZS Bioinformatics AI Platform
 
+[![Status](https://img.shields.io/badge/status-under%20development-orange?style=flat-square)](#)
+[![Python](https://img.shields.io/badge/python-3.12-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.0-1c3c3c?style=flat-square)](https://langchain-ai.github.io/langgraph/)
+[![Mistral](https://img.shields.io/badge/LLM-Mistral-ff7000?style=flat-square)](https://mistral.ai/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Caddy](https://img.shields.io/badge/Caddy-2-1f88c0?style=flat-square&logo=caddy&logoColor=white)](https://caddyserver.com/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![Last commit](https://img.shields.io/github/last-commit/genpat-it/cohesive-llm?style=flat-square)](https://github.com/genpat-it/cohesive-llm/commits/main)
+[![Issues](https://img.shields.io/github/issues/genpat-it/cohesive-llm?style=flat-square)](https://github.com/genpat-it/cohesive-llm/issues)
+
 > ⚠️ **Status: under active development.** APIs, the database schema, the
 > docker-compose layout and the configuration variables can all change between
 > commits without notice. Do **not** use this in production yet — it has no
