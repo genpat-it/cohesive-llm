@@ -23,8 +23,8 @@ Self-hostable platform that lets bioinformaticians describe a sequencing analysi
 
 This platform was started as a master thesis project by three students of the
 [**EDISS — European Master in Digital Innovation for Sustainable Society**](https://www.master-ediss.eu/),
-during their internship at the **Istituto Zooprofilattico Sperimentale dell'Abruzzo
-e del Molise (IZS Teramo)**:
+carried out remotely in collaboration with the **Istituto Zooprofilattico
+Sperimentale dell'Abruzzo e del Molise "G. Caporale" (IZS Teramo)**:
 
 - **Martinus Grady** — [@mgradyn](https://github.com/mgradyn)
 - **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan)
