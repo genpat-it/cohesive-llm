@@ -94,41 +94,36 @@ document.getElementById('paletteSearch').addEventListener('input', (e) => {
     });
 });
 
-// --- Build node HTML with named ports ---
+// --- Build node HTML ---
 function buildNodeHtml(comp) {
     const toolName = comp.tool || comp.id.split('__').pop();
     const domainShort = (comp.domain || '').split(' ')[0] || 'Step';
-    const inputs = comp.inputs || [];
-    const outputs = comp.outputs || [];
-
-    let inputLabels = '';
-    if (inputs.length > 0) {
-        inputLabels = inputs.map((name, i) =>
-            `<div class="port-label port-in" style="top:${30 + i * 22}px">${name}</div>`
-        ).join('');
-    } else {
-        inputLabels = '<div class="port-label port-in" style="top:30px">in</div>';
-    }
-
-    let outputLabels = '';
-    if (outputs.length > 0) {
-        outputLabels = outputs.map((name, i) => {
-            const short = name.includes('.') ? name.split('.').pop() : name;
-            return `<div class="port-label port-out" style="top:${30 + i * 22}px">${short}</div>`;
-        }).join('');
-    } else {
-        outputLabels = '<div class="port-label port-out" style="top:30px">out</div>';
-    }
 
     return `
         <div class="node-content">
-            ${inputLabels}
-            ${outputLabels}
             <div class="node-header">${domainShort}</div>
             <div class="node-title">${toolName}</div>
             <div class="node-tool">${comp.id}</div>
         </div>
     `;
+}
+
+// --- Label Drawflow input/output dots after node is added ---
+function labelNodePorts(nodeId, comp) {
+    const nodeEl = drawflowEl.querySelector(`#node-${nodeId}`);
+    if (!nodeEl) return;
+
+    const inputs = comp.inputs || [];
+    const outputs = comp.outputs || [];
+
+    nodeEl.querySelectorAll('.input').forEach((el, i) => {
+        el.setAttribute('data-label', inputs[i] || 'in');
+    });
+    nodeEl.querySelectorAll('.output').forEach((el, i) => {
+        const name = outputs[i] || 'out';
+        const short = name.includes('.') ? name.split('.').pop() : name;
+        el.setAttribute('data-label', short);
+    });
 }
 
 // --- Drop on canvas ---
@@ -169,6 +164,9 @@ function addNodeToCanvas(comp, clientX, clientY) {
         outputs: comp.outputs || [],
     };
 
+    // Label the Drawflow dots
+    setTimeout(() => labelNodePorts(nodeId, comp), 0);
+
     updateNodeCount();
     return nodeId;
 }
@@ -178,6 +176,28 @@ function updateNodeCount() {
     const count = Object.keys(editor.export().drawflow.Home.data).length;
     document.getElementById('nodeCount').textContent = count;
 }
+
+// Double-click on connection to remove it
+drawflowEl.addEventListener('dblclick', (e) => {
+    const path = e.target.closest('.main-path');
+    if (path) {
+        const connEl = path.closest('.connection');
+        if (connEl) {
+            const classes = connEl.classList;
+            // Extract node_in/out and input/output from class names
+            let nodeOut, nodeIn, outputClass, inputClass;
+            classes.forEach(c => {
+                if (c.startsWith('node_in_node-')) nodeIn = c.replace('node_in_node-', '');
+                if (c.startsWith('node_out_node-')) nodeOut = c.replace('node_out_node-', '');
+                if (c.startsWith('output_')) outputClass = c;
+                if (c.startsWith('input_')) inputClass = c;
+            });
+            if (nodeOut && nodeIn && outputClass && inputClass) {
+                editor.removeSingleConnection(nodeOut, nodeIn, outputClass, inputClass);
+            }
+        }
+    }
+});
 
 editor.on('nodeRemoved', (id) => {
     delete nodeDataMap[id];
