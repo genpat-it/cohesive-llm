@@ -68,15 +68,19 @@ function renderPalette(catalog) {
                 : '<span style="color:#2563eb;">data</span>';
             const outputNames = outputs.slice(0, 3).map(n => n.includes('.') ? n.split('.').pop() : n).join(', ') || 'out';
 
+            const ghUrl = comp.file_path ? `${FRAMEWORK_REPO}/blob/main/${comp.file_path}` : '';
+            const ghLink = ghUrl ? `<a href="${ghUrl}" target="_blank" title="View source" onclick="event.stopPropagation();" style="color:var(--text-muted); font-size:11px; flex-shrink:0;"><i class="fab fa-github"></i></a>` : '';
+
             item.innerHTML = `
                 <i class="fas fa-cube"></i>
-                <div style="min-width:0;">
+                <div style="min-width:0; flex:1;">
                     <span class="tool-name">${comp.tool || comp.id.split('__').pop()}</span>
-                    <div style="font-size:10px; color:var(--text-muted); margin-top:1px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comp.id}">${comp.id}</div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:1px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comp.id}">${comp.id}</div>
                     <div style="font-size:9px; margin-top:2px;">
                         ${inputHtml} &rarr; <span style="color:#059669;">${outputNames}</span>
                     </div>
                 </div>
+                ${ghLink}
             `;
 
             item.addEventListener('dragstart', (e) => {

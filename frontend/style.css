@@ -201,6 +201,12 @@ body {
     gap: 2px;
 }
 
+.conv-preview {
+    overflow: hidden;
+    border-radius: 4px;
+    background: #f8fafc;
+}
+
 .conv-date {
     font-size: 11px;
     color: var(--text-muted);

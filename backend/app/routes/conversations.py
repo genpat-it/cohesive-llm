@@ -48,17 +48,37 @@ class ConversationDetail(ConversationOut):
 
 
 # --- Endpoints ---
-@router.get("", response_model=List[ConversationOut])
+@router.get("")
 def list_conversations(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return (
+    from app.models.db_models import Drawing
+    convs = (
         db.query(Conversation)
         .filter(Conversation.user_id == user.id)
         .order_by(Conversation.updated_at.desc())
         .all()
     )
+    result = []
+    for c in convs:
+        item = {
+            "id": c.id, "session_id": c.session_id, "title": c.title,
+            "drawing_id": c.drawing_id,
+            "created_at": c.created_at, "updated_at": c.updated_at,
+            "drawing_nodes": None,
+        }
+        if c.drawing_id:
+            d = db.query(Drawing).filter(Drawing.id == c.drawing_id).first()
+            if d and d.graph_json:
+                # Extract lightweight node list for thumbnail
+                ndm = d.graph_json.get("nodeDataMap", {})
+                item["drawing_nodes"] = [
+                    {"id": v.get("component_id", ""), "tool": v.get("tool", "")}
+                    for v in ndm.values()
+                ]
+        result.append(item)
+    return result
 
 
 @router.get("/{conversation_id}", response_model=ConversationDetail)

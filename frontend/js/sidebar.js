@@ -64,6 +64,37 @@ export function initSidebar({ onSelect, onNewChat }) {
         });
     }
 
+    function miniPipelineSvg(nodes) {
+        if (!nodes || nodes.length === 0) return '';
+        const W = 240, H = 36;
+        const boxW = 44, boxH = 20, gap = 6;
+        const totalW = nodes.length * (boxW + gap) - gap;
+        const startX = Math.max(4, (W - totalW) / 2);
+
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:36px;display:block;margin:4px 0;">`;
+
+        nodes.forEach((n, i) => {
+            const x = startX + i * (boxW + gap);
+            const y = (H - boxH) / 2;
+            const label = (n.tool || n.id.split('__').pop() || '?').slice(0, 7);
+
+            // Box
+            svg += `<rect x="${x}" y="${y}" width="${boxW}" height="${boxH}" rx="4" fill="#e6f2f8" stroke="#01679c" stroke-width="1"/>`;
+            // Label
+            svg += `<text x="${x + boxW/2}" y="${y + boxH/2 + 4}" text-anchor="middle" font-size="7" font-family="Inter,sans-serif" fill="#01679c" font-weight="500">${label}</text>`;
+            // Arrow to next
+            if (i < nodes.length - 1) {
+                const ax = x + boxW + 1;
+                const ay = H / 2;
+                svg += `<line x1="${ax}" y1="${ay}" x2="${ax + gap - 2}" y2="${ay}" stroke="#01679c" stroke-width="1.2" marker-end="url(#arr)"/>`;
+            }
+        });
+
+        svg += `<defs><marker id="arr" markerWidth="5" markerHeight="4" refX="4" refY="2" orient="auto"><path d="M0,0 L5,2 L0,4 Z" fill="#01679c"/></marker></defs>`;
+        svg += '</svg>';
+        return svg;
+    }
+
     function highlightActive() {
         listEl.querySelectorAll('.conv-item').forEach((el) => {
             el.classList.toggle('active', Number(el.dataset.id) === activeId);
@@ -103,6 +134,15 @@ export function initSidebar({ onSelect, onNewChat }) {
             date.textContent = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
             titleWrap.appendChild(title);
+
+            // Mini pipeline preview for drawer conversations
+            if (conv.drawing_nodes && conv.drawing_nodes.length > 0) {
+                const preview = document.createElement('div');
+                preview.className = 'conv-preview';
+                preview.innerHTML = miniPipelineSvg(conv.drawing_nodes);
+                titleWrap.appendChild(preview);
+            }
+
             titleWrap.appendChild(date);
 
             const actions = document.createElement('div');
