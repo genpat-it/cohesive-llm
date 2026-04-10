@@ -146,9 +146,9 @@
             padding: 12px 16px;
         }
 
-        /* Port labels next to Drawflow dots */
-        .drawflow-node .input::after,
-        .drawflow-node .output::after {
+        /* Port labels outside the node */
+        .drawflow-node .input::before,
+        .drawflow-node .output::before {
             font-size: 9px;
             font-weight: 600;
             letter-spacing: 0.3px;
@@ -160,15 +160,15 @@
             transform: translateY(-50%);
             pointer-events: none;
         }
-        .drawflow-node .input::after {
+        .drawflow-node .input::before {
             content: attr(data-label);
-            left: 16px;
+            right: 18px;
             color: #2563eb;
             background: #eff6ff;
         }
-        .drawflow-node .output::after {
+        .drawflow-node .output::before {
             content: attr(data-label);
-            right: 16px;
+            left: 18px;
             color: #059669;
             background: #ecfdf5;
         }
