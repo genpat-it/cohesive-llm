@@ -398,4 +398,16 @@ def render_mermaid_from_ast(ast_json: dict) -> str:
         else:
             lines.append(f'    {src} --> {tgt}')
 
+    # --- Style runtime parameter nodes in orange ---
+    data_funcs = {
+        'getSingleInput', 'getInput', 'getTrimmedReads', 'getAssembly',
+        'getDepletedReads', 'getLongReads', 'getDS', 'getVCFs',
+        'getKrakenResults', 'getInputFolders', 'getInputOf',
+    }
+    for nid, label, shape, sg in nodes:
+        if shape == 'input':
+            func_match = re.match(r'(get\w+)\(', label)
+            if func_match and func_match.group(1) not in data_funcs:
+                lines.append(f'    style {nid} fill:#fff7ed,stroke:#f97316,color:#c2410c')
+
     return "\n".join(lines)
