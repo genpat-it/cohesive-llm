@@ -135,19 +135,19 @@ HTTPS_MODE=off
 COOKIE_SECURE=false
 ```
 
-### Behind a corporate reverse proxy (e.g. `https://cohesive.izs.it/llm`)
+### Behind a corporate reverse proxy (e.g. `https://intranet.example.com/llm`)
 
 When you can't expose ports 80/443 directly and an upstream proxy
 (nginx, F5, Caddy, IIS, …) handles TLS for a public URL like
-`https://cohesive.izs.it/llm`, run the platform on a custom HTTP port and
+`https://intranet.example.com/llm`, run the platform on a custom HTTP port and
 let the upstream proxy forward to it.
 
 ```env
-DOMAIN=cohesive.izs.it
+DOMAIN=intranet.example.com
 HTTPS_MODE=off                # upstream proxy handles TLS
 CADDY_HOST_PORT=9000          # host port Caddy listens on (HTTP)
 TRUSTED_PROXIES=10.0.0.0/8    # CIDR of the upstream proxy network
-CORS_ORIGINS=https://cohesive.izs.it
+CORS_ORIGINS=https://intranet.example.com
 COOKIE_SECURE=true            # cookie sent only over HTTPS
 COOKIE_PATH=/llm              # scope the session cookie to the sub-path
 COOKIE_SAMESITE=lax
@@ -168,9 +168,9 @@ the prefix before reaching Caddy.
 
 Then ask the sysadmins to configure the upstream proxy to:
 
-1. Forward `https://cohesive.izs.it/llm/*` → `http://your-server:9000/*`
+1. Forward `https://intranet.example.com/llm/*` → `http://your-server:9000/*`
 2. **Strip the `/llm` path prefix** before forwarding
-3. Set the headers: `X-Forwarded-Proto: https`, `X-Forwarded-Host: cohesive.izs.it`, `X-Real-IP`, `X-Forwarded-For`
+3. Set the headers: `X-Forwarded-Proto: https`, `X-Forwarded-Host: intranet.example.com`, `X-Real-IP`, `X-Forwarded-For`
 4. Allow body sizes up to ~10 MB
 5. Tell you the proxy IP/CIDR so you can set `TRUSTED_PROXIES` correctly
 
