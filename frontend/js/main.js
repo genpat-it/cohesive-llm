@@ -129,6 +129,29 @@ const sidebar = initSidebar({
 
 await sidebar.refresh();
 
+// Auto-load chat from URL param ?chat=SESSION_ID
+const urlParams = new URLSearchParams(window.location.search);
+const chatParam = urlParams.get('chat');
+if (chatParam) {
+    // Find the conversation by session_id and load it
+    const { listConversations: listConvs, getConversation: getConv } = await import('./api.js?v=11');
+    const convs = await listConvs();
+    const match = convs.find(c => c.session_id === chatParam);
+    if (match) {
+        const detail = await getConv(match.id);
+        currentSessionId = match.session_id;
+        currentConversationId = match.id;
+        sidebar.setActive(match.id);
+        chatUi.loadMessages(detail.messages || [], {
+            onOpenResults: (msg) => {
+                if (msg.nextflow_code) resultsUi.renderNextflow(msg.nextflow_code);
+                if (msg.mermaid_code) resultsUi.renderMermaid(msg.mermaid_code);
+                resultsContainer.classList.add('open');
+            },
+        });
+    }
+}
+
 // --- System stats dashboard ---
 function barColor(pct) {
     if (pct < 60) return 'green';

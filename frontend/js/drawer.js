@@ -543,10 +543,19 @@ async function refreshDrawingsList() {
                 <div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${d.title}</div>
                 <div style="font-size:10px; color:var(--text-muted);">${date}</div>
             </div>
-            <button class="drawing-delete" title="Delete"><i class="fas fa-trash"></i></button>
+            <button class="drawing-action drawing-link" title="Copy link"><i class="fas fa-link"></i></button>
+            <button class="drawing-action drawing-delete" title="Delete"><i class="fas fa-trash"></i></button>
         `;
 
         item.querySelector('.drawing-info').addEventListener('click', () => loadDrawing(d.id));
+        item.querySelector('.drawing-link').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const url = `${window.location.origin}${BASE_PATH}/drawer?drawing=${d.id}`;
+            await navigator.clipboard.writeText(url);
+            const btn = e.currentTarget;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => { btn.innerHTML = '<i class="fas fa-link"></i>'; }, 1500);
+        });
         item.querySelector('.drawing-delete').addEventListener('click', (e) => {
             e.stopPropagation();
             deleteDrawing(d.id);

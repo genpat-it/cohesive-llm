@@ -202,6 +202,22 @@ export function initSidebar({ onSelect, onNewChat }) {
                 openDrawer.addEventListener('click', (e) => e.stopPropagation());
                 actions.appendChild(openDrawer);
             }
+
+            const copyLink = document.createElement('button');
+            copyLink.className = 'conv-action-btn rename';
+            copyLink.title = 'Copy link';
+            copyLink.innerHTML = '<i class="fas fa-link"></i>';
+            copyLink.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const base = window.IZS_BASE_PATH || '';
+                const url = conv.drawing_id
+                    ? `${window.location.origin}${base}/drawer?drawing=${conv.drawing_id}`
+                    : `${window.location.origin}${base}/?chat=${conv.session_id}`;
+                await navigator.clipboard.writeText(url);
+                copyLink.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => { copyLink.innerHTML = '<i class="fas fa-link"></i>'; }, 1500);
+            });
+            actions.appendChild(copyLink);
             actions.appendChild(rename);
             actions.appendChild(del);
 

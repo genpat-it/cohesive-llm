@@ -293,7 +293,7 @@
         }
         .drawing-item:hover { background: #ecf3f8; }
         .drawing-item.active { background: var(--primary-light); }
-        .drawing-delete {
+        .drawing-action {
             background: transparent;
             border: none;
             color: var(--text-muted);
@@ -304,8 +304,9 @@
             transition: all 0.15s;
             font-size: 11px;
         }
-        .drawing-item:hover .drawing-delete { opacity: 1; }
-        .drawing-delete:hover { color: var(--error); background: #fef2f2; }
+        .drawing-item:hover .drawing-action { opacity: 1; }
+        .drawing-action.drawing-delete:hover { color: var(--error); background: #fef2f2; }
+        .drawing-action.drawing-link:hover { color: var(--primary); background: var(--primary-light); }
 
         /* Result overlay */
         .drawer-result {
