@@ -289,6 +289,108 @@ async def validate_pipeline(
             tmp_file.unlink()
 
 
+@app.get("/catalog/components")
+def get_catalog_components(user: User = Depends(get_current_user)):
+    """Return components grouped by domain for the visual drawer."""
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for comp_id, comp in data_loader.comp_db.items():
+        domain = comp.get("domain", "Other") or "Other"
+        groups[domain].append({
+            "id": comp_id,
+            "tool": comp.get("tool", ""),
+            "description": comp.get("description", ""),
+            "inputs": comp.get("input_channels", comp.get("input_types", [])),
+            "outputs": comp.get("output_channels", comp.get("out", [])),
+            "seq_types": comp.get("compatible_seq_types", []),
+        })
+    return dict(sorted(groups.items()))
+
+
+class GraphGenerateRequest(BaseModel):
+    nodes: List[Dict[str, Any]] = Field(..., description="List of component nodes with IDs and positions")
+    edges: List[Dict[str, Any]] = Field(..., description="List of connections between nodes")
+
+
+@app.post("/generate-from-graph", response_model=ChatResponse)
+async def generate_from_graph(
+    request: GraphGenerateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate a pipeline from a visual graph, skipping the consultant."""
+    from app.routes.conversations import get_or_create_conversation, append_message
+
+    # Build a design plan from the graph
+    component_ids = [n["component_id"] for n in request.nodes]
+    connections = []
+    for e in request.edges:
+        src = next((n for n in request.nodes if n["node_id"] == e["source"]), None)
+        tgt = next((n for n in request.nodes if n["node_id"] == e["target"]), None)
+        if src and tgt:
+            connections.append(f"{src['component_id']} → {tgt['component_id']}")
+
+    plan = "## Visual Pipeline Design\n\n"
+    plan += "### Components (in order):\n"
+    for cid in component_ids:
+        plan += f"- {cid}\n"
+    plan += "\n### Data Flow:\n"
+    for conn in connections:
+        plan += f"- {conn}\n"
+    plan += "\n### Instructions:\n"
+    plan += "Generate a Nextflow DSL2 pipeline using exactly these components in the order and connections shown above.\n"
+
+    # Create conversation
+    session_id = f"drawer_{user.id}_{os.urandom(4).hex()}"
+    conv = get_or_create_conversation(db, user, session_id, "Visual pipeline design")
+    append_message(db, conv, "user", f"[Visual drawer] Components: {', '.join(component_ids)}")
+
+    # Run executor subgraph directly
+    thread_id = f"u{user.id}:drawer_{os.urandom(4).hex()}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    try:
+        result = await app_graph.ainvoke(
+            {
+                "user_query": plan,
+                "messages": [("user", plan)],
+                "consultant_status": "APPROVED",
+                "design_plan": plan,
+                "selected_module_ids": component_ids,
+                "strategy_selector": "CUSTOM_BUILD",
+                "used_template_id": None,
+            },
+            config=config,
+        )
+
+        nf_code = result.get("nextflow_code")
+        mermaid = result.get("mermaid_code")
+        ast_json = result.get("ast_json")
+        error = result.get("error")
+
+        messages = result.get("messages", [])
+        reply = "Pipeline generated from visual design."
+        for msg in reversed(messages):
+            if msg.type == "ai" and msg.content:
+                reply = msg.content
+                break
+
+        append_message(db, conv, "assistant", reply,
+                       nextflow_code=nf_code, mermaid_code=mermaid, ast_json=ast_json)
+
+        return ChatResponse(
+            status="APPROVED" if nf_code else "failed",
+            reply=reply,
+            conversation_id=conv.id,
+            nextflow_code=nf_code,
+            mermaid_code=mermaid,
+            ast_json=ast_json,
+            error=error,
+        )
+    except Exception as e:
+        return ChatResponse(status="failed", reply="Generation failed", error=str(e))
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_agent(
     request: ChatRequest,

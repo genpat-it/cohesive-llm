@@ -10,6 +10,7 @@ FROM caddy:2-alpine
 # Static frontend assets served by Caddy's file_server
 COPY frontend/index.html      /srv/
 COPY frontend/login.html      /srv/
+COPY frontend/drawer.html     /srv/
 COPY frontend/style.css       /srv/
 COPY frontend/js              /srv/js
 COPY frontend/logo_izs.png    /srv/
