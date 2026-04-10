@@ -144,6 +144,28 @@
 
         .node-content {
             padding: 12px 16px;
+            position: relative;
+        }
+
+        .port-label {
+            position: absolute;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        .port-label.port-in {
+            left: -4px;
+            color: #2563eb;
+            background: #eff6ff;
+        }
+        .port-label.port-out {
+            right: -4px;
+            color: #059669;
+            background: #ecfdf5;
+            text-align: right;
         }
         .node-header {
             font-size: 11px;
@@ -240,6 +262,32 @@
             gap: 6px;
         }
 
+        /* Drawing items */
+        .drawing-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            margin: 2px 0;
+            border-radius: 8px;
+            transition: background 0.12s;
+        }
+        .drawing-item:hover { background: #ecf3f8; }
+        .drawing-item.active { background: var(--primary-light); }
+        .drawing-delete {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.15s;
+            font-size: 11px;
+        }
+        .drawing-item:hover .drawing-delete { opacity: 1; }
+        .drawing-delete:hover { color: var(--error); background: #fef2f2; }
+
         /* Result overlay */
         .drawer-result {
             position: absolute;
@@ -313,6 +361,10 @@
                     <input type="text" id="paletteSearch" placeholder="Search components...">
                 </div>
                 <div class="palette-list" id="paletteList"></div>
+                <div style="border-top:1px solid var(--border); padding:8px;">
+                    <div class="palette-domain-label">Saved Drawings</div>
+                    <div id="drawingsList" style="max-height:200px; overflow-y:auto;"></div>
+                </div>
             </div>
 
             <div class="drawer-canvas">
@@ -322,7 +374,11 @@
                     <span class="node-count">
                         <i class="fas fa-cube"></i>
                         <span id="nodeCount">0</span> nodes
+                        <span style="margin-left:8px; font-weight:500;" id="drawingTitle">Untitled</span>
                     </span>
+                    <button class="toolbar-btn secondary" id="saveBtn">
+                        <i class="fas fa-save"></i> Save
+                    </button>
                     <button class="toolbar-btn danger" id="clearBtn">
                         <i class="fas fa-trash"></i> Clear
                     </button>
@@ -335,6 +391,9 @@
                     <div class="drawer-result-header">
                         <h3><i class="fas fa-code" style="color:var(--primary); margin-right:8px;"></i>Generated Pipeline</h3>
                         <div style="display:flex; gap:8px;">
+                            <button class="validate-btn" id="validateDrawerBtn" title="Validate with Nextflow">
+                                <i class="fas fa-play-circle"></i> Validate
+                            </button>
                             <button class="control-btn" id="copyResultBtn" title="Copy code">
                                 <i class="fas fa-copy"></i>
                             </button>

@@ -16,11 +16,18 @@ editor.start();
 
 // Track node data
 const nodeDataMap = {};  // drawflow node id → component data
-let nodeIdCounter = 0;
+let currentDrawingId = null;
+
+// --- API helpers ---
+async function apiFetch(path, opts = {}) {
+    const res = await fetch(`${API_BASE}${path}`, { credentials: 'same-origin', ...opts });
+    if (res.status === 401) { window.location.href = BASE_PATH + '/login'; throw new Error('Unauthorized'); }
+    return res;
+}
 
 // --- Load catalog ---
 async function loadCatalog() {
-    const res = await fetch(`${API_BASE}/catalog/components`, { credentials: 'same-origin' });
+    const res = await apiFetch('/catalog/components');
     if (!res.ok) return {};
     return await res.json();
 }
@@ -49,11 +56,17 @@ function renderPalette(catalog) {
             item.dataset.inputs = JSON.stringify(comp.inputs || []);
             item.dataset.outputs = JSON.stringify(comp.outputs || []);
 
+            const inputNames = (comp.inputs || []).slice(0, 3).join(', ') || 'data';
+            const outputNames = (comp.outputs || []).slice(0, 3).join(', ') || 'out';
+
             item.innerHTML = `
                 <i class="fas fa-cube"></i>
-                <div>
+                <div style="min-width:0;">
                     <span class="tool-name">${comp.tool || comp.id.split('__').pop()}</span>
                     <div style="font-size:10px; color:var(--text-muted); margin-top:1px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comp.id}">${comp.id}</div>
+                    <div style="font-size:9px; color:#64748b; margin-top:2px;">
+                        <span style="color:#2563eb;">${inputNames}</span> &rarr; <span style="color:#059669;">${outputNames}</span>
+                    </div>
                 </div>
             `;
 
@@ -81,49 +94,84 @@ document.getElementById('paletteSearch').addEventListener('input', (e) => {
     });
 });
 
+// --- Build node HTML with named ports ---
+function buildNodeHtml(comp) {
+    const toolName = comp.tool || comp.id.split('__').pop();
+    const domainShort = (comp.domain || '').split(' ')[0] || 'Step';
+    const inputs = comp.inputs || [];
+    const outputs = comp.outputs || [];
+
+    let inputLabels = '';
+    if (inputs.length > 0) {
+        inputLabels = inputs.map((name, i) =>
+            `<div class="port-label port-in" style="top:${30 + i * 22}px">${name}</div>`
+        ).join('');
+    } else {
+        inputLabels = '<div class="port-label port-in" style="top:30px">in</div>';
+    }
+
+    let outputLabels = '';
+    if (outputs.length > 0) {
+        outputLabels = outputs.map((name, i) => {
+            const short = name.includes('.') ? name.split('.').pop() : name;
+            return `<div class="port-label port-out" style="top:${30 + i * 22}px">${short}</div>`;
+        }).join('');
+    } else {
+        outputLabels = '<div class="port-label port-out" style="top:30px">out</div>';
+    }
+
+    return `
+        <div class="node-content">
+            ${inputLabels}
+            ${outputLabels}
+            <div class="node-header">${domainShort}</div>
+            <div class="node-title">${toolName}</div>
+            <div class="node-tool">${comp.id}</div>
+        </div>
+    `;
+}
+
 // --- Drop on canvas ---
 drawflowEl.addEventListener('dragover', (e) => e.preventDefault());
 
 drawflowEl.addEventListener('drop', (e) => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('application/json'));
-    const inputs = (data.inputs || []).length || 1;
-    const outputs = (data.outputs || []).length || 1;
+    addNodeToCanvas(data, e.clientX, e.clientY);
+});
 
-    const toolName = data.tool || data.id.split('__').pop();
-    const domainShort = (data.domain || '').split(' ')[0] || 'Step';
+function addNodeToCanvas(comp, clientX, clientY) {
+    const numInputs = Math.max((comp.inputs || []).length, 1);
+    const numOutputs = Math.max((comp.outputs || []).length, 1);
 
-    const html = `
-        <div class="node-content">
-            <div class="node-header">${domainShort}</div>
-            <div class="node-title">${toolName}</div>
-            <div class="node-tool">${data.id}</div>
-        </div>
-    `;
+    const html = buildNodeHtml(comp);
 
-    // Calculate position relative to canvas
     const rect = drawflowEl.getBoundingClientRect();
-    const x = (e.clientX - rect.left - editor.precanvas.getBoundingClientRect().left + drawflowEl.scrollLeft) / editor.zoom;
-    const y = (e.clientY - rect.top - editor.precanvas.getBoundingClientRect().top + drawflowEl.scrollTop) / editor.zoom;
+    const preRect = editor.precanvas.getBoundingClientRect();
+    const x = (clientX - preRect.left) / editor.zoom;
+    const y = (clientY - preRect.top) / editor.zoom;
 
     const nodeId = editor.addNode(
-        data.id,        // name
-        inputs,         // inputs
-        outputs,        // outputs
-        x, y,           // position
-        data.id,        // class
-        {},             // data
-        html            // html
+        comp.id,
+        numInputs,
+        numOutputs,
+        x, y,
+        comp.id,
+        { component_id: comp.id, tool: comp.tool },
+        html
     );
 
     nodeDataMap[nodeId] = {
         node_id: nodeId,
-        component_id: data.id,
-        tool: data.tool,
+        component_id: comp.id,
+        tool: comp.tool,
+        inputs: comp.inputs || [],
+        outputs: comp.outputs || [],
     };
 
     updateNodeCount();
-});
+    return nodeId;
+}
 
 // --- Node count ---
 function updateNodeCount() {
@@ -131,12 +179,17 @@ function updateNodeCount() {
     document.getElementById('nodeCount').textContent = count;
 }
 
-editor.on('nodeRemoved', () => updateNodeCount());
+editor.on('nodeRemoved', (id) => {
+    delete nodeDataMap[id];
+    updateNodeCount();
+});
 
 // --- Clear ---
 document.getElementById('clearBtn').addEventListener('click', () => {
     editor.clear();
     Object.keys(nodeDataMap).forEach(k => delete nodeDataMap[k]);
+    currentDrawingId = null;
+    updateTitle('Untitled');
     updateNodeCount();
 });
 
@@ -156,12 +209,13 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
         if (data) {
             nodes.push(data);
         }
-        // Extract connections
         for (const [outputKey, conns] of Object.entries(node.outputs || {})) {
             for (const conn of conns.connections || []) {
                 edges.push({
                     source: parseInt(nid),
                     target: parseInt(conn.node),
+                    source_port: outputKey,
+                    target_port: conn.input,
                 });
             }
         }
@@ -172,9 +226,8 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
 
     try {
-        const res = await fetch(`${API_BASE}/generate-from-graph`, {
+        const res = await apiFetch('/generate-from-graph', {
             method: 'POST',
-            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nodes, edges }),
         });
@@ -210,6 +263,175 @@ document.getElementById('copyResultBtn').addEventListener('click', async () => {
     }
 });
 
+// --- Validate from drawer ---
+document.getElementById('validateDrawerBtn').addEventListener('click', async () => {
+    const code = document.getElementById('resultCode').textContent;
+    if (!code) return;
+
+    const btn = document.getElementById('validateDrawerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+
+    try {
+        const res = await apiFetch('/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nextflow_code: code }),
+        });
+        const result = await res.json();
+
+        if (result.success && (!result.warnings || result.warnings.length === 0)) {
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
+            btn.classList.add('validate-pass');
+            btn.classList.remove('validate-fail');
+        } else if (result.success) {
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
+            btn.classList.add('validate-pass');
+            btn.classList.remove('validate-fail');
+            alert('Syntax valid. Missing runtime parameters (expected for framework pipelines).');
+        } else {
+            btn.innerHTML = '<i class="fas fa-times-circle"></i> Invalid';
+            btn.classList.add('validate-fail');
+            btn.classList.remove('validate-pass');
+            alert('Validation errors:\n\n' + result.errors.join('\n'));
+        }
+    } catch (err) {
+        alert('Validation error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-play-circle"></i> Validate';
+            btn.classList.remove('validate-pass', 'validate-fail');
+        }, 5000);
+    }
+});
+
+// ==========================================================================
+// SAVE / LOAD DRAWINGS
+// ==========================================================================
+
+function updateTitle(title) {
+    const el = document.getElementById('drawingTitle');
+    if (el) el.textContent = title;
+}
+
+// Save
+document.getElementById('saveBtn').addEventListener('click', async () => {
+    const exported = editor.export();
+    const title = prompt('Drawing name:', currentDrawingId ? (document.getElementById('drawingTitle')?.textContent || 'Untitled') : 'Untitled');
+    if (!title) return;
+
+    const payload = {
+        title,
+        graph_json: {
+            drawflow: exported,
+            nodeDataMap: { ...nodeDataMap },
+        },
+    };
+
+    try {
+        let res;
+        if (currentDrawingId) {
+            res = await apiFetch(`/drawings/${currentDrawingId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } else {
+            res = await apiFetch('/drawings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        }
+        const data = await res.json();
+        currentDrawingId = data.id;
+        updateTitle(data.title);
+        refreshDrawingsList();
+    } catch (err) {
+        alert('Save failed: ' + err.message);
+    }
+});
+
+// Load drawing
+async function loadDrawing(id) {
+    try {
+        const res = await apiFetch(`/drawings/${id}`);
+        const data = await res.json();
+
+        editor.clear();
+        Object.keys(nodeDataMap).forEach(k => delete nodeDataMap[k]);
+
+        editor.import(data.graph_json.drawflow);
+
+        // Restore nodeDataMap
+        const saved = data.graph_json.nodeDataMap || {};
+        for (const [k, v] of Object.entries(saved)) {
+            nodeDataMap[k] = v;
+        }
+
+        currentDrawingId = data.id;
+        updateTitle(data.title);
+        updateNodeCount();
+    } catch (err) {
+        alert('Load failed: ' + err.message);
+    }
+}
+
+// Delete drawing
+async function deleteDrawing(id) {
+    if (!confirm('Delete this drawing?')) return;
+    await apiFetch(`/drawings/${id}`, { method: 'DELETE' });
+    if (currentDrawingId === id) {
+        currentDrawingId = null;
+        editor.clear();
+        Object.keys(nodeDataMap).forEach(k => delete nodeDataMap[k]);
+        updateTitle('Untitled');
+        updateNodeCount();
+    }
+    refreshDrawingsList();
+}
+
+// Refresh saved drawings list
+async function refreshDrawingsList() {
+    const list = document.getElementById('drawingsList');
+    if (!list) return;
+
+    const res = await apiFetch('/drawings');
+    const drawings = await res.json();
+
+    list.innerHTML = '';
+    if (drawings.length === 0) {
+        list.innerHTML = '<div style="padding:12px; color:var(--text-muted); font-size:12px; text-align:center;">No saved drawings</div>';
+        return;
+    }
+
+    for (const d of drawings) {
+        const item = document.createElement('div');
+        item.className = 'drawing-item';
+        if (d.id === currentDrawingId) item.classList.add('active');
+
+        const date = new Date(d.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+        item.innerHTML = `
+            <div class="drawing-info" style="flex:1; min-width:0; cursor:pointer;">
+                <div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${d.title}</div>
+                <div style="font-size:10px; color:var(--text-muted);">${date}</div>
+            </div>
+            <button class="drawing-delete" title="Delete"><i class="fas fa-trash"></i></button>
+        `;
+
+        item.querySelector('.drawing-info').addEventListener('click', () => loadDrawing(d.id));
+        item.querySelector('.drawing-delete').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteDrawing(d.id);
+        });
+
+        list.appendChild(item);
+    }
+}
+
 // --- Init ---
 const catalog = await loadCatalog();
 renderPalette(catalog);
+refreshDrawingsList();

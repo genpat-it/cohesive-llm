@@ -60,3 +60,16 @@ class Message(Base):
     ast_json = Column(JSONB, nullable=True)
 
     conversation = relationship("Conversation", back_populates="messages")
+
+
+class Drawing(Base):
+    __tablename__ = "drawings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False, default="Untitled")
+    graph_json = Column(JSONB, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User")

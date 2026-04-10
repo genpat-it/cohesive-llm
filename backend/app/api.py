@@ -391,6 +391,77 @@ async def generate_from_graph(
         return ChatResponse(status="failed", reply="Generation failed", error=str(e))
 
 
+# --- Drawing CRUD ---
+class DrawingSave(BaseModel):
+    title: str = "Untitled"
+    graph_json: Dict[str, Any]
+
+
+class DrawingOut(BaseModel):
+    id: int
+    title: str
+    created_at: Any
+    updated_at: Any
+
+    class Config:
+        from_attributes = True
+
+
+class DrawingDetail(DrawingOut):
+    graph_json: Dict[str, Any]
+
+
+@app.get("/drawings")
+def list_drawings(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.db_models import Drawing
+    rows = db.query(Drawing).filter(Drawing.user_id == user.id).order_by(Drawing.updated_at.desc()).all()
+    return [{"id": r.id, "title": r.title, "created_at": r.created_at, "updated_at": r.updated_at} for r in rows]
+
+
+@app.post("/drawings")
+def save_drawing(payload: DrawingSave, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.db_models import Drawing
+    drawing = Drawing(user_id=user.id, title=payload.title, graph_json=payload.graph_json)
+    db.add(drawing)
+    db.commit()
+    db.refresh(drawing)
+    return {"id": drawing.id, "title": drawing.title}
+
+
+@app.put("/drawings/{drawing_id}")
+def update_drawing(drawing_id: int, payload: DrawingSave, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.db_models import Drawing
+    from datetime import datetime
+    d = db.query(Drawing).filter(Drawing.id == drawing_id, Drawing.user_id == user.id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Drawing not found")
+    d.title = payload.title
+    d.graph_json = payload.graph_json
+    d.updated_at = datetime.utcnow()
+    db.commit()
+    return {"id": d.id, "title": d.title}
+
+
+@app.get("/drawings/{drawing_id}")
+def get_drawing(drawing_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.db_models import Drawing
+    d = db.query(Drawing).filter(Drawing.id == drawing_id, Drawing.user_id == user.id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Drawing not found")
+    return {"id": d.id, "title": d.title, "graph_json": d.graph_json, "created_at": d.created_at, "updated_at": d.updated_at}
+
+
+@app.delete("/drawings/{drawing_id}")
+def delete_drawing(drawing_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.db_models import Drawing
+    d = db.query(Drawing).filter(Drawing.id == drawing_id, Drawing.user_id == user.id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Drawing not found")
+    db.delete(d)
+    db.commit()
+    return {"status": "ok"}
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_agent(
     request: ChatRequest,
