@@ -134,6 +134,68 @@ def health_check():
     }
 
 
+@app.get("/system-info")
+def system_info():
+    """Return model names, GPU and RAM stats for the frontend dashboard."""
+    import shutil
+    import subprocess
+
+    from app.core.config import settings
+
+    info: dict = {
+        "llm_model": settings.LLM_MODEL,
+        "embedding_model": settings.EMBEDDING_MODEL,
+        "gpu": None,
+        "ram": None,
+    }
+
+    # --- GPU (nvidia-smi) ---
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=name,memory.used,memory.total,utilization.gpu,temperature.gpu",
+             "--format=csv,noheader,nounits"],
+            text=True, timeout=5,
+        ).strip()
+        if out:
+            parts = [p.strip() for p in out.split(",")]
+            info["gpu"] = {
+                "name": parts[0],
+                "vram_used_mb": int(parts[1]),
+                "vram_total_mb": int(parts[2]),
+                "utilization_pct": int(parts[3]),
+                "temperature_c": int(parts[4]),
+            }
+    except Exception:
+        pass
+
+    # --- RAM ---
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        info["ram"] = {
+            "used_mb": int(vm.used / 1024 / 1024),
+            "total_mb": int(vm.total / 1024 / 1024),
+            "percent": vm.percent,
+        }
+    except ImportError:
+        # fallback: read /proc/meminfo
+        try:
+            with open("/proc/meminfo") as f:
+                lines = {l.split(":")[0]: l.split(":")[1].strip() for l in f if ":" in l}
+            total_kb = int(lines["MemTotal"].split()[0])
+            avail_kb = int(lines["MemAvailable"].split()[0])
+            used_kb = total_kb - avail_kb
+            info["ram"] = {
+                "used_mb": used_kb // 1024,
+                "total_mb": total_kb // 1024,
+                "percent": round(used_kb / total_kb * 100, 1),
+            }
+        except Exception:
+            pass
+
+    return info
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_agent(
     request: ChatRequest,

@@ -62,7 +62,9 @@ services:
     build: ./backend
     container_name: izs_backend
     restart: unless-stopped
+    runtime: nvidia
     environment:
+      - NVIDIA_VISIBLE_DEVICES=all
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - NGSMANAGER_DIR=/ngsmanager
       - DATABASE_URL=${DATABASE_URL}

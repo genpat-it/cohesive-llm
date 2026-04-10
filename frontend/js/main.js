@@ -1,4 +1,4 @@
-import { sendChatMessage, checkSession, logout } from './api.js?v=11';
+import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=11';
 import { initChatUi } from './chat.js?v=8';
 import { initResultsUi } from './results.js?v=4';
 import { initSidebar } from './sidebar.js?v=2';
@@ -128,5 +128,45 @@ const sidebar = initSidebar({
 });
 
 await sidebar.refresh();
+
+// --- System stats dashboard ---
+function barColor(pct) {
+    if (pct < 60) return 'green';
+    if (pct < 85) return 'yellow';
+    return 'red';
+}
+
+function renderBar(pct) {
+    const color = barColor(pct);
+    return `<span class="stat-bar"><span class="stat-bar-fill ${color}" style="width:${pct}%"></span></span>`;
+}
+
+async function refreshStats() {
+    const el = document.getElementById('systemStats');
+    if (!el) return;
+    const info = await fetchSystemInfo();
+    if (!info) { el.innerHTML = ''; return; }
+
+    let html = '';
+    html += `<span class="stat-chip model-chip"><i class="fas fa-microchip"></i>${info.llm_model}</span>`;
+
+    if (info.gpu) {
+        const g = info.gpu;
+        const vramPct = Math.round(g.vram_used_mb / g.vram_total_mb * 100);
+        html += `<span class="stat-chip"><i class="fas fa-bolt"></i>${g.name}</span>`;
+        html += `<span class="stat-chip">VRAM ${g.vram_used_mb}/${g.vram_total_mb} MB ${renderBar(vramPct)}</span>`;
+        html += `<span class="stat-chip"><i class="fas fa-thermometer-half"></i>${g.temperature_c}&deg;C</span>`;
+    }
+
+    if (info.ram) {
+        const r = info.ram;
+        html += `<span class="stat-chip">RAM ${Math.round(r.used_mb/1024)}/${Math.round(r.total_mb/1024)} GB ${renderBar(r.percent)}</span>`;
+    }
+
+    el.innerHTML = html;
+}
+
+refreshStats();
+setInterval(refreshStats, 30000);
 
 console.log('IZS AI chat generator loaded for user:', currentUser.username);

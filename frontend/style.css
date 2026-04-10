@@ -871,6 +871,58 @@ body {
     color: var(--primary);
 }
 
+/* ─── System Stats Dashboard ───────────────────────────────────────────── */
+.system-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+
+.stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.stat-chip i {
+    font-size: 11px;
+    color: var(--primary);
+}
+
+.stat-chip.model-chip {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.stat-bar {
+    width: 48px;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.stat-bar-fill.green  { background: var(--success); }
+.stat-bar-fill.yellow { background: #f59e0b; }
+.stat-bar-fill.red    { background: var(--error); }
+
 /* Scrollbars */
 ::-webkit-scrollbar {
     width: 8px;

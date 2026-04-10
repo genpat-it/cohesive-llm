@@ -83,6 +83,16 @@ export async function renameConversation(id, title) {
     return await res.json();
 }
 
+export async function fetchSystemInfo() {
+    try {
+        const res = await apiFetch('/system-info');
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        return null;
+    }
+}
+
 export async function sendChatMessage(sessionId, message) {
     try {
         const payload = {
