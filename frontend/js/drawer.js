@@ -103,13 +103,21 @@ document.getElementById('paletteSearch').addEventListener('input', (e) => {
     });
 });
 
+const FRAMEWORK_REPO = 'https://github.com/genpat-it/cohesive-ngsmanager';
+
 // --- Build node HTML ---
 function buildNodeHtml(comp) {
     const toolName = comp.tool || comp.id.split('__').pop();
     const domainShort = (comp.domain || '').split(' ')[0] || 'Step';
+    const filePath = comp.file_path || '';
+    const ghLink = filePath ? `${FRAMEWORK_REPO}/blob/main/${filePath}` : '';
+    const ghIcon = ghLink
+        ? `<a href="${ghLink}" target="_blank" title="View source on GitHub" style="color:var(--text-muted); font-size:12px; position:absolute; top:8px; right:8px;" onclick="event.stopPropagation();"><i class="fab fa-github"></i></a>`
+        : '';
 
     return `
-        <div class="node-content">
+        <div class="node-content" style="position:relative;">
+            ${ghIcon}
             <div class="node-header">${domainShort}</div>
             <div class="node-title">${toolName}</div>
             <div class="node-tool">${comp.id}</div>
@@ -173,7 +181,7 @@ function addNodeToCanvas(comp, clientX, clientY) {
         numOutputs,
         x, y,
         comp.id,
-        { component_id: comp.id, tool: comp.tool },
+        { component_id: comp.id, tool: comp.tool, file_path: comp.file_path || '' },
         html
     );
 

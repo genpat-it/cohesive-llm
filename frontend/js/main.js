@@ -163,6 +163,12 @@ async function refreshStats() {
         html += `<span class="stat-chip">RAM ${Math.round(r.used_mb/1024)}/${Math.round(r.total_mb/1024)} GB ${renderBar(r.percent)}</span>`;
     }
 
+    if (info.framework) {
+        const f = info.framework;
+        const commitUrl = f.repo_url ? `${f.repo_url}/commit/${f.commit}` : '#';
+        html += `<a href="${commitUrl}" target="_blank" class="stat-chip" style="text-decoration:none; cursor:pointer;" title="ngsmanager framework commit"><i class="fab fa-github"></i>ngsmanager@${f.commit}</a>`;
+    }
+
     el.innerHTML = html;
 }
 

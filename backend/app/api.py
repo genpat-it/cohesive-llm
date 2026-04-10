@@ -152,6 +152,24 @@ def system_info():
         "ram": None,
     }
 
+    # --- Framework (ngsmanager git hash) ---
+    try:
+        framework_dir = os.getenv("NGSMANAGER_DIR", "/ngsmanager")
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=framework_dir, text=True, timeout=5,
+        ).strip()
+        repo_url = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=framework_dir, text=True, timeout=5,
+        ).strip().replace(".git", "")
+        info["framework"] = {
+            "commit": commit,
+            "repo_url": repo_url,
+        }
+    except Exception:
+        pass
+
     # --- GPU (nvidia-smi) ---
     try:
         out = subprocess.check_output(
@@ -306,6 +324,7 @@ def get_catalog_components(user: User = Depends(get_current_user)):
             "inputs": comp.get("input_channels", comp.get("input_types", [])),
             "outputs": comp.get("output_channels", comp.get("out", [])),
             "seq_types": comp.get("compatible_seq_types", []),
+            "file_path": comp.get("file_path", ""),
         })
     return dict(sorted(groups.items()))
 
