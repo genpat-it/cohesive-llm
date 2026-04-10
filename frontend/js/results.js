@@ -1,5 +1,6 @@
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.esm.min.mjs';
 import { validatePipeline } from './api.js?v=11';
+import { confirmDialog } from './modal.js?v=2';
 
 // Initialize Mermaid with updated configuration
 mermaid.initialize({
@@ -51,17 +52,38 @@ export function initResultsUi() {
 
             const result = await validatePipeline(rawNextflowData);
 
-            if (result.success) {
+            if (result.success && (!result.warnings || result.warnings.length === 0)) {
                 validateBtn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
                 validateBtn.classList.add('validate-pass');
                 validateBtn.classList.remove('validate-fail');
+            } else if (result.success && result.warnings && result.warnings.length > 0) {
+                validateBtn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
+                validateBtn.classList.add('validate-pass');
+                validateBtn.classList.remove('validate-fail');
+                const warningHtml = result.warnings
+                    .map(w => `<code style="display:block;margin:4px 0;padding:6px 10px;background:#fffbeb;border-radius:6px;font-size:12px;color:#92400e;word-break:break-word;">${w.replace(/</g,'&lt;')}</code>`)
+                    .join('');
+                confirmDialog({
+                    title: 'Syntax valid',
+                    message: `The pipeline code is syntactically correct, but Nextflow reports missing runtime parameters. This is expected for framework pipelines — parameters are provided at execution time.<br><br>${warningHtml}`,
+                    confirmText: 'OK',
+                    icon: 'fa-check-circle',
+                });
             } else {
                 validateBtn.innerHTML = '<i class="fas fa-times-circle"></i> Invalid';
                 validateBtn.classList.add('validate-fail');
                 validateBtn.classList.remove('validate-pass');
-                // Show errors in a tooltip/alert
-                const errMsg = result.errors.join('\n');
-                if (errMsg) alert('Validation errors:\n\n' + errMsg);
+                const errorHtml = result.errors
+                    .map(e => `<code style="display:block;margin:4px 0;padding:6px 10px;background:#fef2f2;border-radius:6px;font-size:12px;color:#991b1b;word-break:break-word;">${e.replace(/</g,'&lt;')}</code>`)
+                    .join('');
+                confirmDialog({
+                    title: 'Validation failed',
+                    message: `The generated pipeline has syntax or structural errors:<br><br>${errorHtml}`,
+                    confirmText: 'OK',
+                    cancelText: '',
+                    danger: true,
+                    icon: 'fa-times-circle',
+                });
             }
 
             validateBtn.disabled = false;

@@ -202,6 +202,7 @@ class ValidateRequest(BaseModel):
 
 class ValidateResponse(BaseModel):
     success: bool
+    warnings: List[str] = []
     errors: List[str] = []
     stdout: Optional[str] = None
 
@@ -256,15 +257,25 @@ async def validate_pipeline(
             return ValidateResponse(success=True, stdout=result.stdout[-1000:] if result.stdout else None)
 
         # Extract error lines from both stderr and stdout
+        all_output = (result.stderr or "") + "\n" + (result.stdout or "")
         errors = []
-        for output in [result.stderr, result.stdout]:
-            for line in (output or "").split("\n"):
-                line = line.strip()
-                if any(kw in line for kw in ["ERROR", "Error", "No such file", "Unable to", "not found", "Cannot find"]):
-                    errors.append(line)
+        for line in all_output.split("\n"):
+            line = line.strip()
+            if any(kw in line for kw in ["ERROR", "Error", "No such file", "Unable to", "not found", "Cannot find"]):
+                errors.append(line)
 
         if not errors:
             errors = [result.stderr.strip()[-500:]] if result.stderr.strip() else [f"Exit code {result.returncode}"]
+
+        # "missing required params" means the code is syntactically valid
+        # but needs runtime parameters — treat as success with warning
+        is_params_only = all(
+            "missing required params" in e.lower() or "missing params" in e.lower()
+            for e in errors
+        )
+        if is_params_only:
+            return ValidateResponse(success=True, warnings=errors[:10])
+
         return ValidateResponse(success=False, errors=errors[:10])
 
     except subprocess.TimeoutExpired:
