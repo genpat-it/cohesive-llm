@@ -42,6 +42,8 @@ export function initResultsUi() {
 
     const validateBtn = document.getElementById('validateBtn');
 
+    const openMermaidLiveBtn = document.getElementById('openMermaidLiveBtn');
+
     copyNextflowBtn.addEventListener('click', () => copyToClipboard(rawNextflowData, copyNextflowBtn));
 
     if (validateBtn) {
@@ -94,6 +96,22 @@ export function initResultsUi() {
         });
     }
     copyMermaidBtn.addEventListener('click', () => copyToClipboard(rawMermaidData, copyMermaidBtn));
+
+    if (openMermaidLiveBtn) {
+        openMermaidLiveBtn.addEventListener('click', () => {
+            if (!rawMermaidData) return;
+            const state = {
+                code: rawMermaidData,
+                mermaid: { theme: 'default' },
+                autoSync: true,
+                updateDiagram: true,
+            };
+            const json = JSON.stringify(state);
+            // pako-less approach: use base64 encoding for mermaid.live
+            const encoded = btoa(unescape(encodeURIComponent(json)));
+            window.open(`https://mermaid.live/edit#base64:${encoded}`, '_blank');
+        });
+    }
     
     toggleMermaidBtn.addEventListener('click', () => {
         if (!rawMermaidData) return;
