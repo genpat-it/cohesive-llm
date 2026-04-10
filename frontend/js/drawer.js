@@ -57,16 +57,24 @@ function renderPalette(catalog) {
             item.dataset.inputs = JSON.stringify(comp.inputs || []);
             item.dataset.outputs = JSON.stringify(comp.outputs || []);
 
-            const inputNames = (comp.inputs || []).slice(0, 3).join(', ') || 'data';
-            const outputNames = (comp.outputs || []).slice(0, 3).join(', ') || 'out';
+            const inputs = comp.inputs || [];
+            const outputs = comp.outputs || [];
+            const inputHtml = inputs.length > 0
+                ? inputs.slice(0, 3).map(n =>
+                    DATA_INPUTS.has(n)
+                        ? `<span style="color:#2563eb;">${n}</span>`
+                        : `<span style="color:#c2410c;" title="runtime parameter">${n}</span>`
+                ).join(', ')
+                : '<span style="color:#2563eb;">data</span>';
+            const outputNames = outputs.slice(0, 3).map(n => n.includes('.') ? n.split('.').pop() : n).join(', ') || 'out';
 
             item.innerHTML = `
                 <i class="fas fa-cube"></i>
                 <div style="min-width:0;">
                     <span class="tool-name">${comp.tool || comp.id.split('__').pop()}</span>
                     <div style="font-size:10px; color:var(--text-muted); margin-top:1px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comp.id}">${comp.id}</div>
-                    <div style="font-size:9px; color:#64748b; margin-top:2px;">
-                        <span style="color:#2563eb;">${inputNames}</span> &rarr; <span style="color:#059669;">${outputNames}</span>
+                    <div style="font-size:9px; margin-top:2px;">
+                        ${inputHtml} &rarr; <span style="color:#059669;">${outputNames}</span>
                     </div>
                 </div>
             `;
@@ -109,6 +117,13 @@ function buildNodeHtml(comp) {
     `;
 }
 
+// Inputs that carry sequencing data (from other steps)
+const DATA_INPUTS = new Set([
+    'reads', 'rawreads', 'trimmed', 'assembly', 'assembled', 'contigs',
+    'kraken', 'depleted', 'consensus', 'fastq', 'fasta', 'vcf',
+    'trimmedAndHost', 'short_reads', 'long_reads',
+]);
+
 // --- Label Drawflow input/output dots after node is added ---
 function labelNodePorts(nodeId, comp) {
     const nodeEl = drawflowEl.querySelector(`#node-${nodeId}`);
@@ -118,7 +133,12 @@ function labelNodePorts(nodeId, comp) {
     const outputs = comp.outputs || [];
 
     nodeEl.querySelectorAll('.input').forEach((el, i) => {
-        el.setAttribute('data-label', inputs[i] || 'in');
+        const name = inputs[i] || 'in';
+        el.setAttribute('data-label', name);
+        // Runtime parameters get orange styling
+        if (name !== 'in' && !DATA_INPUTS.has(name)) {
+            el.classList.add('port-param');
+        }
     });
     nodeEl.querySelectorAll('.output').forEach((el, i) => {
         const name = outputs[i] || 'out';
