@@ -169,6 +169,44 @@ body {
     box-shadow: 0 4px 12px rgba(1,103,156,0.25);
 }
 
+.delete-all-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 14px;
+    margin-top: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.delete-all-btn:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: var(--error);
+}
+
+.conv-title-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.conv-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
 .sidebar-section-label {
     padding: 12px 18px 6px;
     font-size: 11px;
@@ -871,6 +909,42 @@ body {
     color: var(--primary);
 }
 
+/* ─── Validate Button ──────────────────────────────────────────────────── */
+.validate-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid rgba(1, 103, 156, 0.2);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.validate-btn:hover:not(:disabled) {
+    background: var(--primary);
+    color: #ffffff;
+}
+.validate-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+.validate-btn.validate-pass {
+    background: #ecfdf5;
+    color: var(--success);
+    border-color: var(--success);
+}
+.validate-btn.validate-fail {
+    background: #fef2f2;
+    color: var(--error);
+    border-color: var(--error);
+}
+
 /* ─── System Stats Dashboard ───────────────────────────────────────────── */
 .system-stats {
     display: flex;
@@ -904,24 +978,27 @@ body {
 }
 
 .stat-bar {
-    width: 48px;
-    height: 6px;
+    width: 56px;
+    height: 8px;
     background: #e2e8f0;
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
     display: inline-block;
     vertical-align: middle;
+    flex-shrink: 0;
 }
 
 .stat-bar-fill {
+    display: block;
     height: 100%;
-    border-radius: 3px;
+    min-width: 2px;
+    border-radius: 4px;
     transition: width 0.5s ease;
 }
 
-.stat-bar-fill.green  { background: var(--success); }
+.stat-bar-fill.green  { background: #10b981; }
 .stat-bar-fill.yellow { background: #f59e0b; }
-.stat-bar-fill.red    { background: var(--error); }
+.stat-bar-fill.red    { background: #ef4444; }
 
 /* Scrollbars */
 ::-webkit-scrollbar {

@@ -17,7 +17,19 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     git \
+    default-jre-headless \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Nextflow and pre-download its dependencies
+RUN curl -fsSL https://get.nextflow.io | bash && \
+    mv nextflow /usr/local/bin/ && \
+    chmod +x /usr/local/bin/nextflow && \
+    NXF_HOME=/usr/local/share/nextflow nextflow -version && \
+    chmod -R a+r /usr/local/share/nextflow
+
+ENV NXF_HOME=/usr/local/share/nextflow
+ENV NXF_OFFLINE=true
 
 # --- THE CACHE TRICK ---
 # Copy ONLY requirements first. Docker will cache this layer.

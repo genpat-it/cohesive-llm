@@ -1,4 +1,5 @@
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.esm.min.mjs';
+import { validatePipeline } from './api.js?v=11';
 
 // Initialize Mermaid with updated configuration
 mermaid.initialize({
@@ -38,7 +39,38 @@ export function initResultsUi() {
     const toggleMermaidBtn = document.getElementById('toggleMermaidBtn');
     const copyMermaidBtn = document.getElementById('copyMermaidBtn');
 
+    const validateBtn = document.getElementById('validateBtn');
+
     copyNextflowBtn.addEventListener('click', () => copyToClipboard(rawNextflowData, copyNextflowBtn));
+
+    if (validateBtn) {
+        validateBtn.addEventListener('click', async () => {
+            if (!rawNextflowData) return;
+            validateBtn.disabled = true;
+            validateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+
+            const result = await validatePipeline(rawNextflowData);
+
+            if (result.success) {
+                validateBtn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
+                validateBtn.classList.add('validate-pass');
+                validateBtn.classList.remove('validate-fail');
+            } else {
+                validateBtn.innerHTML = '<i class="fas fa-times-circle"></i> Invalid';
+                validateBtn.classList.add('validate-fail');
+                validateBtn.classList.remove('validate-pass');
+                // Show errors in a tooltip/alert
+                const errMsg = result.errors.join('\n');
+                if (errMsg) alert('Validation errors:\n\n' + errMsg);
+            }
+
+            validateBtn.disabled = false;
+            setTimeout(() => {
+                validateBtn.innerHTML = '<i class="fas fa-play-circle"></i> Validate';
+                validateBtn.classList.remove('validate-pass', 'validate-fail');
+            }, 5000);
+        });
+    }
     copyMermaidBtn.addEventListener('click', () => copyToClipboard(rawMermaidData, copyMermaidBtn));
     
     toggleMermaidBtn.addEventListener('click', () => {

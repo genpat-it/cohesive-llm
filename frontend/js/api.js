@@ -73,6 +73,11 @@ export async function deleteConversation(id) {
     return res.ok;
 }
 
+export async function deleteAllConversations() {
+    const res = await apiFetch('/conversations', { method: 'DELETE' });
+    return res.ok;
+}
+
 export async function renameConversation(id, title) {
     const res = await apiFetch(`/conversations/${id}`, {
         method: 'PATCH',
@@ -90,6 +95,20 @@ export async function fetchSystemInfo() {
         return await res.json();
     } catch (e) {
         return null;
+    }
+}
+
+export async function validatePipeline(nextflowCode) {
+    try {
+        const res = await apiFetch('/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nextflow_code: nextflowCode }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } catch (e) {
+        return { success: false, errors: [e.message] };
     }
 }
 

@@ -7,7 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.orm import Session
-from typing import Optional, Dict, Any
+from typing import List, Optional, Dict, Any
 
 # Import your custom modules
 from app.core.loader import data_loader
@@ -194,6 +194,88 @@ def system_info():
             pass
 
     return info
+
+
+class ValidateRequest(BaseModel):
+    nextflow_code: str = Field(..., description="The Nextflow code to validate")
+
+
+class ValidateResponse(BaseModel):
+    success: bool
+    errors: List[str] = []
+    stdout: Optional[str] = None
+
+
+@app.post("/validate", response_model=ValidateResponse)
+async def validate_pipeline(
+    request: ValidateRequest,
+    user: User = Depends(get_current_user),
+):
+    """Validate Nextflow code via nextflow -preview against the framework."""
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    framework_dir = Path(os.getenv("NGSMANAGER_DIR", "/ngsmanager"))
+    pipelines_dir = framework_dir / "pipelines"
+
+    if not pipelines_dir.exists():
+        return ValidateResponse(success=False, errors=["Framework not found at /ngsmanager"])
+
+    # Write to /tmp, then symlink into pipelines/ so relative includes resolve
+    tmp_file = Path("/tmp/_llm_validate_tmp.nf")
+    link_file = pipelines_dir / "_llm_validate_tmp.nf"
+    try:
+        tmp_file.write_text(request.nextflow_code)
+
+        # Create symlink (remove stale one first)
+        if link_file.exists() or link_file.is_symlink():
+            link_file.unlink()
+        link_file.symlink_to(tmp_file)
+
+        env = {
+            **os.environ,
+            "NXF_HOME": "/tmp/nxf_home",
+            "NXF_WORK": "/tmp/nxf_work",
+            "NXF_TEMP": "/tmp",
+            "NXF_LOG_FILE": "/tmp/nxf.log",
+        }
+        os.makedirs("/tmp/nxf_home", exist_ok=True)
+        os.makedirs("/tmp/nxf_work", exist_ok=True)
+
+        result = subprocess.run(
+            ["nextflow", "run", str(link_file), "-preview"],
+            capture_output=True,
+            text=True,
+            cwd="/tmp",
+            env=env,
+            timeout=30,
+        )
+
+        if result.returncode == 0:
+            return ValidateResponse(success=True, stdout=result.stdout[-1000:] if result.stdout else None)
+
+        # Extract error lines from both stderr and stdout
+        errors = []
+        for output in [result.stderr, result.stdout]:
+            for line in (output or "").split("\n"):
+                line = line.strip()
+                if any(kw in line for kw in ["ERROR", "Error", "No such file", "Unable to", "not found", "Cannot find"]):
+                    errors.append(line)
+
+        if not errors:
+            errors = [result.stderr.strip()[-500:]] if result.stderr.strip() else [f"Exit code {result.returncode}"]
+        return ValidateResponse(success=False, errors=errors[:10])
+
+    except subprocess.TimeoutExpired:
+        return ValidateResponse(success=False, errors=["Validation timed out after 30s"])
+    except Exception as e:
+        return ValidateResponse(success=False, errors=[str(e)])
+    finally:
+        if link_file.is_symlink():
+            link_file.unlink()
+        if tmp_file.exists():
+            tmp_file.unlink()
 
 
 @app.post("/chat", response_model=ChatResponse)

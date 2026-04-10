@@ -35,6 +35,7 @@ services:
           echo "[ngsmanager-init] Pulling latest..."
           cd /ngsmanager && git pull --ff-only || true
         fi
+        chmod -R a+w /ngsmanager/pipelines 2>/dev/null || true
         echo "[ngsmanager-init] Done."
     restart: "no"
 
@@ -77,7 +78,7 @@ services:
       - COOKIE_SAMESITE=${COOKIE_SAMESITE:-lax}
       - LOGIN_RATE_LIMIT=${LOGIN_RATE_LIMIT:-5/minute}
     volumes:
-      - ngsmanager:/ngsmanager:ro
+      - ngsmanager:/ngsmanager
     expose:
       - "8080"
     depends_on:

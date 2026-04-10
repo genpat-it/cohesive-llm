@@ -97,6 +97,20 @@ def rename_conversation(
     return conv
 
 
+@router.delete("")
+def delete_all_conversations(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    count = (
+        db.query(Conversation)
+        .filter(Conversation.user_id == user.id)
+        .delete()
+    )
+    db.commit()
+    return {"status": "ok", "deleted": count}
+
+
 @router.delete("/{conversation_id}")
 def delete_conversation(
     conversation_id: int,

@@ -2,6 +2,7 @@ import {
     listConversations,
     getConversation,
     deleteConversation,
+    deleteAllConversations,
     renameConversation,
 } from './api.js?v=11';
 import { confirmDialog, promptDialog } from './modal.js?v=2';
@@ -31,6 +32,31 @@ export function initSidebar({ onSelect, onNewChat }) {
             onNewChat();
         });
     }
+
+    // Delete-all button (injected after the New Chat button)
+    const deleteAllBtn = document.createElement('button');
+    deleteAllBtn.className = 'delete-all-btn';
+    deleteAllBtn.innerHTML = '<i class="fas fa-trash"></i> <span>Delete all</span>';
+    deleteAllBtn.title = 'Delete all conversations';
+    deleteAllBtn.addEventListener('click', async () => {
+        const confirmed = await confirmDialog({
+            title: 'Delete all conversations?',
+            message: 'All conversations and their messages will be permanently removed. This cannot be undone.',
+            confirmText: 'Delete all',
+            cancelText: 'Cancel',
+            danger: true,
+            icon: 'fa-trash',
+        });
+        if (!confirmed) return;
+        const ok = await deleteAllConversations();
+        if (ok) {
+            activeId = null;
+            onNewChat();
+            await refresh();
+        }
+    });
+    const sidebarHeader = document.querySelector('.sidebar-header');
+    if (sidebarHeader) sidebarHeader.appendChild(deleteAllBtn);
 
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', () => {
@@ -63,10 +89,21 @@ export function initSidebar({ onSelect, onNewChat }) {
             const icon = document.createElement('i');
             icon.className = 'fas fa-message conv-icon';
 
+            const titleWrap = document.createElement('div');
+            titleWrap.className = 'conv-title-wrap';
+
             const title = document.createElement('span');
             title.className = 'conv-title';
             title.textContent = conv.title || 'Untitled chat';
             title.title = title.textContent;
+
+            const date = document.createElement('span');
+            date.className = 'conv-date';
+            const d = new Date(conv.created_at);
+            date.textContent = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+            titleWrap.appendChild(title);
+            titleWrap.appendChild(date);
 
             const actions = document.createElement('div');
             actions.className = 'conv-actions';
@@ -120,7 +157,7 @@ export function initSidebar({ onSelect, onNewChat }) {
             actions.appendChild(del);
 
             item.appendChild(icon);
-            item.appendChild(title);
+            item.appendChild(titleWrap);
             item.appendChild(actions);
 
             item.addEventListener('click', async () => {
