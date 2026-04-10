@@ -87,7 +87,7 @@ export function initSidebar({ onSelect, onNewChat }) {
             if (conv.id === activeId) item.classList.add('active');
 
             const icon = document.createElement('i');
-            icon.className = 'fas fa-message conv-icon';
+            icon.className = conv.drawing_id ? 'fas fa-project-diagram conv-icon' : 'fas fa-message conv-icon';
 
             const titleWrap = document.createElement('div');
             titleWrap.className = 'conv-title-wrap';
@@ -153,6 +153,15 @@ export function initSidebar({ onSelect, onNewChat }) {
                 }
             });
 
+            if (conv.drawing_id) {
+                const openDrawer = document.createElement('a');
+                openDrawer.className = 'conv-action-btn rename';
+                openDrawer.title = 'Open in Drawer';
+                openDrawer.href = `${window.IZS_BASE_PATH || ''}/drawer?drawing=${conv.drawing_id}`;
+                openDrawer.innerHTML = '<i class="fas fa-project-diagram"></i>';
+                openDrawer.addEventListener('click', (e) => e.stopPropagation());
+                actions.appendChild(openDrawer);
+            }
             actions.appendChild(rename);
             actions.appendChild(del);
 

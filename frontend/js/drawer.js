@@ -247,10 +247,17 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
 
     try {
+        // Include full graph state for auto-save
+        const fullExport = editor.export();
         const res = await apiFetch('/generate-from-graph', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nodes, edges }),
+            body: JSON.stringify({
+                nodes,
+                edges,
+                drawing_id: currentDrawingId,
+                graph_json: { drawflow: fullExport, nodeDataMap: { ...nodeDataMap } },
+            }),
         });
 
         const result = await res.json();
@@ -496,7 +503,118 @@ async function refreshDrawingsList() {
     }
 }
 
+// ==========================================================================
+// EXPORT (SVG / PNG)
+// ==========================================================================
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    const choice = await new Promise((resolve) => {
+        // Simple export menu using confirmDialog-style approach
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay visible';
+        overlay.innerHTML = `
+            <div class="modal-card">
+                <div class="modal-icon"><i class="fas fa-download"></i></div>
+                <div class="modal-title">Export Drawing</div>
+                <div class="modal-message">Choose export format:</div>
+                <div class="modal-actions" style="flex-wrap:wrap; gap:8px;">
+                    <button class="modal-btn modal-btn-primary" data-fmt="svg"><i class="fas fa-file-code"></i> SVG</button>
+                    <button class="modal-btn modal-btn-primary" data-fmt="png"><i class="fas fa-file-image"></i> PNG</button>
+                    <button class="modal-btn" data-fmt="cancel">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-fmt]');
+            if (btn) {
+                overlay.remove();
+                resolve(btn.dataset.fmt);
+            }
+        });
+    });
+
+    if (choice === 'cancel') return;
+
+    const canvas = editor.precanvas;
+    if (!canvas) return;
+
+    if (choice === 'svg') {
+        exportAsSvg(canvas);
+    } else if (choice === 'png') {
+        exportAsPng(canvas);
+    }
+});
+
+function exportAsSvg(sourceEl) {
+    // Clone the visible area and serialize as SVG foreignObject
+    const rect = sourceEl.getBoundingClientRect();
+    const clone = sourceEl.cloneNode(true);
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}">
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Inter,sans-serif;">
+      ${clone.outerHTML}
+    </div>
+  </foreignObject>
+</svg>`;
+
+    downloadFile(svg, 'pipeline-drawing.svg', 'image/svg+xml');
+}
+
+function exportAsPng(sourceEl) {
+    // Use html2canvas-like approach via canvas
+    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="${sourceEl.scrollWidth}" height="${sourceEl.scrollHeight}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Inter,sans-serif;">
+          ${sourceEl.cloneNode(true).outerHTML}
+        </div>
+      </foreignObject>
+    </svg>`;
+
+    const img = new Image();
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = sourceEl.scrollWidth * 2;
+        canvas.height = sourceEl.scrollHeight * 2;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(2, 2);
+        ctx.fillStyle = '#fafbfc';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+
+        canvas.toBlob((pngBlob) => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(pngBlob);
+            a.download = 'pipeline-drawing.png';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+    };
+    img.src = url;
+}
+
+function downloadFile(content, filename, mime) {
+    const blob = new Blob([content], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
 // --- Init ---
 const catalog = await loadCatalog();
 renderPalette(catalog);
 refreshDrawingsList();
+
+// Auto-load drawing from URL param ?drawing=ID
+const urlParams = new URLSearchParams(window.location.search);
+const loadId = urlParams.get('drawing');
+if (loadId) {
+    loadDrawing(parseInt(loadId));
+}

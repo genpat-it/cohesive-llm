@@ -59,6 +59,9 @@ def init_db_and_seed():
         conn.execute(_sql_text(
             "ALTER TABLE messages ADD COLUMN IF NOT EXISTS ast_json JSONB"
         ))
+        conn.execute(_sql_text(
+            "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS drawing_id INTEGER"
+        ))
 
     from app.db import SessionLocal
     db: Session = SessionLocal()
@@ -310,6 +313,8 @@ def get_catalog_components(user: User = Depends(get_current_user)):
 class GraphGenerateRequest(BaseModel):
     nodes: List[Dict[str, Any]] = Field(..., description="List of component nodes with IDs and positions")
     edges: List[Dict[str, Any]] = Field(..., description="List of connections between nodes")
+    drawing_id: Optional[int] = None
+    graph_json: Optional[Dict[str, Any]] = None
 
 
 @app.post("/generate-from-graph", response_model=ChatResponse)
@@ -340,9 +345,28 @@ async def generate_from_graph(
     plan += "\n### Instructions:\n"
     plan += "Generate a Nextflow DSL2 pipeline using exactly these components in the order and connections shown above.\n"
 
+    # Auto-save drawing
+    from app.models.db_models import Drawing
+    drawing_id = request.drawing_id
+    if request.graph_json:
+        if drawing_id:
+            drawing = db.query(Drawing).filter(Drawing.id == drawing_id, Drawing.user_id == user.id).first()
+            if drawing:
+                drawing.graph_json = request.graph_json
+                db.commit()
+        else:
+            title = "Drawer: " + ", ".join(c.split("__")[-1] for c in component_ids[:3])
+            drawing = Drawing(user_id=user.id, title=title, graph_json=request.graph_json)
+            db.add(drawing)
+            db.commit()
+            db.refresh(drawing)
+            drawing_id = drawing.id
+
     # Create conversation
     session_id = f"drawer_{user.id}_{os.urandom(4).hex()}"
     conv = get_or_create_conversation(db, user, session_id, "Visual pipeline design")
+    conv.drawing_id = drawing_id
+    db.commit()
     append_message(db, conv, "user", f"[Visual drawer] Components: {', '.join(component_ids)}")
 
     # Run executor subgraph directly

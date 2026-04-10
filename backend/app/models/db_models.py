@@ -29,10 +29,12 @@ class Conversation(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     session_id = Column(String(128), nullable=False, index=True)
     title = Column(String(255), nullable=True)
+    drawing_id = Column(Integer, ForeignKey("drawings.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="conversations")
+    drawing = relationship("Drawing", foreign_keys=[drawing_id])
     messages = relationship(
         "Message",
         back_populates="conversation",

@@ -35,6 +35,7 @@ class ConversationOut(BaseModel):
     id: int
     session_id: str
     title: Optional[str]
+    drawing_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
