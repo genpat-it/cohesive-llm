@@ -42,7 +42,11 @@ The Nextflow framework being targeted is [genpat-it/cohesive-ngsmanager](https:/
 ```
 cohesive-llm/
 ├── backend/             FastAPI + LangGraph LLM (anti-hallucination, AST validation)
-├── frontend/            Static chat UI (HTML/CSS/JS) — served by Caddy
+├── frontend/            Static UI (HTML/CSS/JS) — served by Caddy
+│   ├── index.html       Chat interface
+│   ├── drawer.html      Visual drag-and-drop pipeline editor
+│   ├── login.html       Authentication page
+│   └── js/              ES modules (chat, sidebar, results, drawer, api, modal)
 ├── caddy/               Caddy image (reverse proxy + static file server)
 ├── scripts/             Render configs and start the stack
 ├── docker-compose.yml   All services orchestrated
@@ -105,9 +109,19 @@ curl -c cookies.txt -X POST http://localhost:9000/api/auth/login \
   -d '{"username":"demo","password":"<your password>"}'
 
 curl -b cookies.txt http://localhost:9000/api/health
+curl -b cookies.txt http://localhost:9000/api/system-info
 curl -b cookies.txt -X POST http://localhost:9000/api/chat \
   -H "Content-Type: application/json" \
   -d '{"session_id":"dev","message":"I want to trim with fastp"}'
+
+# Validate generated Nextflow code
+curl -b cookies.txt -X POST http://localhost:9000/api/validate \
+  -H "Content-Type: application/json" \
+  -d '{"nextflow_code":"workflow { println \"hello\" }"}'
+
+# Drawer APIs
+curl -b cookies.txt http://localhost:9000/api/catalog/components
+curl -b cookies.txt http://localhost:9000/api/drawings
 ```
 
 ## Authentication
@@ -197,7 +211,7 @@ The container layout is intentionally minimal (3 services + 1 init container):
 
 1. `ngsmanager-init` clones [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) into a Docker volume on first start.
 2. `postgres` stores users, conversations and messages.
-3. `backend` (FastAPI + LangGraph) reads the framework from `/ngsmanager`, builds the RAG knowledge base on first start, and serves `/api/auth/*`, `/api/chat`, `/api/conversations/*`.
+3. `backend` (FastAPI + LangGraph) reads the framework from `/ngsmanager`, builds the RAG knowledge base on first start, and serves `/api/auth/*`, `/api/chat`, `/api/conversations/*`, `/api/validate`, `/api/catalog/*`, `/api/drawings/*`, `/api/system-info`. Includes Java + Nextflow for in-container pipeline validation.
 4. `caddy` is the single entry point: serves the static frontend (HTML/JS/CSS) from `/srv` via `file_server` + `templates`, and reverse-proxies `/api/*` to the backend.
 
 ```
@@ -219,6 +233,61 @@ The container layout is intentionally minimal (3 services + 1 init container):
         │ /ngsmanager  │  (Docker volume, cloned by ngsmanager-init)
         └──────────────┘
 ```
+
+## Visual Pipeline Drawer
+
+The platform includes a **drag-and-drop pipeline editor** at `/drawer` where
+users can visually design Nextflow pipelines without writing prompts.
+
+### How it works
+
+1. **Drag** components from the categorized palette onto the canvas
+2. **Connect** outputs to inputs by dragging between port dots
+3. **Click "Generate Pipeline"** — the graph is sent to the architect LLM,
+   which generates the Nextflow code including data shaping and channel operations
+4. **Validate** the generated code directly against the framework with `nextflow -preview`
+
+### Features
+
+- **Named I/O ports** on each node, derived from the framework catalog
+- **Color-coded ports**: blue = data channels (reads, assembly), orange = runtime parameters (reference, schema, host)
+- **Save/load drawings** to the database, with version stamping (framework commit + LLM model)
+- **Version mismatch warning** when loading a drawing created with an older framework version
+- **Shareable links**: `/drawer?drawing=ID` — any logged-in user can open the same drawing
+- **Export**: SVG and PNG download of the canvas
+- **GitHub links**: each node links to its source `.nf` file on GitHub
+
+### Relationship with the chat
+
+The drawer skips the consultant (conversation) phase and goes straight to the
+executor subgraph (hydrator → architect → repair → renderer → diagram). The
+visual graph replaces the design plan that the consultant normally produces.
+
+Drawings generated from the drawer appear in the chat sidebar with a pipeline
+preview thumbnail and a link back to the drawer.
+
+## System stats dashboard
+
+A live status bar at the bottom of the chat shows:
+
+- **LLM model** currently configured (e.g. `labs-devstral-small-2512`)
+- **GPU**: name, VRAM usage, temperature (requires NVIDIA Container Toolkit)
+- **RAM**: usage percentage
+- **Framework commit**: clickable link to the ngsmanager commit on GitHub
+
+Stats refresh every 30 seconds via `GET /api/system-info`.
+
+## Pipeline validation
+
+Generated Nextflow code can be validated in-browser against the real framework
+using `nextflow -preview`. The backend container includes Java and Nextflow,
+so validation is fully self-contained.
+
+- **Green** = syntactically valid
+- **Green + warning** = valid syntax, missing runtime parameters (expected for framework pipelines)
+- **Red** = syntax or structural errors, shown in a styled dialog
+
+Available both in the chat results panel and in the drawer.
 
 ## LLM architecture
 
@@ -495,5 +564,6 @@ ln -sf ../../scripts/check-secrets.sh .git/hooks/pre-push
 | `COOKIE_SAMESITE` | `lax` | `lax` / `strict` / `none` |
 | `LOGIN_RATE_LIMIT` | `5/minute` | Per-IP rate limit on `/auth/login` |
 | `BASE_PATH` | `/` | Sub-path the app is served under (must end with `/`) |
+| `NVIDIA_VISIBLE_DEVICES` | `all` | GPU visibility for the backend container (system stats) |
 
 Full reference with comments: [`.env.example`](.env.example)
