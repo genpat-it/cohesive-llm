@@ -462,9 +462,30 @@ async function loadDrawing(id) {
             nodeDataMap[k] = v;
         }
 
+        // Re-label ports after import
+        for (const [nid, comp] of Object.entries(nodeDataMap)) {
+            setTimeout(() => labelNodePorts(nid, comp), 0);
+        }
+
         currentDrawingId = data.id;
         updateTitle(data.title);
         updateNodeCount();
+
+        // Check version mismatch
+        const savedVersion = data.graph_json._version;
+        if (savedVersion) {
+            const sysRes = await apiFetch('/system-info');
+            const sysInfo = await sysRes.json();
+            const currentCommit = sysInfo.framework?.commit;
+            if (currentCommit && savedVersion.framework_commit && savedVersion.framework_commit !== currentCommit) {
+                confirmDialog({
+                    title: 'Framework updated',
+                    message: `This drawing was created with framework <strong>${savedVersion.framework_commit}</strong>, but the current version is <strong>${currentCommit}</strong>. Some components may have changed. Please verify the pipeline before generating.`,
+                    confirmText: 'OK',
+                    icon: 'fa-exclamation-triangle',
+                });
+            }
+        }
     } catch (err) {
         confirmDialog({ title: 'Load failed', message: err.message, confirmText: 'OK', danger: true, icon: 'fa-exclamation-triangle' });
     }

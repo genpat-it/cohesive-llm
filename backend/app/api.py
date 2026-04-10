@@ -310,6 +310,22 @@ async def validate_pipeline(
             tmp_file.unlink()
 
 
+def _get_version_info():
+    """Collect framework commit + LLM model for stamping artifacts."""
+    import subprocess
+    from app.core.config import settings
+    info = {"llm_model": settings.LLM_MODEL}
+    try:
+        framework_dir = os.getenv("NGSMANAGER_DIR", "/ngsmanager")
+        info["framework_commit"] = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=framework_dir, text=True, timeout=5,
+        ).strip()
+    except Exception:
+        info["framework_commit"] = "unknown"
+    return info
+
+
 @app.get("/catalog/components")
 def get_catalog_components(user: User = Depends(get_current_user)):
     """Return components grouped by domain for the visual drawer."""
@@ -371,10 +387,12 @@ async def generate_from_graph(
         if drawing_id:
             drawing = db.query(Drawing).filter(Drawing.id == drawing_id, Drawing.user_id == user.id).first()
             if drawing:
+                request.graph_json["_version"] = _get_version_info()
                 drawing.graph_json = request.graph_json
                 db.commit()
         else:
             title = "Drawer: " + ", ".join(c.split("__")[-1] for c in component_ids[:3])
+            request.graph_json["_version"] = _get_version_info()
             drawing = Drawing(user_id=user.id, title=title, graph_json=request.graph_json)
             db.add(drawing)
             db.commit()
@@ -464,6 +482,8 @@ def list_drawings(user: User = Depends(get_current_user), db: Session = Depends(
 @app.post("/drawings")
 def save_drawing(payload: DrawingSave, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     from app.models.db_models import Drawing
+    # Stamp version info
+    payload.graph_json["_version"] = _get_version_info()
     drawing = Drawing(user_id=user.id, title=payload.title, graph_json=payload.graph_json)
     db.add(drawing)
     db.commit()
@@ -479,6 +499,7 @@ def update_drawing(drawing_id: int, payload: DrawingSave, user: User = Depends(g
     if not d:
         raise HTTPException(status_code=404, detail="Drawing not found")
     d.title = payload.title
+    payload.graph_json["_version"] = _get_version_info()
     d.graph_json = payload.graph_json
     d.updated_at = datetime.utcnow()
     db.commit()
