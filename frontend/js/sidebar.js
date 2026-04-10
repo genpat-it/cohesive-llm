@@ -4,6 +4,7 @@ import {
     deleteConversation,
     deleteAllConversations,
     renameConversation,
+    showToast,
 } from './api.js?v=11';
 import { confirmDialog, promptDialog } from './modal.js?v=2';
 
@@ -214,8 +215,9 @@ export function initSidebar({ onSelect, onNewChat }) {
                     ? `${window.location.origin}${base}/drawer?drawing=${conv.drawing_id}`
                     : `${window.location.origin}${base}/?chat=${conv.session_id}`;
                 await navigator.clipboard.writeText(url);
-                copyLink.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => { copyLink.innerHTML = '<i class="fas fa-link"></i>'; }, 1500);
+                showToast('Link copied to clipboard', 'fa-link');
+                // Update browser URL
+                window.history.replaceState(null, '', url.replace(window.location.origin, ''));
             });
             actions.appendChild(copyLink);
             actions.appendChild(rename);

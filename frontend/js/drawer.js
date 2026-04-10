@@ -1,4 +1,4 @@
-import { checkSession } from './api.js?v=11';
+import { checkSession, showToast } from './api.js?v=11';
 import { confirmDialog } from './modal.js?v=2';
 
 const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH) || '';
@@ -475,6 +475,9 @@ async function loadDrawing(id) {
         updateTitle(data.title);
         updateNodeCount();
 
+        // Update URL
+        window.history.replaceState(null, '', `${BASE_PATH}/drawer?drawing=${data.id}`);
+
         // Check version mismatch
         const savedVersion = data.graph_json._version;
         if (savedVersion) {
@@ -552,9 +555,7 @@ async function refreshDrawingsList() {
             e.stopPropagation();
             const url = `${window.location.origin}${BASE_PATH}/drawer?drawing=${d.id}`;
             await navigator.clipboard.writeText(url);
-            const btn = e.currentTarget;
-            btn.innerHTML = '<i class="fas fa-check"></i>';
-            setTimeout(() => { btn.innerHTML = '<i class="fas fa-link"></i>'; }, 1500);
+            showToast('Link copied to clipboard', 'fa-link');
         });
         item.querySelector('.drawing-delete').addEventListener('click', (e) => {
             e.stopPropagation();

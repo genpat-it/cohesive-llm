@@ -112,6 +112,19 @@ export async function validatePipeline(nextflowCode) {
     }
 }
 
+export function showToast(message, icon = 'fa-check') {
+    let toast = document.querySelector('.toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
+    toast.classList.add('visible');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('visible'), 2000);
+}
+
 export async function sendChatMessage(sessionId, message) {
     try {
         const payload = {

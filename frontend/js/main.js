@@ -111,10 +111,15 @@ const sidebar = initSidebar({
         chatUi.clearHistory(WELCOME);
         chatUi.setStatus('', 'Ready');
         resultsContainer.classList.remove('open');
+        const base = window.IZS_BASE_PATH || '';
+        window.history.replaceState(null, '', `${base}/`);
     },
     onSelect: (conv) => {
         currentSessionId = conv.session_id;
         currentConversationId = conv.id;
+        // Update URL
+        const base = window.IZS_BASE_PATH || '';
+        window.history.replaceState(null, '', `${base}/?chat=${conv.session_id}`);
         chatUi.loadMessages(conv.messages || [], {
             onOpenResults: (msg) => {
                 if (msg.nextflow_code) resultsUi.renderNextflow(msg.nextflow_code);
