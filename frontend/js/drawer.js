@@ -1,4 +1,5 @@
 import { checkSession } from './api.js?v=11';
+import { confirmDialog } from './modal.js?v=2';
 
 const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH) || '';
 const API_BASE = BASE_PATH + '/api';
@@ -258,10 +259,22 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
             document.getElementById('resultCode').textContent = result.nextflow_code;
             document.getElementById('resultPanel').classList.add('open');
         } else {
-            alert(result.error || 'Generation failed');
+            confirmDialog({
+                title: 'Generation failed',
+                message: result.error || 'Unknown error',
+                confirmText: 'OK',
+                danger: true,
+                icon: 'fa-times-circle',
+            });
         }
     } catch (err) {
-        alert('Error: ' + err.message);
+        confirmDialog({
+            title: 'Generation error',
+            message: err.message,
+            confirmText: 'OK',
+            danger: true,
+            icon: 'fa-exclamation-triangle',
+        });
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Pipeline';
@@ -308,15 +321,39 @@ document.getElementById('validateDrawerBtn').addEventListener('click', async () 
             btn.innerHTML = '<i class="fas fa-check-circle"></i> Valid';
             btn.classList.add('validate-pass');
             btn.classList.remove('validate-fail');
-            alert('Syntax valid. Missing runtime parameters (expected for framework pipelines).');
+            const warningHtml = result.warnings
+                .map(w => `<code style="display:block;margin:4px 0;padding:6px 10px;background:#fffbeb;border-radius:6px;font-size:12px;color:#92400e;word-break:break-word;">${w.replace(/</g,'&lt;')}</code>`)
+                .join('');
+            confirmDialog({
+                title: 'Syntax valid',
+                message: `The pipeline code is syntactically correct, but Nextflow reports missing runtime parameters. This is expected for framework pipelines — parameters are provided at execution time.<br><br>${warningHtml}`,
+                confirmText: 'OK',
+                icon: 'fa-check-circle',
+            });
         } else {
             btn.innerHTML = '<i class="fas fa-times-circle"></i> Invalid';
             btn.classList.add('validate-fail');
             btn.classList.remove('validate-pass');
-            alert('Validation errors:\n\n' + result.errors.join('\n'));
+            const errorHtml = result.errors
+                .map(e => `<code style="display:block;margin:4px 0;padding:6px 10px;background:#fef2f2;border-radius:6px;font-size:12px;color:#991b1b;word-break:break-word;">${e.replace(/</g,'&lt;')}</code>`)
+                .join('');
+            confirmDialog({
+                title: 'Validation failed',
+                message: `The generated pipeline has syntax or structural errors:<br><br>${errorHtml}`,
+                confirmText: 'OK',
+                cancelText: '',
+                danger: true,
+                icon: 'fa-times-circle',
+            });
         }
     } catch (err) {
-        alert('Validation error: ' + err.message);
+        confirmDialog({
+            title: 'Validation error',
+            message: err.message,
+            confirmText: 'OK',
+            danger: true,
+            icon: 'fa-exclamation-triangle',
+        });
     } finally {
         btn.disabled = false;
         setTimeout(() => {
@@ -369,7 +406,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         updateTitle(data.title);
         refreshDrawingsList();
     } catch (err) {
-        alert('Save failed: ' + err.message);
+        confirmDialog({ title: 'Save failed', message: err.message, confirmText: 'OK', danger: true, icon: 'fa-exclamation-triangle' });
     }
 });
 
@@ -394,13 +431,21 @@ async function loadDrawing(id) {
         updateTitle(data.title);
         updateNodeCount();
     } catch (err) {
-        alert('Load failed: ' + err.message);
+        confirmDialog({ title: 'Load failed', message: err.message, confirmText: 'OK', danger: true, icon: 'fa-exclamation-triangle' });
     }
 }
 
 // Delete drawing
 async function deleteDrawing(id) {
-    if (!confirm('Delete this drawing?')) return;
+    const confirmed = await confirmDialog({
+        title: 'Delete drawing?',
+        message: 'This drawing will be permanently removed.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        danger: true,
+        icon: 'fa-trash',
+    });
+    if (!confirmed) return;
     await apiFetch(`/drawings/${id}`, { method: 'DELETE' });
     if (currentDrawingId === id) {
         currentDrawingId = null;
