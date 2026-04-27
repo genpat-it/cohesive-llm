@@ -125,8 +125,19 @@ def setup_database(store):
 
 @pytest.fixture(scope="session")
 def api_client():
-    """In-memory API client with lifespan (loads RAG catalog)."""
+    """In-memory API client with lifespan (loads RAG catalog).
+
+    Automatically logs in as the demo user so all /api/* endpoints
+    that require authentication work without manual cookie handling.
+    """
     with TestClient(app) as client:
+        # Login to get the auth cookie
+        login_resp = client.post("/auth/login", json={
+            "username": os.getenv("DEMO_USER", "demo"),
+            "password": os.getenv("DEMO_PASSWORD", "change_me_please"),
+        })
+        if login_resp.status_code != 200:
+            print(f"⚠️ Login failed: {login_resp.status_code} — API tests will get 401s")
         yield client
 
 
