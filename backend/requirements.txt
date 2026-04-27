@@ -11,6 +11,7 @@ langchain-community==0.4.1
 langchain-mistralai==1.1.1
 langchain-groq===1.1.2
 
+langchain-openai==1.1.0
 langchain-huggingface==1.2.0
 langgraph==1.0.7
 

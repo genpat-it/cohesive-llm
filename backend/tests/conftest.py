@@ -33,11 +33,12 @@ def _preflight_checks():
             "  → Add it to .env or export it: export MISTRAL_API_KEY=your_key"
         )
 
-    # --- GROQ_API_KEY (required — powers the judge) ---
-    if not os.environ.get("GROQ_API_KEY"):
+    # --- Judge LLM (JUDGE_BASE_URL for local, or GROQ_API_KEY for cloud) ---
+    if not os.environ.get("JUDGE_BASE_URL") and not os.environ.get("GROQ_API_KEY"):
         errors.append(
-            "GROQ_API_KEY is not set.\n"
-            "  → LLM judge is required for evaluation. Set it in .env or export it."
+            "Neither JUDGE_BASE_URL nor GROQ_API_KEY is set.\n"
+            "  → Set JUDGE_BASE_URL=http://localhost:8001/v1 for local Qwen judge\n"
+            "  → Or set GROQ_API_KEY for cloud Groq judge"
         )
 
     # --- FAISS index (required — RAG retrieval) ---
@@ -103,8 +104,8 @@ def llm():
 
 @pytest.fixture(scope="session")
 def judge_llm():
-    """Session-scoped judge LLM, or None if GROQ_API_KEY is missing."""
-    if not os.environ.get("GROQ_API_KEY"):
+    """Session-scoped judge LLM, or None if no judge backend configured."""
+    if not os.environ.get("JUDGE_BASE_URL") and not os.environ.get("GROQ_API_KEY"):
         return None
     return get_judge_llm(temperature=0.0)
 

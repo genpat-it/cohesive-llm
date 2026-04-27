@@ -21,18 +21,33 @@ def get_llm():
     )
 
 def get_judge_llm(temperature=0.0):
-    """Returns the configured Groq LLM instance for judging/evaluations."""
+    """Returns the configured judge LLM instance for evaluations.
+
+    Uses JUDGE_BASE_URL (local vLLM/Ollama) if set, otherwise falls back to Groq.
+    """
+    judge_url = os.environ.get("JUDGE_BASE_URL")
+
+    if judge_url:
+        from langchain_openai import ChatOpenAI
+        judge_model = os.environ.get("JUDGE_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+        print(f"🔧 Using local judge: {judge_model} at {judge_url}")
+        return ChatOpenAI(
+            base_url=judge_url,
+            api_key="not-needed",
+            model=judge_model,
+            temperature=temperature,
+            timeout=120,
+        )
+
     api_key = os.environ.get("GROQ_API_KEY")
-    
     if not api_key:
-        print("❌ CRITICAL ERROR: GROQ_API_KEY is missing from environment variables!")
-        raise ValueError("GROQ_API_KEY is not set.")
-        
+        raise ValueError("Neither JUDGE_BASE_URL nor GROQ_API_KEY is set.")
+
     return ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=temperature,
         max_retries=6,
-        timeout=60, 
+        timeout=60,
         api_key=api_key
     )
 
