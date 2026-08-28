@@ -1,14 +1,80 @@
-# Secrets
+# Secrets & Environment
 .env
+.env.*
+!.env.example
 
-# Generated configs
+# Generated configs & database
 caddy/Caddyfile
+*.db
+*.sqlite
+*.sqlite3
 
-# Python
+# Python & virtual environments
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
 backend/venv/
+backend/.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
 
-# OS
+# OS & IDE
 .DS_Store
+.idea/
+.vscode/
 cookies.txt
+.openwiki-temp/
+
+# Framework & Workflow runs
+.nextflow/
+.nextflow.log*
+work/
+nf_framework/
+downloads/
+scratch/
+results/
+report/
+chroma_db/
+*.log
+*.pid
+
+# Knowledge Graph & Agents
+graphify-out/
+.agents/
+
+# Root-level duplicate working copies (All backend code is in backend/)
+/core/
+/plugins/
+/ingestion/
+/tests/
+/main.py
+
+# Benchmark historical reports & logs
+**/tests/reports/*.csv
+**/tests/reports/*.md
+**/tests/reports/*.jsonl*
+**/tests/reports/*.json
+**/tests/reports/logs/
+
+# Benchmarking & Research artifacts (tracked in separate repos)
+cohesive-llm-benchmark-eval-full/
+izs-llm-main-original/
+.reference_project/
+sn-article-template/
+implementation_details_paper_publishing/
+bmc_bioinformatics_strategy.md
+evaluation_report.txt
+full_ids.txt
+updated_diagram.md
+debug_run.py
+fix_ann.py
+temp_*
+run_*.sh
+
+# Submodules / framework clones
+**/cohesive-ngsmanager/

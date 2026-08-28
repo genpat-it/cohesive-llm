@@ -1,0 +1,1278 @@
+{
+  "components": [
+    {
+      "id": "multi_alignment__snippycore",
+      "tool": "multi_alignment__snippycore",
+      "domain": "General",
+      "description": "multi_alignment__snippycore \u2014 'multi_alignment__snippycore'.",
+      "keywords": [
+        "multi_alignment__snippycore"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getInputFolders()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "file_path": "multi/multi_alignment__snippycore"
+    },
+    {
+      "id": "multi_clustering__augur",
+      "tool": "multi_clustering__augur",
+      "domain": "General",
+      "description": "multi_clustering__augur \u2014 'multi_clustering__augur'.",
+      "keywords": [
+        "multi_clustering__augur"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reference",
+        "raw_metadata",
+        "geodata",
+        "ref2"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/augur:23.1.1--pyhdfd78af_1",
+      "file_path": "multi/multi_clustering__augur"
+    },
+    {
+      "id": "multi_clustering__cfsan",
+      "tool": "multi_clustering__cfsan",
+      "domain": "General",
+      "description": "multi_clustering__cfsan \u2014 'multi_clustering__cfsan'.",
+      "keywords": [
+        "multi_clustering__cfsan"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "input",
+        "reference",
+        "metadata",
+        "geodata"
+      ],
+      "output_channels": [],
+      "container": null,
+      "file_path": "multi/multi_clustering__cfsan"
+    },
+    {
+      "id": "multi_clustering__grapetree",
+      "tool": "multi_clustering__grapetree",
+      "domain": "General",
+      "description": "multi_clustering__grapetree \u2014 'multi_clustering__grapetree'.",
+      "keywords": [
+        "multi_clustering__grapetree"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.containsKey",
+        "params.input",
+        "params.outdir",
+        "params.schema"
+      ],
+      "input_channels": [
+        "input",
+        "metadata",
+        "geodata"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/chewbbaca-w-chewie-schemas:2.8.5--16b816c96d",
+      "file_path": "multi/multi_clustering__grapetree"
+    },
+    {
+      "id": "multi_clustering__ksnp3",
+      "tool": "multi_clustering__ksnp3",
+      "domain": "General",
+      "description": "multi_clustering__ksnp3 \u2014 'multi_clustering__ksnp3'.",
+      "keywords": [
+        "multi_clustering__ksnp3"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "input",
+        "kmers_size",
+        "analysis_type",
+        "metadata",
+        "geodata"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/ksnp3:3.0--addd2c2d0e",
+      "file_path": "multi/multi_clustering__ksnp3"
+    },
+    {
+      "id": "multi_clustering__reportree_alignment",
+      "tool": "multi_clustering__reportree_alignment",
+      "domain": "General",
+      "description": "multi_clustering__reportree_alignment \u2014 'multi_clustering__reportree_alignment'.",
+      "keywords": [
+        "multi_clustering__reportree_alignment"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "input",
+        "raw_metadata",
+        "geodata",
+        "nomenclature"
+      ],
+      "output_channels": [],
+      "container": "ubuntu:20.04",
+      "file_path": "multi/multi_clustering__reportree_alignment"
+    },
+    {
+      "id": "multi_clustering__reportree_alleles",
+      "tool": "multi_clustering__reportree_alleles",
+      "domain": "General",
+      "description": "multi_clustering__reportree_alleles \u2014 'multi_clustering__reportree_alleles'.",
+      "keywords": [
+        "multi_clustering__reportree_alleles",
+        "reportree alleles",
+        "cgmlst allele clustering",
+        "phylogenetic tree from cgmlst allele profiles",
+        "allele profile clustering"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.containsKey",
+        "params.input",
+        "params.max_cpus",
+        "params.outdir",
+        "params.schema"
+      ],
+      "input_channels": [
+        "input",
+        "raw_metadata",
+        "geodata",
+        "nomenclature"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/chewbbaca-w-chewie-schemas:2.8.5--16b816c96d",
+      "file_path": "multi/multi_clustering__reportree_alleles"
+    },
+    {
+      "id": "multi_clustering__reportree_vcf",
+      "tool": "multi_clustering__reportree_vcf",
+      "domain": "General",
+      "description": "multi_clustering__reportree_vcf \u2014 'multi_clustering__reportree_vcf'.",
+      "keywords": [
+        "multi_clustering__reportree_vcf"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "input",
+        "raw_metadata",
+        "geodata",
+        "nomenclature"
+      ],
+      "output_channels": [],
+      "container": "ubuntu:20.04",
+      "file_path": "multi/multi_clustering__reportree_vcf"
+    },
+    {
+      "id": "multi_clustering__vcf2mst",
+      "tool": "multi_clustering__vcf2mst",
+      "domain": "General",
+      "description": "multi_clustering__vcf2mst \u2014 'multi_clustering__vcf2mst'.",
+      "keywords": [
+        "multi_clustering__vcf2mst"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "input"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/vcf2mst:0.0.1--d587d682e9",
+      "file_path": "multi/multi_clustering__vcf2mst"
+    },
+    {
+      "id": "multi_pangenome__panaroo",
+      "tool": "multi_pangenome__panaroo",
+      "domain": "General",
+      "description": "multi_pangenome__panaroo \u2014 'multi_pangenome__panaroo'.",
+      "keywords": [
+        "multi_pangenome__panaroo"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "input"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/panaroo:1.3.3--pyhdfd78af_0",
+      "file_path": "multi/multi_pangenome__panaroo"
+    },
+    {
+      "id": "step_0SQ_rawreads__fastq",
+      "tool": "step_0SQ_rawreads__fastq",
+      "domain": "General",
+      "description": "step_0SQ_rawreads__fastq \u2014 'step_0SQ_rawreads__fastq'.",
+      "keywords": [
+        "step_0SQ_rawreads__fastq",
+        "raw sequencing quality check",
+        "check quality of raw sequencing files",
+        "raw fastq qc",
+        "fastqc raw reads",
+        "quality control raw reads"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [],
+      "container": "biocontainers/fastqc:v0.11.5_cv4",
+      "file_path": "steps/step_0SQ_rawreads__fastq"
+    },
+    {
+      "id": "step_1PP_downsampling__bbnorm",
+      "tool": "step_1PP_downsampling__bbnorm",
+      "domain": "General",
+      "description": "step_1PP_downsampling__bbnorm \u2014 'step_1PP_downsampling__bbnorm'.",
+      "keywords": [
+        "step_1PP_downsampling__bbnorm"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_memory",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "k",
+        "target"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/bbmap:39.01--h5c4e2a8_0",
+      "file_path": "steps/step_1PP_downsampling__bbnorm"
+    },
+    {
+      "id": "step_1PP_filtering__bowtie",
+      "tool": "step_1PP_filtering__bowtie",
+      "domain": "General",
+      "description": "step_1PP_filtering__bowtie \u2014 'step_1PP_filtering__bowtie'.",
+      "keywords": [
+        "step_1PP_filtering__bowtie"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "samtools.out.filtered"
+      ],
+      "container": "ghcr.io/genpat-it/bowtie2:2.1.0--37ad014737",
+      "file_path": "steps/step_1PP_filtering__bowtie"
+    },
+    {
+      "id": "step_1PP_filtering__krakentools",
+      "tool": "step_1PP_filtering__krakentools",
+      "domain": "General",
+      "description": "step_1PP_filtering__krakentools \u2014 'step_1PP_filtering__krakentools'.",
+      "keywords": [
+        "step_1PP_filtering__krakentools"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "kraken",
+        "trimmed",
+        "taxaid",
+        "include_children",
+        "include_parents"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/krakentools:1.2--pyh5e36f6f_0",
+      "file_path": "steps/step_1PP_filtering__krakentools"
+    },
+    {
+      "id": "step_1PP_filtering__minimap2",
+      "tool": "step_1PP_filtering__minimap2",
+      "domain": "General",
+      "description": "step_1PP_filtering__minimap2 \u2014 'step_1PP_filtering__minimap2'.",
+      "keywords": [
+        "step_1PP_filtering__minimap2"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "samtools.out.filtered"
+      ],
+      "container": "quay.io/biocontainers/minimap2:2.26--he4a0461_1",
+      "file_path": "steps/step_1PP_filtering__minimap2"
+    },
+    {
+      "id": "step_1PP_generated__fasta2fastq",
+      "tool": "step_1PP_generated__fasta2fastq",
+      "domain": "General",
+      "description": "step_1PP_generated__fasta2fastq \u2014 'step_1PP_generated__fasta2fastq'.",
+      "keywords": [
+        "step_1PP_generated__fasta2fastq"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/biopython:1.78",
+      "file_path": "steps/step_1PP_generated__fasta2fastq"
+    },
+    {
+      "id": "step_1PP_hostdepl__bowtie",
+      "tool": "step_1PP_hostdepl__bowtie",
+      "domain": "General",
+      "description": "step_1PP_hostdepl__bowtie \u2014 'step_1PP_hostdepl__bowtie'.",
+      "keywords": [
+        "step_1PP_hostdepl__bowtie"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getHostUnkeyed()",
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "trimmedAndHost"
+      ],
+      "output_channels": [
+        "samtools.out.depleted"
+      ],
+      "container": "ghcr.io/genpat-it/bowtie2:2.1.0--37ad014737",
+      "file_path": "steps/step_1PP_hostdepl__bowtie"
+    },
+    {
+      "id": "step_1PP_hostdepl__minimap2",
+      "tool": "step_1PP_hostdepl__minimap2",
+      "domain": "General",
+      "description": "step_1PP_hostdepl__minimap2 \u2014 'step_1PP_hostdepl__minimap2'.",
+      "keywords": [
+        "step_1PP_hostdepl__minimap2"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "host"
+      ],
+      "output_channels": [
+        "samtools.out.depleted"
+      ],
+      "container": "quay.io/biocontainers/minimap2:2.26--he4a0461_1",
+      "file_path": "steps/step_1PP_hostdepl__minimap2"
+    },
+    {
+      "id": "step_1PP_trimming__chopper",
+      "tool": "step_1PP_trimming__chopper",
+      "domain": "General",
+      "description": "step_1PP_trimming__chopper \u2014 'step_1PP_trimming__chopper'.",
+      "keywords": [
+        "step_1PP_trimming__chopper"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "rawreads"
+      ],
+      "output_channels": [
+        "trimmed"
+      ],
+      "container": "quay.io/biocontainers/chopper:0.7.0--hdcf5f25_0",
+      "file_path": "steps/step_1PP_trimming__chopper"
+    },
+    {
+      "id": "step_1PP_trimming__fastp",
+      "tool": "step_1PP_trimming__fastp",
+      "domain": "General",
+      "description": "step_1PP_trimming__fastp \u2014 'step_1PP_trimming__fastp'.",
+      "keywords": [
+        "step_1PP_trimming__fastp",
+        "fastp",
+        "trimming",
+        "trim adapters and low-quality bases",
+        "adapter trimming",
+        "read quality trimming",
+        "preprocessing"
+      ],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "rawreads"
+      ],
+      "output_channels": [
+        "trimmed"
+      ],
+      "container": "ghcr.io/genpat-it/fastp:0.23.1--e4ac3df4c5",
+      "file_path": "steps/step_1PP_trimming__fastp"
+    },
+    {
+      "id": "step_1PP_trimming__trimmomatic",
+      "tool": "step_1PP_trimming__trimmomatic",
+      "domain": "General",
+      "description": "step_1PP_trimming__trimmomatic \u2014 'step_1PP_trimming__trimmomatic'.",
+      "keywords": [
+        "step_1PP_trimming__trimmomatic"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "rawreads"
+      ],
+      "output_channels": [
+        "trimmed"
+      ],
+      "container": "quay.io/biocontainers/trimmomatic:0.36--6",
+      "file_path": "steps/step_1PP_trimming__trimmomatic"
+    },
+    {
+      "id": "step_2AS_denovo__flye",
+      "tool": "step_2AS_denovo__flye",
+      "domain": "General",
+      "description": "step_2AS_denovo__flye \u2014 'step_2AS_denovo__flye'.",
+      "keywords": [
+        "step_2AS_denovo__flye"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "assembly"
+      ],
+      "container": "quay.io/biocontainers/quast:4.4--boost1.61_1",
+      "file_path": "steps/step_2AS_denovo__flye"
+    },
+    {
+      "id": "step_2AS_denovo__plasmidspades",
+      "tool": "step_2AS_denovo__plasmidspades",
+      "domain": "General",
+      "description": "step_2AS_denovo__plasmidspades \u2014 'step_2AS_denovo__plasmidspades'.",
+      "keywords": [
+        "step_2AS_denovo__plasmidspades"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [
+        "assembled"
+      ],
+      "container": "quay.io/biocontainers/spades:3.11.1--py27_zlib1.2.8_0",
+      "file_path": "steps/step_2AS_denovo__plasmidspades"
+    },
+    {
+      "id": "step_2AS_denovo__shovill",
+      "tool": "step_2AS_denovo__shovill",
+      "domain": "General",
+      "description": "step_2AS_denovo__shovill \u2014 'step_2AS_denovo__shovill'.",
+      "keywords": [
+        "step_2AS_denovo__shovill",
+        "shovill",
+        "bacterial isolate assembly",
+        "de novo isolate assembler",
+        "assemble genomes de novo isolate",
+        "foodborne outbreak isolate assembler",
+        "bacterial isolates de novo assembly"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir",
+        "params.skip_checkm"
+      ],
+      "input_channels": [
+        "rawreads"
+      ],
+      "output_channels": [
+        "assembly"
+      ],
+      "container": "ghcr.io/genpat-it/shovill:1.1.0--d84470570e",
+      "file_path": "steps/step_2AS_denovo__shovill"
+    },
+    {
+      "id": "step_2AS_denovo__spades",
+      "tool": "step_2AS_denovo__spades",
+      "domain": "General",
+      "description": "step_2AS_denovo__spades \u2014 'step_2AS_denovo__spades'.",
+      "keywords": [
+        "step_2AS_denovo__spades"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [
+        "assembled"
+      ],
+      "container": "quay.io/biocontainers/spades:3.11.1--py27_zlib1.2.8_0",
+      "file_path": "steps/step_2AS_denovo__spades"
+    },
+    {
+      "id": "step_2AS_denovo__unicycler",
+      "tool": "step_2AS_denovo__unicycler",
+      "domain": "General",
+      "description": "step_2AS_denovo__unicycler \u2014 'step_2AS_denovo__unicycler'.",
+      "keywords": [
+        "step_2AS_denovo__unicycler"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [
+        "assembled"
+      ],
+      "container": "docker.io/biocontainers/unicycler:v0.4.7dfsg-2-deb_cv1",
+      "file_path": "steps/step_2AS_denovo__unicycler"
+    },
+    {
+      "id": "step_2AS_filtering__seqio",
+      "tool": "step_2AS_filtering__seqio",
+      "domain": "General",
+      "description": "step_2AS_filtering__seqio \u2014 'step_2AS_filtering__seqio'.",
+      "keywords": [
+        "step_2AS_filtering__seqio"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "calls",
+        "assembly",
+        "reference"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/python3:3.10.1--29cf21c1f1",
+      "file_path": "steps/step_2AS_filtering__seqio"
+    },
+    {
+      "id": "step_2AS_hybrid__unicycler",
+      "tool": "step_2AS_hybrid__unicycler",
+      "domain": "General",
+      "description": "step_2AS_hybrid__unicycler \u2014 'step_2AS_hybrid__unicycler'.",
+      "keywords": [
+        "step_2AS_hybrid__unicycler"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "short_reads",
+        "long_reads"
+      ],
+      "output_channels": [
+        "scaffolds"
+      ],
+      "container": "quay.io/biocontainers/unicycler:0.5.0--py38h5cf8b27_3",
+      "file_path": "steps/step_2AS_hybrid__unicycler"
+    },
+    {
+      "id": "step_2AS_mapping__bowtie",
+      "tool": "step_2AS_mapping__bowtie",
+      "domain": "General",
+      "description": "step_2AS_mapping__bowtie \u2014 'step_2AS_mapping__bowtie'.",
+      "keywords": [
+        "step_2AS_mapping__bowtie"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "container": "ghcr.io/genpat-it/bowtie2:2.1.0--37ad014737",
+      "file_path": "steps/step_2AS_mapping__bowtie"
+    },
+    {
+      "id": "step_2AS_mapping__ivar",
+      "tool": "step_2AS_mapping__ivar",
+      "domain": "General",
+      "description": "step_2AS_mapping__ivar \u2014 'step_2AS_mapping__ivar'.",
+      "keywords": [
+        "step_2AS_mapping__ivar"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir",
+        "params.step_2AS_mapping__ivar___q"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "file_path": "steps/step_2AS_mapping__ivar"
+    },
+    {
+      "id": "step_2AS_mapping__medaka",
+      "tool": "step_2AS_mapping__medaka",
+      "domain": "General",
+      "description": "step_2AS_mapping__medaka \u2014 'step_2AS_mapping__medaka'.",
+      "keywords": [
+        "step_2AS_mapping__medaka"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "container": "quay.io/biocontainers/medaka:1.8.0--py38hdaa7744_0",
+      "file_path": "steps/step_2AS_mapping__medaka"
+    },
+    {
+      "id": "step_2AS_mapping__minimap2",
+      "tool": "step_2AS_mapping__minimap2",
+      "domain": "General",
+      "description": "step_2AS_mapping__minimap2 \u2014 'step_2AS_mapping__minimap2'.",
+      "keywords": [
+        "step_2AS_mapping__minimap2"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "container": "quay.io/biocontainers/minimap2:2.26--he4a0461_1",
+      "file_path": "steps/step_2AS_mapping__minimap2"
+    },
+    {
+      "id": "step_2AS_mapping__snippy",
+      "tool": "step_2AS_mapping__snippy",
+      "domain": "General",
+      "description": "step_2AS_mapping__snippy \u2014 'step_2AS_mapping__snippy'.",
+      "keywords": [
+        "step_2AS_mapping__snippy"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "file_path": "steps/step_2AS_mapping__snippy"
+    },
+    {
+      "id": "step_2MG_denovo__metaspades",
+      "tool": "step_2MG_denovo__metaspades",
+      "domain": "General",
+      "description": "step_2MG_denovo__metaspades \u2014 'step_2MG_denovo__metaspades'.",
+      "keywords": [
+        "step_2MG_denovo__metaspades"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [
+        "assembled"
+      ],
+      "container": "quay.io/biocontainers/spades:3.11.1--py27_zlib1.2.8_0",
+      "file_path": "steps/step_2MG_denovo__metaspades"
+    },
+    {
+      "id": "step_3TX_class__centrifuge",
+      "tool": "step_3TX_class__centrifuge",
+      "domain": "General",
+      "description": "step_3TX_class__centrifuge \u2014 'step_3TX_class__centrifuge'.",
+      "keywords": [
+        "step_3TX_class__centrifuge"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/centrifuge:1.0.4_beta--h9a82719_6",
+      "file_path": "steps/step_3TX_class__centrifuge"
+    },
+    {
+      "id": "step_3TX_class__confindr",
+      "tool": "step_3TX_class__confindr",
+      "domain": "General",
+      "description": "step_3TX_class__confindr \u2014 'step_3TX_class__confindr'.",
+      "keywords": [
+        "step_3TX_class__confindr",
+        "confindr",
+        "contamination detection",
+        "flag mixed samples",
+        "intra-species contamination",
+        "cross-sample contamination"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/confindr:0.7.4--8fe19dd246",
+      "file_path": "steps/step_3TX_class__confindr"
+    },
+    {
+      "id": "step_3TX_class__kraken",
+      "tool": "step_3TX_class__kraken",
+      "domain": "General",
+      "description": "step_3TX_class__kraken — 'step_3TX_class__kraken'.",
+      "keywords": [
+        "step_3TX_class__kraken"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "genus_report"
+      ],
+      "container": "quay.io/biocontainers/kraken:1.0--pl5.22.0_0",
+      "file_path": "steps/step_3TX_class__kraken"
+    },
+    {
+      "id": "step_3TX_class__kraken2",
+      "tool": "step_3TX_class__kraken2",
+      "domain": "General",
+      "description": "step_3TX_class__kraken2 — 'step_3TX_class__kraken2'.",
+      "keywords": [
+        "step_3TX_class__kraken2",
+        "kraken2",
+        "taxonomic classification",
+        "classify reads taxonomically",
+        "confirm pathogen identity",
+        "metagenomic taxonomy"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "genus_report"
+      ],
+      "container": "quay.io/biocontainers/kraken2:2.1.2--pl5262h7d875b9_0",
+      "file_path": "steps/step_3TX_class__kraken2"
+    },
+    {
+      "id": "step_3TX_species__kmerfinder",
+      "tool": "step_3TX_species__kmerfinder",
+      "domain": "General",
+      "description": "step_3TX_species__kmerfinder — 'step_3TX_species__kmerfinder'.",
+      "keywords": [
+        "step_3TX_species__kmerfinder",
+        "kmerfinder",
+        "species identification",
+        "identify species from assemblies",
+        "kmer species prediction"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [
+        "assigned_species"
+      ],
+      "container": "python:2.7.8",
+      "file_path": "steps/step_3TX_species__kmerfinder"
+    },
+    {
+      "id": "step_3TX_species__mash",
+      "tool": "step_3TX_species__mash",
+      "domain": "General",
+      "description": "step_3TX_species__mash \u2014 'step_3TX_species__mash'.",
+      "keywords": [
+        "step_3TX_species__mash"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/mash:2.3--debdd7eb23",
+      "file_path": "steps/step_3TX_species__mash"
+    },
+    {
+      "id": "step_3TX_species__vdabricate",
+      "tool": "step_3TX_species__vdabricate",
+      "domain": "General",
+      "description": "step_3TX_species__vdabricate \u2014 'step_3TX_species__vdabricate'.",
+      "keywords": [
+        "step_3TX_species__vdabricate"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [
+        "calls"
+      ],
+      "container": "quay.io/biocontainers/abricate:0.9.8--h1341992_0",
+      "file_path": "steps/step_3TX_species__vdabricate"
+    },
+    {
+      "id": "step_4AN_AMR__abricate",
+      "tool": "step_4AN_AMR__abricate",
+      "domain": "General",
+      "description": "step_4AN_AMR__abricate \u2014 'step_4AN_AMR__abricate'.",
+      "keywords": [
+        "step_4AN_AMR__abricate",
+        "abricate",
+        "screen antimicrobial resistance genes",
+        "screen amr genes abricate",
+        "amr screening abricate",
+        "antimicrobial resistance screening",
+        "screen for antimicrobial resistance genes using two different databases"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [],
+      "container": "staphb/abricate:1.0.0",
+      "file_path": "steps/step_4AN_AMR__abricate"
+    },
+    {
+      "id": "step_4AN_AMR__filtering",
+      "tool": "step_4AN_AMR__filtering",
+      "domain": "General",
+      "description": "step_4AN_AMR__filtering \u2014 'step_4AN_AMR__filtering'.",
+      "keywords": [
+        "step_4AN_AMR__filtering",
+        "amr filtering",
+        "filter amr results",
+        "confidence thresholds",
+        "coverage identity filtering"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data",
+        "coverage",
+        "identity"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/python3:3.10.1--29cf21c1f1",
+      "file_path": "steps/step_4AN_AMR__filtering"
+    },
+    {
+      "id": "step_4AN_AMR__resfinder",
+      "tool": "step_4AN_AMR__resfinder",
+      "domain": "General",
+      "description": "step_4AN_AMR__resfinder \u2014 'step_4AN_AMR__resfinder'.",
+      "keywords": [
+        "step_4AN_AMR__resfinder",
+        "resfinder",
+        "antimicrobial resistance resfinder",
+        "amr screening resfinder",
+        "screen antimicrobial resistance two different databases",
+        "dual amr screening resfinder",
+        "dual database amr resfinder"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/resfinder:4.1.5--858219071c",
+      "file_path": "steps/step_4AN_AMR__resfinder"
+    },
+    {
+      "id": "step_4AN_AMR__staramr",
+      "tool": "step_4AN_AMR__staramr",
+      "domain": "General",
+      "description": "step_4AN_AMR__staramr \u2014 'step_4AN_AMR__staramr'.",
+      "keywords": [
+        "step_4AN_AMR__staramr"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "assembly",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/staramr:0.9.1--8fe6b5a239",
+      "file_path": "steps/step_4AN_AMR__staramr"
+    },
+    {
+      "id": "step_4AN_genes__prokka",
+      "tool": "step_4AN_genes__prokka",
+      "domain": "General",
+      "description": "step_4AN_genes__prokka \u2014 'step_4AN_genes__prokka'.",
+      "keywords": [
+        "step_4AN_genes__prokka",
+        "prokka",
+        "annotate all genes",
+        "gene annotation",
+        "functional annotation",
+        "bacterial genome annotation"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getKingdom()",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [],
+      "container": "quay.io/biocontainers/prokka:1.14.5--pl526_1",
+      "file_path": "steps/step_4AN_genes__prokka"
+    },
+    {
+      "id": "step_4TY_MLST__mlst",
+      "tool": "step_4TY_MLST__mlst",
+      "domain": "General",
+      "description": "step_4TY_MLST__mlst — 'step_4TY_MLST__mlst'.",
+      "keywords": [
+        "step_4TY_MLST__mlst",
+        "mlst",
+        "classical mlst",
+        "determine classical mlst sequence type",
+        "7 gene mlst typing",
+        "sequence type"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "assembly"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/mlst-w-db:2.23.0--60b8b2e3dd_231219.124455",
+      "file_path": "steps/step_4TY_MLST__mlst"
+    },
+    {
+      "id": "step_4TY_cgMLST__chewbbaca",
+      "tool": "step_4TY_cgMLST__chewbbaca",
+      "domain": "General",
+      "description": "step_4TY_cgMLST__chewbbaca — 'step_4TY_cgMLST__chewbbaca'.",
+      "keywords": [
+        "step_4TY_cgMLST__chewbbaca",
+        "chewbbaca",
+        "core-genome mlst",
+        "cgmlst typing",
+        "perform core-genome mlst typing",
+        "allele calling",
+        "cgmlst allele extraction"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "assembly",
+        "genus_species",
+        "schema"
+      ],
+      "output_channels": [
+        "alleles"
+      ],
+      "container": "ghcr.io/genpat-it/chewbbaca-w-chewie-schemas:2.8.5--16b816c96d",
+      "file_path": "steps/step_4TY_cgMLST__chewbbaca"
+    },
+    {
+      "id": "step_4TY_flaA__flaA",
+      "tool": "step_4TY_flaA__flaA",
+      "domain": "General",
+      "description": "step_4TY_flaA__flaA — 'step_4TY_flaA__flaA'.",
+      "keywords": [
+        "step_4TY_flaA__flaA",
+        "flaa",
+        "flagellar antigen typing",
+        "run flagellar antigen typing",
+        "campylobacter flagellar typing"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "assembly",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/mlst-w-db:2.23.0--60b8b2e3dd_231219.124455",
+      "file_path": "steps/step_4TY_flaA__flaA"
+    },
+    {
+      "id": "step_4TY_lineage__pangolin",
+      "tool": "step_4TY_lineage__pangolin",
+      "domain": "General",
+      "description": "step_4TY_lineage__pangolin \u2014 'step_4TY_lineage__pangolin'.",
+      "keywords": [
+        "step_4TY_lineage__pangolin"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "input_channels": [
+        "consensus"
+      ],
+      "output_channels": [],
+      "container": "ghcr.io/genpat-it/pangolin:v4.3.1-v0.1.12-v0.3.17-v1.21",
+      "file_path": "steps/step_4TY_lineage__pangolin"
+    },
+    {
+      "id": "step_4TY_lineage__westnile",
+      "tool": "step_4TY_lineage__westnile",
+      "domain": "General",
+      "description": "step_4TY_lineage__westnile \u2014 'step_4TY_lineage__westnile'.",
+      "keywords": [
+        "step_4TY_lineage__westnile"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.assets_dir",
+        "params.outdir",
+        "params.step_4TY_lineage__westnile___threshold"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "lineage"
+      ],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "file_path": "steps/step_4TY_lineage__westnile"
+    },
+    {
+      "id": "step_4TY_plasmid__mobsuite",
+      "tool": "step_4TY_plasmid__mobsuite",
+      "domain": "General",
+      "description": "step_4TY_plasmid__mobsuite \u2014 'step_4TY_plasmid__mobsuite'.",
+      "keywords": [
+        "step_4TY_plasmid__mobsuite",
+        "mobsuite",
+        "plasmid typing",
+        "type plasmids present",
+        "mob_recon",
+        "replicon typing",
+        "plasmid identification"
+      ],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "plasmids"
+      ],
+      "container": "ghcr.io/genpat-it/mobsuite:3.1.4--c2c728b1a2",
+      "file_path": "steps/step_4TY_plasmid__mobsuite"
+    }
+  ]
+}

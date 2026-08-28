@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -15,6 +15,7 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 # --- Schemas ---
 class MessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     role: str
     content: str
@@ -23,24 +24,19 @@ class MessageOut(BaseModel):
     mermaid_code: Optional[str] = None
     ast_json: Optional[Dict[str, Any]] = None
 
-    class Config:
-        from_attributes = True
-
 
 class ConversationRename(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
 
 
 class ConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     session_id: str
     title: Optional[str]
     drawing_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ConversationDetail(ConversationOut):
@@ -71,7 +67,6 @@ def list_conversations(
         if c.drawing_id:
             d = db.query(Drawing).filter(Drawing.id == c.drawing_id).first()
             if d and d.graph_json:
-                # Extract lightweight node list for thumbnail
                 ndm = d.graph_json.get("nodeDataMap", {})
                 item["drawing_nodes"] = [
                     {"id": v.get("component_id", ""), "tool": v.get("tool", "")}
@@ -150,7 +145,6 @@ def delete_conversation(
     return {"status": "ok"}
 
 
-# --- Helpers used by /chat ---
 def get_or_create_conversation(
     db: Session, user: User, session_id: str, first_user_message: str
 ) -> Conversation:

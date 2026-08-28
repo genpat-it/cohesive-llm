@@ -1,0 +1,14 @@
+{
+  "resources": {
+    "helper_functions": [],
+    "containers": [
+      "biocontainers/bcftools:1.19",
+      "biocontainers/bwa-mem2:2.2.1",
+      "biocontainers/fastqc:0.12.1",
+      "biocontainers/prokka:1.14.6",
+      "biocontainers/samtools:1.17",
+      "biocontainers/spades:3.15.5",
+      "biocontainers/trimmomatic:0.39"
+    ]
+  }
+}

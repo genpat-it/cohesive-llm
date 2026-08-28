@@ -1,0 +1,421 @@
+{
+  "templates": [
+    {
+      "id": "module_covid_emergency",
+      "description": "Workflow 'module_covid_emergency'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.assets_dir"
+      ],
+      "components_used": [
+        "step_2AS_mapping__ivar",
+        "step_4TY_lineage__pangolin"
+      ],
+      "input_channels": [
+        "trimmed"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_covid_emergency"
+    },
+    {
+      "id": "module_denovo",
+      "description": "Workflow 'module_denovo'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getHost()",
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "extractKey",
+        "step_1PP_hostdepl__bowtie",
+        "step_2AS_denovo__spades"
+      ],
+      "input_channels": [
+        "trimmedReads",
+        "host"
+      ],
+      "output_channels": [
+        "assembled",
+        "depleted"
+      ],
+      "file_path": "modules/module_denovo"
+    },
+    {
+      "id": "module_draft_genome",
+      "description": "Workflow 'module_draft_genome'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "extractKey",
+        "step_2AS_mapping__bowtie",
+        "step_2AS_mapping__ivar",
+        "step_4AN_genes__prokka"
+      ],
+      "input_channels": [
+        "reads",
+        "reference",
+        "referenceGB"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_draft_genome"
+    },
+    {
+      "id": "module_enterotoxin_saureus_finder",
+      "description": "Workflow 'module_enterotoxin_saureus_finder' — Screen Staphylococcus aureus assembly for enterotoxin gene clusters using BLAST.",
+      "keywords": [
+        "enterotoxin",
+        "saureus",
+        "staphylococcus",
+        "toxin",
+        "virulence",
+        "clusters"
+      ],
+      "use_cases": [
+        "Staphylococcus aureus enterotoxin detection",
+        "Enterotoxin gene cluster screening"
+      ],
+      "compatible_seq_types": [
+        "ILLUMINA_PE",
+        "FASTA"
+      ],
+      "variables_needed": [
+        "getGenusSpeciesOptional()",
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "step_2AS_denovo__unicycler",
+        "extractKey",
+        "step_4AN_AMR__blast"
+      ],
+      "input_channels": [
+        "trimmed",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_enterotoxin_saureus_finder"
+    },
+    {
+      "id": "module_filtered_denovo",
+      "description": "Workflow 'module_filtered_denovo'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "extractKey",
+        "step_1PP_filtering__bowtie",
+        "step_2AS_denovo__spades"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "assembled",
+        "filtered"
+      ],
+      "file_path": "modules/module_filtered_denovo"
+    },
+    {
+      "id": "module_plasmids",
+      "description": "Workflow 'module_plasmids'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()",
+        "params.outdir"
+      ],
+      "components_used": [
+        "step_4TY_plasmid__mobsuite",
+        "staramr"
+      ],
+      "input_channels": [
+        "assembly",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_plasmids"
+    },
+    {
+      "id": "module_qc_fastqc",
+      "description": "Process 'module_qc_fastqc'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "components_used": [],
+      "input_channels": [
+        "riscd_input",
+        "reads"
+      ],
+      "output_channels": [
+        "name",
+        "name"
+      ],
+      "file_path": "modules/module_qc_fastqc"
+    },
+    {
+      "id": "module_qc_nanoplot",
+      "description": "Process 'module_qc_nanoplot'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.max_cpus",
+        "params.outdir"
+      ],
+      "components_used": [],
+      "input_channels": [
+        "riscd_input",
+        "reads"
+      ],
+      "output_channels": [
+        "name",
+        "name"
+      ],
+      "file_path": "modules/module_qc_nanoplot"
+    },
+    {
+      "id": "module_qc_quast",
+      "description": "Workflow 'module_qc_quast'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.outdir"
+      ],
+      "components_used": [
+        "quast"
+      ],
+      "input_channels": [
+        "input"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_qc_quast"
+    },
+    {
+      "id": "module_reads_processing",
+      "description": "Workflow 'module_reads_processing'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [],
+      "components_used": [
+        "hasFastqData",
+        "step_0SQ_rawreads__fastq",
+        "isIlluminaPaired",
+        "isIonTorrent",
+        "isNanopore",
+        "isBacterium",
+        "step_1PP_trimming__trimmomatic",
+        "step_1PP_trimming__fastp",
+        "hasEnoughFastqData",
+        "step_3TX_class__kraken"
+      ],
+      "input_channels": [
+        "rawReads"
+      ],
+      "output_channels": [
+        "no_reads",
+        "trimmed_with_data",
+        "insufficient_number_of_reads"
+      ],
+      "file_path": "modules/module_reads_processing"
+    },
+    {
+      "id": "module_scaffolds_filtering",
+      "description": "Workflow 'module_scaffolds_filtering'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [],
+      "components_used": [
+        "extractKey",
+        "step_3TX_species__vdabricate",
+        "step_2AS_filtering__seqio"
+      ],
+      "input_channels": [
+        "assembled",
+        "reference",
+        "abricatedatabase"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_scaffolds_filtering"
+    },
+    {
+      "id": "module_segmented",
+      "description": "Workflow 'module_segmented'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "step_2AS_mapping__ivar"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "step_2AS_mapping__ivar.out.consensus"
+      ],
+      "file_path": "modules/module_segmented"
+    },
+    {
+      "id": "module_typing_bacteria",
+      "description": "Workflow 'module_typing_bacteria'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "params.skip_bestref_mapping"
+      ],
+      "components_used": [
+        "step_3TX_species__kmerfinder",
+        "extractKey",
+        "step_2AS_mapping__bowtie",
+        "step_4AN_AMR__abricate",
+        "step_4AN_genes__prokka",
+        "getEmpty",
+        "step_4AN_AMR__staramr",
+        "step_4TY_MLST__mlst",
+        "step_4TY_flaA__flaA",
+        "step_4TY_cgMLST__chewbbaca"
+      ],
+      "input_channels": [
+        "trimmed",
+        "assembly"
+      ],
+      "output_channels": [
+        "genus_species"
+      ],
+      "file_path": "modules/module_typing_bacteria"
+    },
+    {
+      "id": "module_vdraft",
+      "description": "Workflow 'module_vdraft'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getHost()",
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "module_denovo",
+        "extractKey",
+        "module_scaffolds_filtering",
+        "module_draft_genome"
+      ],
+      "input_channels": [
+        "reads",
+        "host",
+        "reference",
+        "referenceGB",
+        "abricateDatabase"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_vdraft"
+    },
+    {
+      "id": "module_vdraft_light",
+      "description": "Workflow 'module_vdraft_light'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "extractKey",
+        "step_1PP_hostdepl__bowtie",
+        "step_2AS_mapping__bowtie"
+      ],
+      "input_channels": [
+        "trimmedReads",
+        "host",
+        "reference"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_vdraft_light"
+    },
+    {
+      "id": "module_westnile",
+      "description": "Workflow 'module_westnile'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "step_4TY_lineage__westnile",
+        "extractKey",
+        "getReferenceForLineage",
+        "step_2AS_mapping__ivar"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "file_path": "modules/module_westnile"
+    },
+    {
+      "id": "module_wgs_bacteria",
+      "description": "Workflow 'module_wgs_bacteria'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "step_2AS_denovo__shovill"
+      ],
+      "input_channels": [
+        "trimmedReads"
+      ],
+      "output_channels": [
+        "step_2AS_denovo__shovill.out"
+      ],
+      "file_path": "modules/module_wgs_bacteria"
+    },
+    {
+      "id": "pipeline_ngsmanager",
+      "description": "Workflow 'pipeline_ngsmanager'",
+      "keywords": [],
+      "use_cases": [],
+      "compatible_seq_types": [],
+      "variables_needed": [
+        "getSingleInput()"
+      ],
+      "components_used": [
+        "isFastqRiscd",
+        "param",
+        "ngsmanager_fastq",
+        "getSingleInput",
+        "isFastaRiscd",
+        "ngsmanager_fasta"
+      ],
+      "input_channels": [],
+      "output_channels": [],
+      "file_path": "pipelines/pipeline_ngsmanager"
+    }
+  ]
+}

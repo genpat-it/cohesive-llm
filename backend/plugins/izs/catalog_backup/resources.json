@@ -1,0 +1,1379 @@
+{
+  "metadata": {
+    "version": "2.0"
+  },
+  "resources": {
+    "helper_functions": [
+      {
+        "name": "parseMetadataFromFileName",
+        "description": "Extracts DS, DT, anno, cmp from filename using regex pattern.",
+        "usage": "def md = parseMetadataFromFileName(file)",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "metadata",
+          "filename",
+          "regex",
+          "ds",
+          "dt",
+          "anno",
+          "cmp",
+          "extract",
+          "parsing"
+        ],
+        "use_cases": [
+          "Extract metadata from a file name",
+          "Parse DS and DT from input files"
+        ],
+        "aliases": [
+          "Filename Parser",
+          "Metadata Extractor"
+        ]
+      },
+      {
+        "name": "executionMetadata",
+        "description": "Returns current anno (year) and dt (YYMMDD) based on workflow start or analysis_date param.",
+        "usage": "def ex = executionMetadata()",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "execution",
+          "metadata",
+          "date",
+          "year",
+          "dt",
+          "anno",
+          "workflow start",
+          "timestamp"
+        ],
+        "use_cases": [
+          "Get the current execution year and date",
+          "Generate a timestamp for the workflow run"
+        ],
+        "aliases": [
+          "Execution Timestamp",
+          "Date Metadata"
+        ]
+      },
+      {
+        "name": "taskMemory",
+        "description": "Dynamic memory management with retry scaling (1x → 3x → max).",
+        "usage": "memory { taskMemory(8.GB, task.attempt) }",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "memory",
+          "dynamic memory",
+          "retry scaling",
+          "task management",
+          "resource allocation"
+        ],
+        "use_cases": [
+          "Allocate dynamic memory for a task",
+          "Scale memory automatically on task retry"
+        ],
+        "aliases": [
+          "Dynamic Memory Allocator",
+          "Retry Memory Scaler"
+        ]
+      },
+      {
+        "name": "taskTime",
+        "description": "Dynamic time management with retry scaling (1x → max).",
+        "usage": "time { taskTime(2.h, task.attempt) }",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "time",
+          "dynamic time",
+          "retry scaling",
+          "timeout",
+          "resource allocation"
+        ],
+        "use_cases": [
+          "Allocate dynamic time limit for a task",
+          "Increase time limit automatically on task retry"
+        ],
+        "aliases": [
+          "Dynamic Time Allocator",
+          "Retry Time Scaler"
+        ]
+      },
+      {
+        "name": "getRisCd",
+        "description": "Generates RISCD unique identifier from metadata, execution context, step, and method.",
+        "usage": "val riscd = getRisCd(md, ex, '1PP', 'trimming')",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "riscd",
+          "identifier",
+          "unique id",
+          "generator",
+          "execution context",
+          "metadata"
+        ],
+        "use_cases": [
+          "Generate a unique RISCD for a step",
+          "Create an identifier based on metadata and step"
+        ],
+        "aliases": [
+          "RISCD Generator",
+          "Unique ID Builder"
+        ]
+      },
+      {
+        "name": "extractKey",
+        "description": "Extracts DS prefix (e.g., DS123) from filename for cross-join operations.",
+        "usage": "def key = extractKey(input)",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "key extraction",
+          "ds prefix",
+          "cross-join",
+          "filename",
+          "grouping"
+        ],
+        "use_cases": [
+          "Extract a sample ID or DS prefix for grouping files",
+          "Get a cross-join key from a filename string"
+        ],
+        "aliases": [
+          "DS Key Extractor",
+          "Prefix Parser"
+        ]
+      },
+      {
+        "name": "stepInputs",
+        "description": "Generates structured metadata JSON including input, riscd, meta, and params.",
+        "usage": "def jsonStr = stepInputs(riscd, md, ex, step, method, opt)",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "step inputs",
+          "json",
+          "metadata json",
+          "structured output",
+          "workflow step"
+        ],
+        "use_cases": [
+          "Generate a metadata JSON for a workflow step",
+          "Structure input files and parameters as a JSON object"
+        ],
+        "aliases": [
+          "Step JSON Generator",
+          "Metadata Structurer"
+        ]
+      },
+      {
+        "name": "extractDsRef",
+        "description": "Extracts DS and reference suffix (e.g., DS123-refA) from filename.",
+        "usage": "def dsRef = extractDsRef(input)",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "ds prefix",
+          "reference suffix",
+          "extraction",
+          "filename",
+          "reference mapping"
+        ],
+        "use_cases": [
+          "Extract sample ID and its specific reference from a filename string"
+        ],
+        "aliases": [
+          "DS and Reference Extractor"
+        ]
+      },
+      {
+        "name": "getBaseName",
+        "description": "Removes file extension from a filename.",
+        "usage": "def base = getBaseName('file.fastq.gz')",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "basename",
+          "filename",
+          "extension removal",
+          "string manipulation"
+        ],
+        "use_cases": [
+          "Get the base name of a file without its extension"
+        ],
+        "aliases": [
+          "Extension Remover",
+          "Basename Getter"
+        ]
+      },
+      {
+        "name": "getGB",
+        "description": "Attempts to locate matching .gb file for a given FASTA reference; returns empty file if not found.",
+        "usage": "def gbFile = getGB(fastaRef)",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "genbank",
+          ".gb",
+          "fasta reference",
+          "file locator",
+          "annotation file"
+        ],
+        "use_cases": [
+          "Find the corresponding GenBank file for a FASTA reference"
+        ],
+        "aliases": [
+          "GenBank Locator",
+          "GB Finder"
+        ]
+      },
+      {
+        "name": "getEmpty",
+        "description": "Returns a reference to a static empty file placeholder.",
+        "usage": "def empty = getEmpty()",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "empty file",
+          "placeholder",
+          "dummy file",
+          "static file"
+        ],
+        "use_cases": [
+          "Get a placeholder when a required file is missing to prevent errors"
+        ],
+        "aliases": [
+          "Empty File Generator",
+          "Placeholder File"
+        ]
+      },
+      {
+        "name": "parseRISCD",
+        "description": "Parses a RISCD string into structured components (dt, ds, acc, met, ref).",
+        "usage": "def parts = parseRISCD('240524-123-0SQ456-trimming_refA')",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "riscd",
+          "parser",
+          "structured components",
+          "dt",
+          "ds",
+          "acc",
+          "string parsing"
+        ],
+        "use_cases": [
+          "Break down a RISCD string into its individual metadata components"
+        ],
+        "aliases": [
+          "RISCD Parser",
+          "String Splitter"
+        ]
+      },
+      {
+        "name": "isFastqRiscd",
+        "description": "Checks if a RISCD corresponds to FASTQ data (accession starts with '0SQ').",
+        "usage": "if (isFastqRiscd(riscd)) { ... }",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "fastq",
+          "riscd validation",
+          "0SQ",
+          "sequencing data",
+          "conditional check"
+        ],
+        "use_cases": [
+          "Determine if a step generates or uses FASTQ data based on its RISCD"
+        ],
+        "aliases": [
+          "FASTQ RISCD Checker"
+        ]
+      },
+      {
+        "name": "isFastaRiscd",
+        "description": "Checks if a RISCD corresponds to FASTA data (accession starts with '2AS').",
+        "usage": "if (isFastaRiscd(riscd)) { ... }",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "fasta",
+          "riscd validation",
+          "2AS",
+          "assembly data",
+          "conditional check"
+        ],
+        "use_cases": [
+          "Determine if a step generates or uses FASTA data based on its RISCD"
+        ],
+        "aliases": [
+          "FASTA RISCD Checker"
+        ]
+      },
+      {
+        "name": "isSpeciesSupported",
+        "description": "Validates if a genus/species is in a provided whitelist (case-insensitive).",
+        "usage": "if (isSpeciesSupported(gsp, whitelist, reads, entrypoint)) { ... }",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "species",
+          "genus",
+          "whitelist",
+          "validation",
+          "case-insensitive",
+          "support check"
+        ],
+        "use_cases": [
+          "Check if an identified species is supported by the downstream tool"
+        ],
+        "aliases": [
+          "Species Validator",
+          "Whitelist Checker"
+        ]
+      },
+      {
+        "name": "csv2map",
+        "description": "Reads a 2-line CSV file and returns a key-value map.",
+        "usage": "def md = csv2map(file, ',')",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "csv to map",
+          "key-value",
+          "parsing",
+          "dictionary"
+        ],
+        "use_cases": [
+          "Convert a two-line CSV output into a Groovy map object"
+        ],
+        "aliases": [
+          "CSV Reader",
+          "Map Converter"
+        ]
+      },
+      {
+        "name": "flattenPath",
+        "description": "Extracts basename from a full file path.",
+        "usage": "def name = flattenPath('/path/to/file.txt')",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "path",
+          "basename",
+          "filepath extraction",
+          "string manipulation"
+        ],
+        "use_cases": [
+          "Get the simple file name from a long absolute or relative path"
+        ],
+        "aliases": [
+          "Path Flattener",
+          "Basename Extractor"
+        ]
+      },
+      {
+        "name": "logHeader",
+        "description": "Generates a formatted log header with workflow metadata and a custom message.",
+        "usage": "println logHeader('Starting QC step')",
+        "path": "cohesive-ngsmanager/functions/common.nf",
+        "keywords": [
+          "log header",
+          "formatting",
+          "logging",
+          "metadata"
+        ],
+        "use_cases": [
+          "Print a standard formatted header string to the Nextflow log console"
+        ],
+        "aliases": [
+          "Log Formatter",
+          "Header Generator"
+        ]
+      },
+      {
+        "name": "getTrimmedReads",
+        "description": "Retrieves trimmed FASTQ files based on 'trimming-riscd' and 'cmp', validating against allowed accessions (1PP).",
+        "usage": "def reads = getTrimmedReads(true)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "trimmed reads",
+          "fastq",
+          "1PP",
+          "data retrieval"
+        ],
+        "use_cases": [
+          "Fetch trimmed FASTQ files for downstream processing steps"
+        ],
+        "aliases": [
+          "Trimmed Reads Getter"
+        ]
+      },
+      {
+        "name": "getAssembly",
+        "description": "Retrieves assembly FASTA files based on 'cmp' and 'riscd', supporting denovo, import, and mapping accessions.",
+        "usage": "def assembly = getAssembly()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "assembly",
+          "fasta",
+          "retrieval",
+          "denovo",
+          "mapping",
+          "import"
+        ],
+        "use_cases": [
+          "Fetch assembled FASTA files for typing, annotation, or multi-sample steps"
+        ],
+        "aliases": [
+          "Assembly Getter"
+        ]
+      },
+      {
+        "name": "getDepletedReads",
+        "description": "Retrieves host-depleted reads based on 'cmp' and 'riscd' (1PP_hostdepl).",
+        "usage": "def deplReads = getDepletedReads()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "depleted reads",
+          "host depletion",
+          "1PP",
+          "retrieval"
+        ],
+        "use_cases": [
+          "Fetch reads that have had host contamination removed by Bowtie"
+        ],
+        "aliases": [
+          "Depleted Reads Getter"
+        ]
+      },
+      {
+        "name": "getReferenceCodes",
+        "description": "Extracts a list of reference codes from the 'references' parameter.",
+        "usage": "def codes = getReferenceCodes()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "reference codes",
+          "parameters",
+          "parsing",
+          "extraction"
+        ],
+        "use_cases": [
+          "Get a list of all reference codes provided in the workflow parameters"
+        ],
+        "aliases": [
+          "Reference Code Extractor"
+        ]
+      },
+      {
+        "name": "getNCBICodes",
+        "description": "Parses NCBI codes from a string or list parameter.",
+        "usage": "def ncbi = getNCBICodes()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "ncbi",
+          "accession codes",
+          "parsing",
+          "parameters"
+        ],
+        "use_cases": [
+          "Extract NCBI accession numbers from parameter inputs"
+        ],
+        "aliases": [
+          "NCBI Code Parser"
+        ]
+      },
+      {
+        "name": "getReferences",
+        "description": "Retrieves reference files (FASTA or GenBank) keyed by DS, handling multiple references.",
+        "usage": "def refs = getReferences('fa')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "multiple references",
+          "fasta",
+          "genbank",
+          "retrieval",
+          "ds key",
+          "multi-fasta"
+        ],
+        "use_cases": [
+          "Fetch all reference files required for a specific sample DS (e.g. for segmented mapping)"
+        ],
+        "aliases": [
+          "Multi-Reference Getter"
+        ]
+      },
+      {
+        "name": "getReference",
+        "description": "Retrieves a single reference file (FASTA or GenBank) keyed by DS.",
+        "usage": "def ref = getReference('gb')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "single reference",
+          "fasta",
+          "genbank",
+          "retrieval",
+          "ds key"
+        ],
+        "use_cases": [
+          "Fetch the primary reference file for a specific sample"
+        ],
+        "aliases": [
+          "Single Reference Getter"
+        ]
+      },
+      {
+        "name": "getReferenceUnkeyed",
+        "description": "Retrieves a single reference file without the DS cross-reference key.",
+        "usage": "def ref = getReferenceUnkeyed('any')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "reference",
+          "unkeyed",
+          "global reference",
+          "retrieval"
+        ],
+        "use_cases": [
+          "Fetch a global reference file that is not tied to a specific sample ID"
+        ],
+        "aliases": [
+          "Global Reference Getter",
+          "Unkeyed Reference"
+        ]
+      },
+      {
+        "name": "getReferenceOptional",
+        "description": "Retrieves a reference file if available, otherwise returns an empty file placeholder.",
+        "usage": "def ref = getReferenceOptional('fa')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "optional reference",
+          "fallback",
+          "empty file",
+          "conditional retrieval"
+        ],
+        "use_cases": [
+          "Fetch a reference file if provided, otherwise fail gracefully with an empty file placeholder"
+        ],
+        "aliases": [
+          "Optional Reference Getter"
+        ]
+      },
+      {
+        "name": "getHost",
+        "description": "Retrieves the 'host' parameter, keyed by DS.",
+        "usage": "def host = getHost()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "host parameter",
+          "retrieval",
+          "ds key",
+          "host organism"
+        ],
+        "use_cases": [
+          "Get the host name assigned to a specific sample dataset"
+        ],
+        "aliases": [
+          "Host Parameter Getter"
+        ]
+      },
+      {
+        "name": "getGenusSpecies",
+        "description": "Retrieves 'genus_species' parameter keyed by DS.",
+        "usage": "def gsp = getGenusSpecies()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "genus_species",
+          "parameter",
+          "retrieval",
+          "taxonomy"
+        ],
+        "use_cases": [
+          "Get the taxonomy (genus and species) assigned to a sample"
+        ],
+        "aliases": [
+          "Taxonomy Getter",
+          "Genus Species Getter"
+        ]
+      },
+      {
+        "name": "getModule",
+        "description": "Retrieves the 'module' parameter keyed by DS.",
+        "usage": "def mod = getModule()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "module parameter",
+          "pipeline routing",
+          "retrieval"
+        ],
+        "use_cases": [
+          "Determine which analytical module or template to run for a sample"
+        ],
+        "aliases": [
+          "Module Parameter Getter"
+        ]
+      },
+      {
+        "name": "getAbricateDatabase",
+        "description": "Retrieves 'abricate_database' parameter keyed by DS.",
+        "usage": "def db = getAbricateDatabase()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "abricate database",
+          "parameter",
+          "amr",
+          "virulence"
+        ],
+        "use_cases": [
+          "Get the specific Abricate database requested for a sample"
+        ],
+        "aliases": [
+          "Abricate DB Getter"
+        ]
+      },
+      {
+        "name": "getBlastDatabase",
+        "description": "Retrieves 'blast_database' parameter keyed by DS.",
+        "usage": "def blastDb = getBlastDatabase()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "blast database",
+          "parameter",
+          "alignment"
+        ],
+        "use_cases": [
+          "Get the specific BLAST database to use for a sample"
+        ],
+        "aliases": [
+          "BLAST DB Getter"
+        ]
+      },
+      {
+        "name": "getParamTaxaId",
+        "description": "Retrieves the 'taxaid' parameter value.",
+        "usage": "def taxId = getParamTaxaId()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "taxaid",
+          "parameter",
+          "taxonomy",
+          "id"
+        ],
+        "use_cases": [
+          "Fetch the Taxonomic ID parameter from the workflow options"
+        ],
+        "aliases": [
+          "Taxa ID Getter"
+        ]
+      },
+      {
+        "name": "_getParamAsValue",
+        "description": "Internal helper to retrieve a parameter value with optional default and security checks.",
+        "usage": "def val = _getParamAsValue('paramName', true, 'default')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "internal helper",
+          "param value",
+          "default value",
+          "security",
+          "safe retrieval"
+        ],
+        "use_cases": [
+          "Safely read a workflow parameter and supply a fallback if it is missing"
+        ],
+        "aliases": [
+          "Safe Param Reader"
+        ]
+      },
+      {
+        "name": "_getParam",
+        "description": "Internal helper to retrieve parameters, optionally crossing them with RISCD DS keys.",
+        "usage": "def p = _getParam('name', false, true)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "internal helper",
+          "parameter cross-referencing",
+          "ds key"
+        ],
+        "use_cases": [
+          "Fetch a parameter and securely associate it with a specific sample ID"
+        ],
+        "aliases": [
+          "Cross-referencing Param Reader"
+        ]
+      },
+      {
+        "name": "getDS",
+        "description": "Extracts the DS component from the global RISCD parameter.",
+        "usage": "def ds = getDS()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "ds",
+          "riscd",
+          "parameter parsing",
+          "global state"
+        ],
+        "use_cases": [
+          "Extract the sample dataset ID prefix from the current global RISCD string"
+        ],
+        "aliases": [
+          "Global DS Getter"
+        ]
+      },
+      {
+        "name": "isFullOutput",
+        "description": "Checks if the 'full_output' or 'fullOutput' parameter is enabled.",
+        "usage": "if (isFullOutput()) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "full_output",
+          "parameter toggle",
+          "verbosity",
+          "reporting"
+        ],
+        "use_cases": [
+          "Check if the user requested detailed output files to be published"
+        ],
+        "aliases": [
+          "Full Output Checker"
+        ]
+      },
+      {
+        "name": "getResult",
+        "description": "Core function to retrieve results from specific workflow steps (raw, assembly, genes, AMR, etc.) based on CMP, RISCD, and file patterns.",
+        "usage": "def res = getResult(cmp, riscd, '*.fasta')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "core retrieval",
+          "result fetching",
+          "cmp",
+          "riscd",
+          "file pattern",
+          "channel"
+        ],
+        "use_cases": [
+          "Dynamically fetch channel outputs from a previous workflow step based on a file pattern"
+        ],
+        "aliases": [
+          "Core Result Fetcher",
+          "Output Retrieval"
+        ]
+      },
+      {
+        "name": "getKrakenResults",
+        "description": "Retrieves Kraken classification results (TSV/TXT).",
+        "usage": "def krak = getKrakenResults()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "kraken",
+          "classification",
+          "tsv",
+          "txt",
+          "taxonomy results"
+        ],
+        "use_cases": [
+          "Fetch taxonomy reports generated by a previous Kraken step"
+        ],
+        "aliases": [
+          "Kraken Results Getter"
+        ]
+      },
+      {
+        "name": "getInput",
+        "description": "Aggregates inputs defined in 'input' list or 'cmp'/'riscd' params using `getResult`.",
+        "usage": "def inp = getInput()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "input aggregation",
+          "parameter list",
+          "cmp",
+          "riscd"
+        ],
+        "use_cases": [
+          "Collect all diverse input files needed for a process into a single channel"
+        ],
+        "aliases": [
+          "Input Aggregator"
+        ]
+      },
+      {
+        "name": "getVCFs",
+        "description": "Retrieves VCF input files matching standard patterns.",
+        "usage": "def vcfs = getVCFs()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "vcf",
+          "variant calling",
+          "retrieval",
+          "snps"
+        ],
+        "use_cases": [
+          "Fetch variant calling format files for multi-sample aggregation tools"
+        ],
+        "aliases": [
+          "VCF Getter"
+        ]
+      },
+      {
+        "name": "hasEnoughFastqData",
+        "description": "Validates if FASTQ files exceed a defined 'raw_reads_threshold'.",
+        "usage": "if (!hasEnoughFastqData(reads)) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "validation",
+          "fastq",
+          "threshold",
+          "file size",
+          "quality control"
+        ],
+        "use_cases": [
+          "Ensure there is enough sequencing data present to proceed with analysis"
+        ],
+        "aliases": [
+          "FASTQ Size Validator"
+        ]
+      },
+      {
+        "name": "hasFastqData",
+        "description": "Checks if FASTQ files contain any processable reads (non-zero size).",
+        "usage": "if (hasFastqData(reads)) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "validation",
+          "fastq",
+          "non-zero",
+          "empty check"
+        ],
+        "use_cases": [
+          "Prevent downstream processes from failing on completely empty FASTQ files"
+        ],
+        "aliases": [
+          "FASTQ Empty Checker"
+        ]
+      },
+      {
+        "name": "param",
+        "description": "Retrieves a mandatory parameter value.",
+        "usage": "def p = param('threads')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "mandatory parameter",
+          "retrieval",
+          "required"
+        ],
+        "use_cases": [
+          "Fail the workflow cleanly if a required parameter is not set by the user"
+        ],
+        "aliases": [
+          "Mandatory Param Reader"
+        ]
+      },
+      {
+        "name": "optional",
+        "description": "Retrieves an optional parameter value (returns empty string if missing).",
+        "usage": "def p = optional('suffix')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "optional parameter",
+          "default empty",
+          "safe check"
+        ],
+        "use_cases": [
+          "Safely read a parameter that might not be provided without crashing"
+        ],
+        "aliases": [
+          "Optional Param Reader"
+        ]
+      },
+      {
+        "name": "optionalOrDefault",
+        "description": "Retrieves an optional parameter value with a fallback default.",
+        "usage": "def p = optionalOrDefault('threads', 4)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "optional parameter",
+          "fallback default",
+          "safe read"
+        ],
+        "use_cases": [
+          "Read a parameter, falling back to a specific default value if it is absent"
+        ],
+        "aliases": [
+          "Default Param Reader"
+        ]
+      },
+      {
+        "name": "isIonTorrent",
+        "description": "Checks if input reads are Ion Torrent data based on 'seq_type' or header detection.",
+        "usage": "if (isIonTorrent(reads)) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "ion torrent",
+          "sequencing type",
+          "validation",
+          "routing check"
+        ],
+        "use_cases": [
+          "Determine if the current reads are from Ion Torrent to route logic appropriately"
+        ],
+        "aliases": [
+          "Ion Torrent Checker"
+        ]
+      },
+      {
+        "name": "isNanopore",
+        "description": "Checks if input reads are Nanopore data based on 'seq_type' or header detection.",
+        "usage": "if (isNanopore(reads)) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "nanopore",
+          "ont",
+          "long reads",
+          "sequencing type"
+        ],
+        "use_cases": [
+          "Determine if the current reads are ONT long reads to route logic"
+        ],
+        "aliases": [
+          "Nanopore Checker"
+        ]
+      },
+      {
+        "name": "isIlluminaPaired",
+        "description": "Checks if input reads are Illumina Paired-End data.",
+        "usage": "if (isIlluminaPaired(reads)) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "illumina paired-end",
+          "short reads",
+          "sequencing type"
+        ],
+        "use_cases": [
+          "Determine if the current reads are standard Illumina paired-end data"
+        ],
+        "aliases": [
+          "Illumina Checker"
+        ]
+      },
+      {
+        "name": "isCompatibleWithSeqType",
+        "description": "Validates if the provided reads match a list of allowed sequencing types.",
+        "usage": "boolean compat = isCompatibleWithSeqType(reads, ['ion', 'illumina'], 'Trimming')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "compatibility",
+          "sequencing type",
+          "validation",
+          "routing",
+          "allowed types"
+        ],
+        "use_cases": [
+          "Prevent a specific tool from running on an unsupported sequencing read type"
+        ],
+        "aliases": [
+          "Sequencing Type Validator"
+        ]
+      },
+      {
+        "name": "isSegmentedMapping",
+        "description": "Determines if the current run is a segmented mapping workflow.",
+        "usage": "if (isSegmentedMapping()) { ... }",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "segmented mapping",
+          "workflow type",
+          "influenza",
+          "routing"
+        ],
+        "use_cases": [
+          "Trigger specific aggregation logic meant only for multi-segment viruses"
+        ],
+        "aliases": [
+          "Segmented Run Checker"
+        ]
+      },
+      {
+        "name": "checkEnum",
+        "description": "Validates if a value exists within a given Enum class.",
+        "usage": "checkEnum(MyEnum, value)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "enum",
+          "validation",
+          "allowed values",
+          "strict check"
+        ],
+        "use_cases": [
+          "Ensure a string parameter strictly matches an allowed set of enumerated values"
+        ],
+        "aliases": [
+          "Enum Validator"
+        ]
+      },
+      {
+        "name": "getHostReference",
+        "description": "Retrieves the specific host reference FASTA from 'hosts_dir'.",
+        "usage": "def hostRef = getHostReference()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "host reference",
+          "fasta",
+          "depletion",
+          "host genome"
+        ],
+        "use_cases": [
+          "Fetch the specific host genome file required for read depletion processes"
+        ],
+        "aliases": [
+          "Host FASTA Getter"
+        ]
+      },
+      {
+        "name": "getLongReads",
+        "description": "Retrieves long reads based on 'long_reads.cmp' and 'long_reads.riscd' parameters.",
+        "usage": "def lr = getLongReads()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "long reads",
+          "ont",
+          "nanopore",
+          "retrieval",
+          "hybrid"
+        ],
+        "use_cases": [
+          "Fetch long reads to be used in hybrid assembly or polishing steps"
+        ],
+        "aliases": [
+          "Long Reads Getter"
+        ]
+      },
+      {
+        "name": "paramWrap",
+        "description": "Wraps a mandatory parameter value into a string pattern (e.g., replaces {}).",
+        "usage": "def arg = paramWrap('cpu', '--threads {}')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "string wrapping",
+          "parameter formatting",
+          "template",
+          "command line"
+        ],
+        "use_cases": [
+          "Format a mandatory command-line argument snippet for a tool script"
+        ],
+        "aliases": [
+          "Param String Wrapper"
+        ]
+      },
+      {
+        "name": "optWrap",
+        "description": "Wraps an optional parameter value into a string pattern if the parameter exists.",
+        "usage": "def arg = optWrap('min_len', '--length {}')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "string wrapping",
+          "optional parameter",
+          "template",
+          "conditional format"
+        ],
+        "use_cases": [
+          "Conditionally format a command-line argument snippet only if the parameter is set"
+        ],
+        "aliases": [
+          "Optional String Wrapper"
+        ]
+      },
+      {
+        "name": "_getReferences",
+        "description": "Internal helper to retrieve multiple references, handling keying by DS and optionality.",
+        "usage": "def refs = _getReferences(false, 'fa', true, true)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "internal helper",
+          "multiple references",
+          "ds key",
+          "abstraction"
+        ],
+        "use_cases": [
+          "Abstract logic for fetching many reference files securely"
+        ],
+        "aliases": [
+          "Multi-Ref Helper"
+        ]
+      },
+      {
+        "name": "_getSingleReference",
+        "description": "Internal helper to retrieve a single reference file based on specific input map and type.",
+        "usage": "def ref = _getSingleReference(false, 'gb', params, 'DS123')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "internal helper",
+          "single reference",
+          "input map",
+          "abstraction"
+        ],
+        "use_cases": [
+          "Abstract logic for fetching one reference file safely and quickly"
+        ],
+        "aliases": [
+          "Single-Ref Helper"
+        ]
+      },
+      {
+        "name": "getHostOptional",
+        "description": "Retrieves the 'host' parameter optionally, keyed by DS.",
+        "usage": "def host = getHostOptional()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "optional host",
+          "retrieval",
+          "ds key",
+          "safe check"
+        ],
+        "use_cases": [
+          "Fetch a host parameter safely for steps where a host might not be requested"
+        ],
+        "aliases": [
+          "Optional Host Getter"
+        ]
+      },
+      {
+        "name": "getHostUnkeyed",
+        "description": "Retrieves the 'host' parameter without cross-referencing the DS key.",
+        "usage": "def host = getHostUnkeyed()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "global host",
+          "unkeyed",
+          "retrieval",
+          "workflow wide"
+        ],
+        "use_cases": [
+          "Fetch a workflow-wide host parameter that applies to all samples"
+        ],
+        "aliases": [
+          "Global Host Getter"
+        ]
+      },
+      {
+        "name": "getGenusSpeciesOptionalUnkeyed",
+        "description": "Retrieves 'genus_species' optionally without cross-referencing the DS key.",
+        "usage": "def gs = getGenusSpeciesOptionalUnkeyed()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "optional taxonomy",
+          "global",
+          "unkeyed",
+          "safe fetch"
+        ],
+        "use_cases": [
+          "Fetch an optional workflow-wide taxonomy identifier safely"
+        ],
+        "aliases": [
+          "Optional Global Genus Species Getter"
+        ]
+      },
+      {
+        "name": "getGenusSpeciesOptional",
+        "description": "Retrieves 'genus_species' optionally, keyed by DS.",
+        "usage": "def gs = getGenusSpeciesOptional()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "optional taxonomy",
+          "retrieval",
+          "ds key",
+          "safe fetch"
+        ],
+        "use_cases": [
+          "Fetch sample-specific taxonomy safely when it might not be defined"
+        ],
+        "aliases": [
+          "Optional Genus Species Getter"
+        ]
+      },
+      {
+        "name": "getSpecies",
+        "description": "Retrieves the 'species' parameter keyed by DS.",
+        "usage": "def sp = getSpecies()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "species parameter",
+          "retrieval",
+          "taxonomy",
+          "short name"
+        ],
+        "use_cases": [
+          "Fetch just the species name string for a specific sample"
+        ],
+        "aliases": [
+          "Species Getter"
+        ]
+      },
+      {
+        "name": "getBlastDatabaseUnkeyed",
+        "description": "Retrieves 'blast_database' parameter without cross-referencing the DS key.",
+        "usage": "def db = getBlastDatabaseUnkeyed()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "global blast database",
+          "retrieval",
+          "unkeyed"
+        ],
+        "use_cases": [
+          "Fetch a workflow-wide BLAST database path"
+        ],
+        "aliases": [
+          "Global BLAST DB Getter"
+        ]
+      },
+      {
+        "name": "getKingdom",
+        "description": "Retrieves 'kingdom' parameter keyed by DS.",
+        "usage": "def kingdom = getKingdom()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "kingdom",
+          "parameter",
+          "taxonomy",
+          "retrieval",
+          "prokka"
+        ],
+        "use_cases": [
+          "Get the kingdom (e.g., Bacteria, Viruses) to configure annotation logic"
+        ],
+        "aliases": [
+          "Kingdom Getter"
+        ]
+      },
+      {
+        "name": "getTaxIdsUnkeyed",
+        "description": "Retrieves 'taxids' parameter without cross-referencing the DS key.",
+        "usage": "def ids = getTaxIdsUnkeyed()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "global taxids",
+          "retrieval",
+          "unkeyed",
+          "taxonomy"
+        ],
+        "use_cases": [
+          "Fetch global taxonomic IDs that apply to the whole run"
+        ],
+        "aliases": [
+          "Global Tax ID Getter"
+        ]
+      },
+      {
+        "name": "getParamIncludeParents",
+        "description": "Retrieves the 'include-parents' parameter value.",
+        "usage": "def incP = getParamIncludeParents()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "include parents",
+          "parameter",
+          "taxonomy",
+          "tree"
+        ],
+        "use_cases": [
+          "Check if parent taxa should be included in reporting steps"
+        ],
+        "aliases": [
+          "Include Parents Param"
+        ]
+      },
+      {
+        "name": "getParamIncludeChildren",
+        "description": "Retrieves the 'include-children' parameter value.",
+        "usage": "def incC = getParamIncludeChildren()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "include children",
+          "parameter",
+          "taxonomy",
+          "tree"
+        ],
+        "use_cases": [
+          "Check if child taxa should be included in reporting steps"
+        ],
+        "aliases": [
+          "Include Children Param"
+        ]
+      },
+      {
+        "name": "_getAlleles",
+        "description": "Internal helper to retrieve allele results based on schema and RISCD.",
+        "usage": "def alleles = _getAlleles(cmp, riscd, schema)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "internal helper",
+          "alleles",
+          "schema",
+          "riscd",
+          "cgmlst"
+        ],
+        "use_cases": [
+          "Abstract logic to fetch cgMLST allele calls for multi-sample clustering"
+        ],
+        "aliases": [
+          "Allele Helper"
+        ]
+      },
+      {
+        "name": "getParam",
+        "description": "Public wrapper for `_getParam` to retrieve arbitrary parameters.",
+        "usage": "def val = getParam('myParam', false, true)",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "public wrapper",
+          "arbitrary parameter",
+          "retrieval",
+          "dynamic configuration"
+        ],
+        "use_cases": [
+          "Dynamically fetch any parameter by string name"
+        ],
+        "aliases": [
+          "Generic Param Getter"
+        ]
+      },
+      {
+        "name": "getInputOf",
+        "description": "Aggregates inputs matching a specific file pattern from the input list or single RISCD.",
+        "usage": "def files = getInputOf('*.bam')",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "input pattern",
+          "glob",
+          "file pattern",
+          "aggregation"
+        ],
+        "use_cases": [
+          "Fetch all inputs matching a specific extension from a complex channel"
+        ],
+        "aliases": [
+          "Pattern Input Getter"
+        ]
+      },
+      {
+        "name": "getInputFolders",
+        "description": "Aggregates input folders (no specific file pattern) from the input list or single RISCD.",
+        "usage": "def folders = getInputFolders()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "input folders",
+          "directories",
+          "aggregation",
+          "batch processing"
+        ],
+        "use_cases": [
+          "Fetch output directories from previous tools to use for batch processing steps"
+        ],
+        "aliases": [
+          "Input Folder Getter"
+        ]
+      },
+      {
+        "name": "getSingleInput",
+        "description": "Retrieves a single input result based on current 'cmp' and 'riscd' params.",
+        "usage": "def inp = getSingleInput()",
+        "path": "cohesive-ngsmanager/functions/parameters.nf",
+        "keywords": [
+          "single input",
+          "cmp",
+          "riscd",
+          "retrieval",
+          "direct fetch"
+        ],
+        "use_cases": [
+          "Fetch one specific file directly from the previous execution step"
+        ],
+        "aliases": [
+          "Single Input Getter"
+        ]
+      }
+    ]
+  }
+}

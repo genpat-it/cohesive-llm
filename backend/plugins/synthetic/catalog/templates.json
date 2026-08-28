@@ -1,0 +1,141 @@
+{
+  "templates": [
+    {
+      "id": "module_denovo_annotation",
+      "description": "Workflow 'module_denovo_annotation'",
+      "components_used": [
+        "step_trimming__trimmomatic",
+        "step_annotation__prokka",
+        "step_qc__fastqc",
+        "step_assembly__spades"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "assembly"
+      ],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/module_denovo_annotation.nf",
+      "relative_path": "module_denovo_annotation"
+    },
+    {
+      "id": "module_illumina_variant_calling",
+      "description": "Workflow 'module_illumina_variant_calling'",
+      "components_used": [
+        "extractKey",
+        "step_trimming__trimmomatic",
+        "step_variant__bcftools",
+        "step_qc__fastqc",
+        "step_mapping__bwa_mem2"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "variants"
+      ],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/module_illumina_variant_calling.nf",
+      "relative_path": "module_illumina_variant_calling"
+    },
+    {
+      "id": "step_annotation__prokka",
+      "description": "Workflow 'step_annotation__prokka'",
+      "components_used": [
+        "PROKKA"
+      ],
+      "input_channels": [
+        "assembly"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_annotation__prokka.nf",
+      "relative_path": "step_annotation__prokka"
+    },
+    {
+      "id": "step_assembly__spades",
+      "description": "Workflow 'step_assembly__spades'",
+      "components_used": [
+        "SPADES"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "assembly"
+      ],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_assembly__spades.nf",
+      "relative_path": "step_assembly__spades"
+    },
+    {
+      "id": "step_mapping__bwa_mem2",
+      "description": "Workflow 'step_mapping__bwa_mem2'",
+      "components_used": [
+        "SAMTOOLS_DEPTH",
+        "BWA_MEM2"
+      ],
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "aligned_bam",
+        "bam_index",
+        "coverage"
+      ],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_mapping__bwa_mem2.nf",
+      "relative_path": "step_mapping__bwa_mem2"
+    },
+    {
+      "id": "step_qc__fastqc",
+      "description": "Workflow 'step_qc__fastqc'",
+      "components_used": [
+        "FASTQC"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_qc__fastqc.nf",
+      "relative_path": "step_qc__fastqc"
+    },
+    {
+      "id": "step_trimming__trimmomatic",
+      "description": "Workflow 'step_trimming__trimmomatic'",
+      "components_used": [
+        "TRIMMOMATIC"
+      ],
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "trimmed"
+      ],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_trimming__trimmomatic.nf",
+      "relative_path": "step_trimming__trimmomatic"
+    },
+    {
+      "id": "step_variant__bcftools",
+      "description": "Workflow 'step_variant__bcftools'",
+      "components_used": [
+        "BCFTOOLS_CALL"
+      ],
+      "input_channels": [
+        "aligned_bam",
+        "reference"
+      ],
+      "output_channels": [
+        "variants"
+      ],
+      "compatible_seq_types": [],
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_variant__bcftools.nf",
+      "relative_path": "step_variant__bcftools"
+    }
+  ]
+}

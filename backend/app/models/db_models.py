@@ -1,7 +1,6 @@
-"""Database models: User, Conversation, Message."""
+"""Database models: User, Conversation, Message, Drawing."""
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -59,7 +58,7 @@ class Message(Base):
     # Result" button keeps working when the conversation is reloaded later.
     nextflow_code = Column(Text, nullable=True)
     mermaid_code = Column(Text, nullable=True)
-    ast_json = Column(JSONB, nullable=True)
+    ast_json = Column(JSON, nullable=True)
 
     conversation = relationship("Conversation", back_populates="messages")
 
@@ -70,7 +69,7 @@ class Drawing(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(255), nullable=False, default="Untitled")
-    graph_json = Column(JSONB, nullable=False)
+    graph_json = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

@@ -1,0 +1,1130 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "generated_from": "../cohesive-ngsmanager-cli/cohesive-ngsmanager",
+    "total_steps": 43,
+    "total_modules": 33
+  },
+  "components": [
+    {
+      "id": "step_0SQ_rawreads__fastq",
+      "file_path": "steps/step_0SQ_rawreads__fastq.nf",
+      "domain": "Quality Control",
+      "tool": "fastq",
+      "description": "Fastq step for quality control.",
+      "keywords": [
+        "fastq"
+      ],
+      "use_cases": [
+        "Run fastq analysis",
+        "Use fastq for quality control"
+      ],
+      "container": "biocontainers/fastqc:v0.11.5_cv4",
+      "input_channels": [],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_downsampling__bbnorm",
+      "file_path": "steps/step_1PP_downsampling__bbnorm.nf",
+      "domain": "Preprocessing",
+      "tool": "bbnorm",
+      "description": "Bbnorm step for preprocessing.",
+      "keywords": [
+        "bbnorm"
+      ],
+      "use_cases": [
+        "Run bbnorm analysis",
+        "Use bbnorm for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/bbmap:39.01--h5c4e2a8_0",
+      "input_channels": [
+        "reads",
+        "k",
+        "target"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_filtering__bowtie",
+      "file_path": "steps/step_1PP_filtering__bowtie.nf",
+      "domain": "Preprocessing",
+      "tool": "bowtie",
+      "description": "Bowtie step for preprocessing. Outputs: samtools.out.filtered.",
+      "keywords": [
+        "bowtie"
+      ],
+      "use_cases": [
+        "Run bowtie analysis",
+        "Use bowtie for preprocessing"
+      ],
+      "container": "ghcr.io/genpat-it/bowtie2:2.1.0--37ad014737",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "samtools.out.filtered"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_filtering__krakentools",
+      "file_path": "steps/step_1PP_filtering__krakentools.nf",
+      "domain": "Preprocessing",
+      "tool": "krakentools",
+      "description": "Krakentools step for preprocessing.",
+      "keywords": [
+        "krakentools"
+      ],
+      "use_cases": [
+        "Run krakentools analysis",
+        "Use krakentools for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/krakentools:1.2--pyh5e36f6f_0",
+      "input_channels": [
+        "kraken",
+        "trimmed",
+        "taxaid",
+        "include_children",
+        "include_parents"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_filtering__minimap2",
+      "file_path": "steps/step_1PP_filtering__minimap2.nf",
+      "domain": "Preprocessing",
+      "tool": "minimap2",
+      "description": "Minimap2 step for preprocessing. Outputs: samtools.out.filtered.",
+      "keywords": [
+        "minimap2"
+      ],
+      "use_cases": [
+        "Run minimap2 analysis",
+        "Use minimap2 for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/minimap2:2.26--he4a0461_1",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "samtools.out.filtered"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_generated__fasta2fastq",
+      "file_path": "steps/step_1PP_generated__fasta2fastq.nf",
+      "domain": "Preprocessing",
+      "tool": "fasta2fastq",
+      "description": "Fasta2fastq step for preprocessing.",
+      "keywords": [
+        "fasta2fastq"
+      ],
+      "use_cases": [
+        "Run fasta2fastq analysis",
+        "Use fasta2fastq for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/biopython:1.78",
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_hostdepl__bowtie",
+      "file_path": "steps/step_1PP_hostdepl__bowtie.nf",
+      "domain": "Preprocessing",
+      "tool": "bowtie",
+      "description": "Bowtie step for preprocessing. Outputs: samtools.out.depleted.",
+      "keywords": [
+        "bowtie"
+      ],
+      "use_cases": [
+        "Run bowtie analysis",
+        "Use bowtie for preprocessing"
+      ],
+      "container": "ghcr.io/genpat-it/bowtie2:2.1.0--37ad014737",
+      "input_channels": [
+        "trimmedAndHost"
+      ],
+      "output_channels": [
+        "samtools.out.depleted"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_hostdepl__minimap2",
+      "file_path": "steps/step_1PP_hostdepl__minimap2.nf",
+      "domain": "Preprocessing",
+      "tool": "minimap2",
+      "description": "Minimap2 step for preprocessing. Outputs: samtools.out.depleted.",
+      "keywords": [
+        "minimap2"
+      ],
+      "use_cases": [
+        "Run minimap2 analysis",
+        "Use minimap2 for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/minimap2:2.26--he4a0461_1",
+      "input_channels": [
+        "reads",
+        "host"
+      ],
+      "output_channels": [
+        "samtools.out.depleted"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_trimming__chopper",
+      "file_path": "steps/step_1PP_trimming__chopper.nf",
+      "domain": "Preprocessing",
+      "tool": "chopper",
+      "description": "Chopper step for preprocessing. Outputs: trimmed.",
+      "keywords": [
+        "trim",
+        "quality filter",
+        "trimming",
+        "chopper",
+        "adapter"
+      ],
+      "use_cases": [
+        "Run chopper analysis",
+        "Use chopper for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/chopper:0.7.0--hdcf5f25_0",
+      "input_channels": [
+        "rawreads"
+      ],
+      "output_channels": [
+        "trimmed"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_trimming__fastp",
+      "file_path": "steps/step_1PP_trimming__fastp.nf",
+      "domain": "Preprocessing",
+      "tool": "fastp",
+      "description": "Fastp step for preprocessing. Outputs: trimmed.",
+      "keywords": [
+        "trim",
+        "fastp",
+        "quality filter",
+        "trimming",
+        "adapter"
+      ],
+      "use_cases": [
+        "Run fastp analysis",
+        "Use fastp for preprocessing"
+      ],
+      "container": "ghcr.io/genpat-it/fastp:0.23.1--e4ac3df4c5",
+      "input_channels": [
+        "rawreads"
+      ],
+      "output_channels": [
+        "trimmed"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_1PP_trimming__trimmomatic",
+      "file_path": "steps/step_1PP_trimming__trimmomatic.nf",
+      "domain": "Preprocessing",
+      "tool": "trimmomatic",
+      "description": "Trimmomatic step for preprocessing. Outputs: trimmed.",
+      "keywords": [
+        "trimmomatic",
+        "trim",
+        "quality filter",
+        "trimming",
+        "adapter"
+      ],
+      "use_cases": [
+        "Run trimmomatic analysis",
+        "Use trimmomatic for preprocessing"
+      ],
+      "container": "quay.io/biocontainers/trimmomatic:0.36--6",
+      "input_channels": [],
+      "output_channels": [
+        "trimmed"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__flye",
+      "file_path": "steps/step_2AS_denovo__flye.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "flye",
+      "description": "Flye step for assembly & mapping. Outputs: assembly.",
+      "keywords": [
+        "assembly",
+        "de novo",
+        "flye",
+        "assemble"
+      ],
+      "use_cases": [
+        "Run flye analysis",
+        "Use flye for assembly & mapping"
+      ],
+      "container": "quay.io/biocontainers/flye:2.9.2--py310h2b6aa90_2",
+      "input_channels": [],
+      "output_channels": [
+        "assembly"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__plasmidspades",
+      "file_path": "steps/step_2AS_denovo__plasmidspades.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "plasmidspades",
+      "description": "Plasmidspades step for assembly & mapping. Outputs: assembled.",
+      "keywords": [
+        "assembly",
+        "plasmidspades",
+        "de novo",
+        "assemble"
+      ],
+      "use_cases": [
+        "Run plasmidspades analysis",
+        "Use plasmidspades for assembly & mapping"
+      ],
+      "container": "quay.io/biocontainers/spades:3.11.1--py27_zlib1.2.8_0",
+      "input_channels": [],
+      "output_channels": [
+        "assembled"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__shovill",
+      "file_path": "steps/step_2AS_denovo__shovill.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "shovill",
+      "description": "Shovill step for assembly & mapping. Outputs: assembly.",
+      "keywords": [
+        "assembly",
+        "shovill",
+        "de novo",
+        "assemble"
+      ],
+      "use_cases": [
+        "Run shovill analysis",
+        "Use shovill for assembly & mapping"
+      ],
+      "container": "ghcr.io/genpat-it/shovill:1.1.0--d84470570e",
+      "input_channels": [],
+      "output_channels": [
+        "assembly"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__spades",
+      "file_path": "steps/step_2AS_denovo__spades.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "spades",
+      "description": "Spades step for assembly & mapping. Outputs: assembled.",
+      "keywords": [
+        "spades",
+        "assembly",
+        "de novo",
+        "assemble"
+      ],
+      "use_cases": [
+        "Run spades analysis",
+        "Use spades for assembly & mapping"
+      ],
+      "container": "quay.io/biocontainers/spades:3.11.1--py27_zlib1.2.8_0",
+      "input_channels": [],
+      "output_channels": [
+        "assembled"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_denovo__unicycler",
+      "file_path": "steps/step_2AS_denovo__unicycler.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "unicycler",
+      "description": "Unicycler step for assembly & mapping. Outputs: assembled.",
+      "keywords": [
+        "assembly",
+        "assemble",
+        "de novo",
+        "unicycler"
+      ],
+      "use_cases": [
+        "Run unicycler analysis",
+        "Use unicycler for assembly & mapping"
+      ],
+      "container": "docker.io/biocontainers/unicycler:v0.4.7dfsg-2-deb_cv1",
+      "input_channels": [],
+      "output_channels": [
+        "assembled"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_filtering__seqio",
+      "file_path": "steps/step_2AS_filtering__seqio.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "seqio",
+      "description": "Seqio step for assembly & mapping.",
+      "keywords": [
+        "seqio"
+      ],
+      "use_cases": [
+        "Run seqio analysis",
+        "Use seqio for assembly & mapping"
+      ],
+      "container": "ghcr.io/genpat-it/python3:3.10.1--29cf21c1f1",
+      "input_channels": [
+        "calls",
+        "assembly",
+        "reference"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_hybrid__unicycler",
+      "file_path": "steps/step_2AS_hybrid__unicycler.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "unicycler",
+      "description": "Unicycler step for assembly & mapping. Outputs: scaffolds.",
+      "keywords": [
+        "unicycler"
+      ],
+      "use_cases": [
+        "Run unicycler analysis",
+        "Use unicycler for assembly & mapping"
+      ],
+      "container": "quay.io/biocontainers/unicycler:0.5.0--py38h5cf8b27_3",
+      "input_channels": [
+        "short_reads",
+        "long_reads"
+      ],
+      "output_channels": [
+        "scaffolds"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__bowtie",
+      "file_path": "steps/step_2AS_mapping__bowtie.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "bowtie",
+      "description": "Bowtie step for assembly & mapping. Outputs: consensus.",
+      "keywords": [
+        "alignment",
+        "bowtie",
+        "mapping",
+        "map reads"
+      ],
+      "use_cases": [
+        "Run bowtie analysis",
+        "Use bowtie for assembly & mapping"
+      ],
+      "container": "ghcr.io/genpat-it/bowtie2:2.1.0--37ad014737",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__ivar",
+      "file_path": "steps/step_2AS_mapping__ivar.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "ivar",
+      "description": "Ivar step for assembly & mapping. Outputs: consensus, coverage_depth.",
+      "keywords": [
+        "alignment",
+        "mapping",
+        "ivar",
+        "map reads"
+      ],
+      "use_cases": [
+        "Run ivar analysis",
+        "Use ivar for assembly & mapping"
+      ],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus",
+        "coverage_depth"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__medaka",
+      "file_path": "steps/step_2AS_mapping__medaka.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "medaka",
+      "description": "Medaka step for assembly & mapping. Outputs: consensus.",
+      "keywords": [
+        "medaka",
+        "mapping",
+        "alignment",
+        "map reads"
+      ],
+      "use_cases": [
+        "Run medaka analysis",
+        "Use medaka for assembly & mapping"
+      ],
+      "container": "quay.io/biocontainers/medaka:1.8.0--py38hdaa7744_0",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__minimap2",
+      "file_path": "steps/step_2AS_mapping__minimap2.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "minimap2",
+      "description": "Minimap2 step for assembly & mapping. Outputs: consensus.",
+      "keywords": [
+        "alignment",
+        "mapping",
+        "map reads",
+        "minimap2"
+      ],
+      "use_cases": [
+        "Run minimap2 analysis",
+        "Use minimap2 for assembly & mapping"
+      ],
+      "container": "quay.io/biocontainers/minimap2:2.26--he4a0461_1",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [
+        "consensus"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2AS_mapping__snippy",
+      "file_path": "steps/step_2AS_mapping__snippy.nf",
+      "domain": "Assembly & Mapping",
+      "tool": "snippy",
+      "description": "Snippy step for assembly & mapping.",
+      "keywords": [
+        "alignment",
+        "snippy",
+        "mapping",
+        "map reads"
+      ],
+      "use_cases": [
+        "Run snippy analysis",
+        "Use snippy for assembly & mapping"
+      ],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "input_channels": [
+        "reads",
+        "reference"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_2MG_denovo__metaspades",
+      "file_path": "steps/step_2MG_denovo__metaspades.nf",
+      "domain": "Metagenomics",
+      "tool": "metaspades",
+      "description": "Metaspades step for metagenomics. Outputs: assembled.",
+      "keywords": [
+        "assembly",
+        "metaspades",
+        "de novo",
+        "assemble"
+      ],
+      "use_cases": [
+        "Run metaspades analysis",
+        "Use metaspades for metagenomics"
+      ],
+      "container": "quay.io/biocontainers/spades:3.11.1--py27_zlib1.2.8_0",
+      "input_channels": [],
+      "output_channels": [
+        "assembled"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_class__centrifuge",
+      "file_path": "steps/step_3TX_class__centrifuge.nf",
+      "domain": "Taxonomy",
+      "tool": "centrifuge",
+      "description": "Centrifuge step for taxonomy.",
+      "keywords": [
+        "centrifuge"
+      ],
+      "use_cases": [
+        "Run centrifuge analysis",
+        "Use centrifuge for taxonomy"
+      ],
+      "container": "quay.io/biocontainers/centrifuge:1.0.4_beta--h9a82719_6",
+      "input_channels": [],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_class__confindr",
+      "file_path": "steps/step_3TX_class__confindr.nf",
+      "domain": "Taxonomy",
+      "tool": "confindr",
+      "description": "Confindr step for taxonomy.",
+      "keywords": [
+        "confindr"
+      ],
+      "use_cases": [
+        "Run confindr analysis",
+        "Use confindr for taxonomy"
+      ],
+      "container": "ghcr.io/genpat-it/confindr:0.7.4--8fe19dd246",
+      "input_channels": [
+        "reads",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_class__kraken",
+      "file_path": "steps/step_3TX_class__kraken.nf",
+      "domain": "Taxonomy",
+      "tool": "kraken",
+      "description": "Kraken step for taxonomy. Outputs: genus_report.",
+      "keywords": [
+        "kraken"
+      ],
+      "use_cases": [
+        "Run kraken analysis",
+        "Use kraken for taxonomy"
+      ],
+      "container": "quay.io/biocontainers/kraken:1.0--pl5.22.0_0",
+      "input_channels": [],
+      "output_channels": [
+        "genus_report"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_class__kraken2",
+      "file_path": "steps/step_3TX_class__kraken2.nf",
+      "domain": "Taxonomy",
+      "tool": "kraken2",
+      "description": "Kraken2 step for taxonomy. Outputs: genus_report.",
+      "keywords": [
+        "kraken2"
+      ],
+      "use_cases": [
+        "Run kraken2 analysis",
+        "Use kraken2 for taxonomy"
+      ],
+      "container": "quay.io/biocontainers/kraken2:2.1.2--pl5262h7d875b9_0",
+      "input_channels": [],
+      "output_channels": [
+        "genus_report"
+      ],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_species__kmerfinder",
+      "file_path": "steps/step_3TX_species__kmerfinder.nf",
+      "domain": "Taxonomy",
+      "tool": "kmerfinder",
+      "description": "Kmerfinder step for taxonomy. Outputs: assigned_species.",
+      "keywords": [
+        "kmerfinder"
+      ],
+      "use_cases": [
+        "Run kmerfinder analysis",
+        "Use kmerfinder for taxonomy"
+      ],
+      "container": "python:2.7.8",
+      "input_channels": [],
+      "output_channels": [
+        "assigned_species"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_species__mash",
+      "file_path": "steps/step_3TX_species__mash.nf",
+      "domain": "Taxonomy",
+      "tool": "mash",
+      "description": "Mash step for taxonomy.",
+      "keywords": [
+        "mash"
+      ],
+      "use_cases": [
+        "Run mash analysis",
+        "Use mash for taxonomy"
+      ],
+      "container": "ghcr.io/genpat-it/mash:2.3--debdd7eb23",
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_3TX_species__vdabricate",
+      "file_path": "steps/step_3TX_species__vdabricate.nf",
+      "domain": "Taxonomy",
+      "tool": "vdabricate",
+      "description": "Vdabricate step for taxonomy. Outputs: calls.",
+      "keywords": [
+        "vdabricate"
+      ],
+      "use_cases": [
+        "Run vdabricate analysis",
+        "Use vdabricate for taxonomy"
+      ],
+      "container": "quay.io/biocontainers/abricate:0.9.8--h1341992_0",
+      "input_channels": [],
+      "output_channels": [
+        "calls"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4AN_AMR__abricate",
+      "file_path": "steps/step_4AN_AMR__abricate.nf",
+      "domain": "Annotation & AMR",
+      "tool": "abricate",
+      "description": "Abricate step for annotation & amr.",
+      "keywords": [
+        "abricate",
+        "resistance genes",
+        "antimicrobial resistance",
+        "amr"
+      ],
+      "use_cases": [
+        "Run abricate analysis",
+        "Use abricate for annotation & amr"
+      ],
+      "container": "staphb/abricate:1.0.0",
+      "input_channels": [],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4AN_AMR__filtering",
+      "file_path": "steps/step_4AN_AMR__filtering.nf",
+      "domain": "Annotation & AMR",
+      "tool": "filtering",
+      "description": "Filtering step for annotation & amr.",
+      "keywords": [
+        "amr",
+        "resistance genes",
+        "antimicrobial resistance",
+        "filtering"
+      ],
+      "use_cases": [
+        "Run filtering analysis",
+        "Use filtering for annotation & amr"
+      ],
+      "container": "ghcr.io/genpat-it/python3:3.10.1--29cf21c1f1",
+      "input_channels": [
+        "data",
+        "coverage",
+        "identity"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4AN_AMR__resfinder",
+      "file_path": "steps/step_4AN_AMR__resfinder.nf",
+      "domain": "Annotation & AMR",
+      "tool": "resfinder",
+      "description": "Resfinder step for annotation & amr.",
+      "keywords": [
+        "resistance genes",
+        "antimicrobial resistance",
+        "resfinder",
+        "amr"
+      ],
+      "use_cases": [
+        "Run resfinder analysis",
+        "Use resfinder for annotation & amr"
+      ],
+      "container": "ghcr.io/genpat-it/resfinder:4.1.5--858219071c",
+      "input_channels": [
+        "reads",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4AN_AMR__staramr",
+      "file_path": "steps/step_4AN_AMR__staramr.nf",
+      "domain": "Annotation & AMR",
+      "tool": "staramr",
+      "description": "Staramr step for annotation & amr.",
+      "keywords": [
+        "resistance genes",
+        "antimicrobial resistance",
+        "staramr",
+        "amr"
+      ],
+      "use_cases": [
+        "Run staramr analysis",
+        "Use staramr for annotation & amr"
+      ],
+      "container": "ghcr.io/genpat-it/staramr:0.9.1--8fe6b5a239",
+      "input_channels": [
+        "assembly",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4AN_genes__prokka",
+      "file_path": "steps/step_4AN_genes__prokka.nf",
+      "domain": "Annotation & AMR",
+      "tool": "prokka",
+      "description": "Prokka step for annotation & amr.",
+      "keywords": [
+        "prokka"
+      ],
+      "use_cases": [
+        "Run prokka analysis",
+        "Use prokka for annotation & amr"
+      ],
+      "container": "quay.io/biocontainers/prokka:1.14.5--pl526_1",
+      "input_channels": [
+        "data"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4TY_MLST__mlst",
+      "file_path": "steps/step_4TY_MLST__mlst.nf",
+      "domain": "Typing",
+      "tool": "mlst",
+      "description": "Mlst step for typing.",
+      "keywords": [
+        "mlst",
+        "multilocus sequence typing"
+      ],
+      "use_cases": [
+        "Run mlst analysis",
+        "Use mlst for typing"
+      ],
+      "container": "ghcr.io/genpat-it/mlst-w-db:2.23.0--60b8b2e3dd_231219.124455",
+      "input_channels": [
+        "assembly"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4TY_cgMLST__chewbbaca",
+      "file_path": "steps/step_4TY_cgMLST__chewbbaca.nf",
+      "domain": "Typing",
+      "tool": "chewbbaca",
+      "description": "Chewbbaca step for typing.",
+      "keywords": [
+        "mlst",
+        "chewbbaca",
+        "multilocus sequence typing"
+      ],
+      "use_cases": [
+        "Run chewbbaca analysis",
+        "Use chewbbaca for typing"
+      ],
+      "container": "ghcr.io/genpat-it/chewbbaca-w-chewie-schemas:2.8.5--16b816c96d",
+      "input_channels": [
+        "assembly",
+        "genus_species",
+        "schema"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4TY_flaA__flaA",
+      "file_path": "steps/step_4TY_flaA__flaA.nf",
+      "domain": "Typing",
+      "tool": "flaA",
+      "description": "Flaa step for typing.",
+      "keywords": [
+        "flaa"
+      ],
+      "use_cases": [
+        "Run flaA analysis",
+        "Use flaA for typing"
+      ],
+      "container": "ghcr.io/genpat-it/mlst-w-db:2.23.0--60b8b2e3dd_231219.124455",
+      "input_channels": [
+        "assembly",
+        "genus_species"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4TY_lineage__pangolin",
+      "file_path": "steps/step_4TY_lineage__pangolin.nf",
+      "domain": "Typing",
+      "tool": "pangolin",
+      "description": "Pangolin step for typing.",
+      "keywords": [
+        "clade",
+        "lineage",
+        "pangolin",
+        "variant"
+      ],
+      "use_cases": [
+        "Run pangolin analysis",
+        "Use pangolin for typing"
+      ],
+      "container": "ghcr.io/genpat-it/pangolin:v4.3.1-v0.1.12-v0.3.17-v1.21",
+      "input_channels": [
+        "consensus"
+      ],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4TY_lineage__westnile",
+      "file_path": "steps/step_4TY_lineage__westnile.nf",
+      "domain": "Typing",
+      "tool": "westnile",
+      "description": "Westnile step for typing. Outputs: lineage.",
+      "keywords": [
+        "clade",
+        "lineage",
+        "variant",
+        "westnile"
+      ],
+      "use_cases": [
+        "Run westnile analysis",
+        "Use westnile for typing"
+      ],
+      "container": "ghcr.io/genpat-it/snippy:4.5.1--7be4a1c45a",
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "lineage"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_4TY_plasmid__mobsuite",
+      "file_path": "steps/step_4TY_plasmid__mobsuite.nf",
+      "domain": "Typing",
+      "tool": "mobsuite",
+      "description": "Mobsuite step for typing. Outputs: plasmids.",
+      "keywords": [
+        "mobsuite"
+      ],
+      "use_cases": [
+        "Run mobsuite analysis",
+        "Use mobsuite for typing"
+      ],
+      "container": "ghcr.io/genpat-it/mobsuite:3.1.4--c2c728b1a2",
+      "input_channels": [
+        "reads"
+      ],
+      "output_channels": [
+        "plasmids"
+      ],
+      "compatible_seq_types": [
+        "ion",
+        "nanopore"
+      ]
+    },
+    {
+      "id": "step_TEST_custom__kmer",
+      "file_path": "steps/step_TEST_custom__kmer.nf",
+      "domain": "",
+      "tool": "",
+      "description": " step for .",
+      "keywords": [
+        ""
+      ],
+      "use_cases": [],
+      "container": "staphb/seqtk:latest",
+      "input_channels": [],
+      "output_channels": [],
+      "compatible_seq_types": [
+        "illumina_paired",
+        "ion",
+        "nanopore"
+      ]
+    }
+  ]
+}

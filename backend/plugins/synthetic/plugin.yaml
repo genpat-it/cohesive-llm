@@ -1,0 +1,85 @@
+name: "synthetic-genomics"
+description: "Synthetic demo plugin with common genomics tools for framework validation"
+version: "0.2.0"
+
+# Model configuration (plugin-specific)
+model:
+  embedding_model: "Qwen/Qwen3-Embedding-0.6B"
+
+# Paths (relative to this plugin directory)
+catalog:
+  components: "catalog/components.json"
+  templates: "catalog/templates.json"
+  resources: "catalog/resources.json"
+
+code_store: "code_store.jsonl"
+faiss_index: "faiss_index"
+chroma_index: "chroma_index"
+patterns_index: "patterns_index"
+
+# Benchmark data directory (relative to this plugin directory)
+benchmark_data: "benchmark_data"
+
+# Modules directory for framework validation
+modules_dir: "nf_source"
+
+# Static helper function imports for dynamic AST injection
+helper_imports:
+  "extractKey": "../functions/common.nf"
+  "extractDsRef": "../functions/common.nf"
+  "getEmpty": "../functions/common.nf"
+  "parseMetadataFromFileName": "../functions/common.nf"
+  "executionMetadata": "../functions/common.nf"
+  "getSingleInput": "../functions/parameters.nf"
+  "getInput": "../functions/parameters.nf"
+  "getReference": "../functions/parameters.nf"
+  "getHost": "../functions/parameters.nf"
+  "hasFastqData": "../functions/parameters.nf"
+  "hasEnoughFastqData": "../functions/parameters.nf"
+  "isIlluminaPaired": "../functions/parameters.nf"
+  "isIonTorrent": "../functions/parameters.nf"
+  "isNanopore": "../functions/parameters.nf"
+  "param": "../functions/parameters.nf"
+
+# Prompts
+prompts:
+  domain_context: "prompts/domain_context.md"
+  rejection_rules: "prompts/rejection_rules.md"
+
+# Void tool detection
+void_tools:
+  suffixes:
+    - "__prokka"
+    - "__fastqc"
+  exact_names: []
+
+# RAG tuning
+rag:
+  excluded_templates: []
+  search_keywords:
+    - "trimming"
+    - "mapping"
+    - "qc"
+    - "assembly"
+    - "variant"
+    - "annotation"
+    - "alignment"
+    - "denovo"
+  query_replacements:
+    "de novo": "denovo"
+    "paired end": "paired"
+    "paired-end": "paired"
+    "quality control": "qc"
+    "quality check": "qc"
+    "reference based": "mapping"
+    "reference-based": "mapping"
+  query_synonyms:
+    "trim": ["trimming", "adapter", "quality", "trimmomatic", "preprocessing", "clean"]
+    "assembly": ["assemble", "assembler", "denovo", "contigs", "scaffolds", "spades"]
+    "variant": ["snp", "snv", "calling", "vcf", "mutation", "bcftools"]
+    "qc": ["fastqc", "quality", "check", "report", "statistics"]
+    "annotation": ["annotate", "prokka", "gene", "protein", "gff", "functional"]
+    "consensus": ["mapping", "alignment", "reference", "bwa", "bwa-mem2"]
+
+# No void tool exceptions needed
+void_tool_exceptions: []

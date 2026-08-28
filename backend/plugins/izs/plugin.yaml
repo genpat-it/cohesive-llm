@@ -1,0 +1,294 @@
+name: "izs-bioinformatics"
+description: "IZS Nextflow bioinformatics pipeline generator for cohesive-ngsmanager"
+version: "1.0.0"
+
+# Model configuration (plugin-specific; no core defaults)
+model:
+  embedding_model: "Qwen/Qwen3-Embedding-0.6B"
+
+# Benchmark data directory (relative to this plugin directory)
+benchmark_data: "benchmark_data"
+
+# Paths (relative to this plugin directory)
+catalog:
+  components: "catalog/components.json"
+  templates: "catalog/templates.json"
+  resources: "catalog/resources.json"
+
+code_store: "code_store.jsonl"
+faiss_index: "faiss_index"
+chroma_index: "chroma_index"
+patterns_index: "patterns_index"
+
+# Module source directory for framework validation (optional)
+# Set NGSMANAGER_DIR env var or leave empty to skip filesystem validation
+modules_dir: null
+
+# Ingestion configuration (plugin-specific overrides)
+ingestion:
+  template_patterns:
+    - "pipeline_*"
+    - "modules/*"
+  component_patterns:
+    - "multi/*"
+    - "steps/*"
+    - "_dummy.nf"
+  domain_mapping:
+    "step_0SQ": "Quality Control"
+    "step_1PP": "Preprocessing"
+    "step_2AS": "Assembly & Mapping"
+    "step_2MG": "Metagenomics"
+    "step_3TX": "Taxonomy"
+    "step_4AN": "Annotation & AMR"
+    "step_4TY": "Typing"
+    "module_qc": "Quality Control"
+
+# Prompts (merged with core base prompts)
+prompts:
+  domain_context: "prompts/domain_context.md"
+  rejection_rules: "prompts/rejection_rules.md"
+
+# Static helper function imports for dynamic AST injection
+helper_imports:
+  "isSarsCov2": "../functions/common.nf"
+  "isIlluminaPaired": "../functions/parameters.nf"
+  "isIonTorrent": "../functions/parameters.nf"
+  "isNanopore": "../functions/parameters.nf"
+  "getKrakenResults": "../functions/parameters.nf"
+  "getFastqPair": "../functions/common.nf"
+  "extractKey": "../functions/common.nf"
+  "extractDsRef": "../functions/common.nf"
+  "getEmpty": "../functions/common.nf"
+  "getReferences": "../functions/parameters.nf"
+  "getReference": "../functions/parameters.nf"
+  "getReferenceCodes": "../functions/parameters.nf"
+  "getReferenceUnkeyed": "../functions/parameters.nf"
+  "getReferenceOptional": "../functions/parameters.nf"
+  "getReferenceForLineage": "../functions/parameters.nf"
+  "_getParam": "../functions/parameters.nf"
+  "getDS": "../functions/parameters.nf"
+  "isFullOutput": "../functions/parameters.nf"
+  "getResult": "../functions/parameters.nf"
+  "getInput": "../functions/parameters.nf"
+  "getAssembly": "../functions/parameters.nf"
+  "getTrimmedReads": "../functions/parameters.nf"
+  "getVCFs": "../functions/parameters.nf"
+  "hasEnoughFastqData": "../functions/parameters.nf"
+  "hasFastqData": "../functions/parameters.nf"
+  "param": "../functions/parameters.nf"
+  "optional": "../functions/parameters.nf"
+  "optionalOrDefault": "../functions/parameters.nf"
+  "isCompatibleWithSeqType": "../functions/parameters.nf"
+  "isSegmentedMapping": "../functions/parameters.nf"
+  "checkEnum": "../functions/parameters.nf"
+  "getHostReference": "../functions/parameters.nf"
+  "getLongReads": "../functions/parameters.nf"
+  "paramWrap": "../functions/parameters.nf"
+  "optWrap": "../functions/parameters.nf"
+  "_getReferences": "../functions/parameters.nf"
+  "_getSingleReference": "../functions/parameters.nf"
+  "getHostOptional": "../functions/parameters.nf"
+  "getHostUnkeyed": "../functions/parameters.nf"
+  "getGenusSpeciesOptionalUnkeyed": "../functions/parameters.nf"
+  "getGenusSpeciesOptional": "../functions/parameters.nf"
+  "getSpecies": "../functions/parameters.nf"
+  "getBlastDatabaseUnkeyed": "../functions/parameters.nf"
+  "getKingdom": "../functions/parameters.nf"
+  "getTaxIdsUnkeyed": "../functions/parameters.nf"
+  "getParamIncludeParents": "../functions/parameters.nf"
+  "getParamIncludeChildren": "../functions/parameters.nf"
+  "_getAlleles": "../functions/parameters.nf"
+  "getInputOf": "../functions/parameters.nf"
+  "getInputFolders": "../functions/parameters.nf"
+  "getSingleInput": "../functions/parameters.nf"
+  "getDepletedReads": "../functions/parameters.nf"
+  "getHost": "../functions/parameters.nf"
+  "getGB": "../functions/parameters.nf"
+  "getGenusSpecies": "../functions/parameters.nf"
+  "getBlastDatabase": "../functions/parameters.nf"
+  "getModule": "../functions/parameters.nf"
+  "getNCBICodes": "../functions/parameters.nf"
+  "getParam": "../functions/parameters.nf"
+  "getParamTaxaId": "../functions/parameters.nf"
+  "getAbricateDatabase": "../functions/parameters.nf"
+  "getBaseName": "../functions/common.nf"
+  "getRisCd": "../functions/common.nf"
+  "flattenPath": "../functions/common.nf"
+  "parseMetadataFromFileName": "../functions/common.nf"
+  "parseRISCD": "../functions/common.nf"
+  "executionMetadata": "../functions/common.nf"
+  "stepInputs": "../functions/common.nf"
+  "taskMemory": "../functions/common.nf"
+  "taskTime": "../functions/common.nf"
+  "logHeader": "../functions/common.nf"
+  "csv2map": "../functions/common.nf"
+  "isAssembly": "../functions/sampletypes.nf"
+  "isFastq": "../functions/sampletypes.nf"
+  "isFasta": "../functions/sampletypes.nf"
+  "isBam": "../functions/sampletypes.nf"
+  "isVcf": "../functions/sampletypes.nf"
+  "isGff": "../functions/sampletypes.nf"
+  "isBed": "../functions/sampletypes.nf"
+  "isCsv": "../functions/sampletypes.nf"
+  "isTsv": "../functions/sampletypes.nf"
+  "isFastaRiscd": "../functions/sampletypes.nf"
+  "isFastqRiscd": "../functions/sampletypes.nf"
+  "isSpeciesSupported": "../functions/sampletypes.nf"
+
+# Void tool detection
+# If omitted, void tools are auto-detected from catalog (components with no output_channels)
+void_tools:
+  suffixes:
+    - "__pangolin"
+    - "__prokka"
+    - "__abricate"
+    - "__staramr"
+    - "__resfinder"
+    - "__mlst"
+    - "__flaa"
+    - "__centrifuge"
+    - "__confindr"
+    - "__mash"
+    - "__fastq"
+    - "__snippy"
+  exact_names:
+    - "module_qc_fastqc"
+    - "module_qc_nanoplot"
+    - "module_qc_quast"
+    - "step_4an_amr__filtering"
+
+# RAG tuning overrides (optional, falls back to core defaults)
+rag:
+  max_keyword_components: 15
+  max_keyword_templates: 2
+  keyword_template_min_score: 5
+  keyword_component_threshold: 0.20
+  faiss_k: 20
+  faiss_max_l2_distance: 1.4
+  faiss_relative_margin: 0.35
+  max_helper_functions: 5
+  excluded_templates:
+    - "module_test_llm"
+    - "module_variant_lineage_FIXED"
+    - "module_variant_lineage_MINIMAL"
+    - "module_variant_lineage_MINIMAL_FIX"
+    - "module_variant_lineage_ONE_LINE_FIX"
+  query_replacements:
+    "de novo": "denovo"
+    "paired end": "paired"
+    "paired-end": "paired"
+    "single end": "single"
+    "single-end": "single"
+    "short reads": "illumina"
+    "short-reads": "illumina"
+    "long reads": "nanopore"
+    "long-reads": "nanopore"
+    "oxford nanopore": "nanopore"
+    "ont": "nanopore"
+    "ion torrent": "ion"
+    "ion-torrent": "ion"
+    "rna seq": "rnaseq"
+    "rna-seq": "rnaseq"
+    "chip seq": "chipseq"
+    "chip-seq": "chipseq"
+    "quality control": "qc"
+    "quality check": "qc"
+    "quality assessment": "qc"
+    "sars cov 2": "sarscov2"
+    "sars-cov-2": "sarscov2"
+    "sars cov2": "sarscov2"
+    "covid 19": "covid19"
+    "covid-19": "covid19"
+    "west nile": "westnile"
+    "west-nile": "westnile"
+    "e coli": "escherichia"
+    "e. coli": "escherichia"
+    "kraken 2": "kraken2"
+    "kraken-2": "kraken2"
+    "iq tree": "iqtree"
+    "iq-tree": "iqtree"
+    "k snp": "ksnp3"
+    "mob suite": "mobsuite"
+    "mob-suite": "mobsuite"
+    "16 s": "16s"
+    "wgs": "wholegenome"
+    "whole genome": "wholegenome"
+    "whole-genome": "wholegenome"
+    "core genome": "coregenome"
+    "core-genome": "coregenome"
+    "antimicrobial resistance": "amr"
+    "antibiotic resistance": "amr"
+    "resistance genes": "amr"
+    "virulence factors": "virulence"
+    "virulence factor": "virulence"
+    "sequence typing": "mlst"
+    "host depletion": "hostdepl"
+    "host removal": "hostdepl"
+    "host decontamination": "hostdepl"
+    "positive selection": "filtering"
+    "minimum spanning tree": "mst"
+    "phylogenetic tree": "phylogeny"
+    "reference based": "mapping"
+    "reference-based": "mapping"
+    "coverage depth": "coverage"
+  query_synonyms:
+    "trim": ["trimming", "adapter", "quality", "fastp", "trimmomatic", "chopper", "preprocessing", "clean"]
+    "downsample": ["downsampling", "normalize", "depth", "bbnorm", "subsampling", "coverage"]
+    "hostdepl": ["host", "depletion", "decontamination", "bowtie", "minimap2", "background"]
+    "filtering": ["filter", "positive", "selection", "retain", "enrich", "extract", "confidence", "threshold", "thresholds"]
+    "assembly": ["assemble", "assembler", "denovo", "contigs", "scaffolds", "spades", "shovill", "unicycler", "flye"]
+    "hybrid": ["hybrid", "short", "long", "combined", "unicycler"]
+    "consensus": ["mapping", "alignment", "reference", "bowtie", "minimap2", "medaka", "ivar", "snippy", "polish"]
+    "metagenomics": ["metagenomic", "metaspades", "microbiome", "community", "environmental"]
+    "taxonomy": ["classify", "classification", "taxa", "species", "kraken", "kraken2", "centrifuge", "bracken", "taxonomic"]
+    "species": ["identification", "predict", "kmerfinder", "mash", "organism"]
+    "mlst": ["typing", "sequence", "clonal", "complex", "pubmlst", "epidemiology"]
+    "cgmlst": ["chewbbaca", "allele", "allelic", "wgmlst", "coregenome", "profile"]
+    "lineage": ["pangolin", "sarscov2", "covid19", "westnile", "pango", "variant"]
+    "amr": ["resistance", "antimicrobial", "antibiotic", "resfinder", "staramr", "abricate"]
+    "virulence": ["vfdb", "pathogenicity", "virulence", "abricate"]
+    "annotation": ["annotate", "prokka", "gene", "protein", "gff", "genbank", "functional"]
+    "phylogeny": ["tree", "clustering", "mst", "distance", "newick", "augur", "nextstrain", "reportree", "grapetree", "iqtree", "phylogenetic"]
+    "snp": ["variant", "snv", "calling", "vcf", "mutation", "snippy", "cfsan"]
+    "pangenome": ["panaroo", "core", "gene", "presence", "absence", "mafft"]
+    "qc": ["fastqc", "nanoplot", "quast", "quality", "check", "report", "n50", "statistics"]
+    "variant": ["snp", "snv", "calling", "vcf", "mutation", "ivar", "snippy"]
+    "plasmid": ["plasmidspades", "mobsuite", "mob_recon", "replicon", "extrachromosomal", "mobile"]
+    "contamination": ["confindr", "purity", "mixed", "strain", "intra"]
+  # String replacements to normalize domain-specific multi-word phrases BEFORE tokenization
+  query_replacements:
+    "point mutation": "pointfinder staramr amr"
+    "point mutations": "pointfinder staramr amr"
+    "tree from cgmlst allele profiles": "multi_clustering__reportree_alleles"
+    "tree from the cgmlst allele profiles": "multi_clustering__reportree_alleles"
+    "tree from allele profiles": "multi_clustering__reportree_alleles"
+    "tree from the allele profiles": "multi_clustering__reportree_alleles"
+
+  # Domain-specific keywords that boost search ranking when found in component IDs
+  search_keywords:
+    - "lineage"
+    - "denovo"
+    - "trimming"
+    - "mapping"
+    - "qc"
+    - "clustering"
+    - "class"
+    - "hostdepl"
+    - "filtering"
+    - "typing"
+    - "annotation"
+    - "pangenome"
+    - "phylogeny"
+    - "metagenomics"
+    - "amr"
+    - "plasmid"
+    - "polishing"
+    - "consensus"
+    - "alignment"
+    - "surveillance"
+
+# Void tool exceptions: suffixes that should NOT trigger void detection 
+# when preceded by certain prefixes (e.g., vdabricate is emitting, not void)
+void_tool_exceptions:
+  - suffix: "__abricate"
+    unless_contains: "vdabricate"

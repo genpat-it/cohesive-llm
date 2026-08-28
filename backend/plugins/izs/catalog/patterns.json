@@ -1,0 +1,777 @@
+{
+  "patterns": [
+    {
+      "id": "conditional_fan_out_with_tuple_unpacking_and_optional_channe",
+      "title": "Conditional Fan-Out with Tuple Unpacking and Optional Channel Branching",
+      "description": "A workflow that conditionally fans out into two separate analysis paths based on optional parameters. The first path uses a flatMap/collect pattern to gather FASTA files, then runs a multi-alignment tool (maaft). The second path conditionally triggers a hierarchical clustering (reportree_hc) only when a specific threshold parameter is present. The workflow also demonstrates tuple unpacking (it[1]) to extract specific elements from the input channel.",
+      "use_cases": [
+        "Conditional execution of processes based on the presence of specific metadata or configuration flags.",
+        "Extracting specific elements from a tuple-based channel using flatMap/collect.",
+        "Running different analysis pipelines based on optional command-line parameters."
+      ],
+      "groovy_code": "metadata = prepare_metadata(raw_metadata).metadata\nfastas = input.flatMap { it[1] }.collect()\nalignment = maaft(fastas).alignment\nmatrix = reportree_gt(alignment, metadata, nomenclature).matrix\n\nif (optional('multi_clustering__reportree__sample_of_interest') && optional('multi_clustering__reportree__report_threshold')) {\n    find_closest(matrix)\n}\nif (optional('multi_clustering__reportree__HC_threshold')) {\n  reportree_hc(alignment, metadata)\n  augur(reportree_hc.out.nwk_hc, reportree_hc.out.metadata_hc, geodata)\n}",
+      "caveats": [
+        "The conditional branches are not mutually exclusive; both can be triggered if both optional parameters are present.",
+        "The flatMap/collect pattern assumes that the input channel emits tuples where the second element is a FASTA file. If the structure changes, the workflow will break.",
+        "The optional() function must be defined elsewhere in the workflow or imported from a library.",
+        "The workflow does not handle cases where the optional parameters are present but the required data (e.g., alignment, metadata) is missing or invalid."
+      ],
+      "tags": [
+        "collect",
+        "conditional",
+        "data-shaping",
+        "fan-out",
+        "flatMap",
+        "hierarchical-clustering",
+        "multi-alignment",
+        "optional-parameters",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "collect_map_unpack_pattern",
+      "title": "Collect-Map-Unpack Pattern",
+      "description": "A three-step channel transformation that first collects all elements into a single list, then maps over that list to extract a specific field, and finally unpacks the result into a variable. This is useful when you need to aggregate all elements of a channel into a single data structure before processing.",
+      "use_cases": [
+        "When you need to extract a specific field from each element of a channel and then process the entire list at once.",
+        "When you need to gather all elements of a channel into a single list before processing."
+      ],
+      "groovy_code": "input\n .map { it[1] }\n .collect()\n .set { inputSet }",
+      "caveats": [
+        "The collect() operator will block until all elements have been received, which can cause memory issues if the channel is very large.",
+        "The map() operator is applied to each element of the channel before collect() is called, so the order of operations is important."
+      ],
+      "tags": [
+        "collect",
+        "data-shaping",
+        "map",
+        "set",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "collecting_inputs_before_cross_product",
+      "title": "Collecting Inputs Before Cross Product",
+      "description": "The workflow first collects all GFF files into a single list via .collect(), then passes this list to the panaroo process. This avoids a cross product between individual GFF files and other inputs, which would otherwise explode combinatorially.",
+      "use_cases": [
+        "When you need to gather all files of a certain type before processing them together.",
+        "When you need to pass a complete list of files to a process that expects a single input channel rather than a cross product.",
+        "When you want to avoid the combinatorial explosion of cross products between multiple input channels."
+      ],
+      "groovy_code": "input\n .map { it[1] }\n .collect()\n .set { gffs }\n panaroo(gffs)",
+      "caveats": [
+        "The .collect() operator blocks until all upstream items are emitted, which can cause memory issues if the input channel is very large.",
+        "The .collect() operator does not handle backpressure, so if the input channel is very large, the workflow may run out of memory.",
+        "The .collect() operator does not handle errors gracefully, so if any item in the input channel fails to emit, the entire workflow will fail.",
+        "The .collect() operator does not preserve the order of items in the input channel, so if order matters, you should use .toList() instead."
+      ],
+      "tags": [
+        "collect",
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "map",
+        "set",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "sorted_collect_flatten",
+      "title": "Sorted Collect Flatten",
+      "description": "A data-shaping pattern that first sorts a list of tuples by a specific field, then flattens the list into a single-level collection, and finally collects it into a single item. This is useful when you need to ensure a specific order of items before processing them further.",
+      "use_cases": [
+        "When you need to ensure that a list of items is sorted before being passed to a process that expects a specific order.",
+        "When you need to flatten a list of lists into a single list, but first need to sort the inner lists by a specific field.",
+        "When you need to process a list of items in a specific order, such as processing files in a directory in alphabetical order."
+      ],
+      "groovy_code": "reads = getInput()\n    .map { it[1] }\n    .toSortedList( { a, b -> a[0] <=> b[0] } )\n    .flatten()\n    .collect()",
+      "caveats": [
+        "The `collect` method will return a single item, which may not be the desired behavior if you need to process the list as a whole.",
+        "The `flatten` method will throw an exception if the list contains any non-list items. Ensure that the list is properly structured before using this method.",
+        "The `toSortedList` method requires a comparator function that returns -1, 0, or 1. If the comparator function does not return one of these values, the sorting may not work as expected."
+      ],
+      "tags": [
+        "collect",
+        "data-shaping",
+        "flatten",
+        "map",
+        "toSortedList",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "multimap_with_tuple_unpacking",
+      "title": "MultiMap with Tuple Unpacking",
+      "description": "This pattern demonstrates how to use the multiMap operator to split a combined channel tuple into multiple named outputs. The tuple is unpacked into two separate tuples, one for reads and one for reference, which are then used as inputs to the snippy process.",
+      "use_cases": [
+        "When you need to pass different parts of a tuple to different inputs of a process.",
+        "When you need to split a combined channel tuple into multiple named outputs."
+      ],
+      "groovy_code": "reads.combine(reference)\n                .multiMap { \n                    reads: it[0..1] // riscd, R[]\n                    reference:  it[2..4] // riscd, code, path\n                }.set { input }",
+      "caveats": [
+        "Be aware of the potential for index out-of-bounds errors if the tuple is not the expected length.",
+        "Ensure that the tuple indices are correct and match the expected data structure."
+      ],
+      "tags": [
+        "channel-merge",
+        "data-shaping",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "collect_with_map",
+      "title": "Collect with Map",
+      "description": "This pattern demonstrates how to use the map operator to extract a specific element from a tuple and then use the collect operator to gather all the elements into a single list.",
+      "use_cases": [
+        "When you need to extract a specific element from a tuple and gather all the elements into a single list.",
+        "When you need to pass a list of elements to a process."
+      ],
+      "groovy_code": "input\n            .map { it[1] }\n            .collect()\n            .set { vcfs }",
+      "caveats": [
+        "Be aware of the potential for index out-of-bounds errors if the tuple is not the expected length.",
+        "Ensure that the tuple indices are correct and match the expected data structure."
+      ],
+      "tags": [
+        "collect",
+        "data-shaping",
+        "map",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "conditional_fan_out_fan_in_with_tuple_unpacking",
+      "title": "Conditional Fan-Out / Fan-In with Tuple Unpacking",
+      "description": "A complex data-shaping pattern that uses a combination of `.collect()`, `.flatMap()`, and `.branch()` to fan-out a multi-dimensional input tuple, process it through multiple independent workflows, and then fan-in the results into a single output tuple. This pattern is particularly useful when you need to process different parts of a tuple independently and then recombine them into a single output tuple.",
+      "use_cases": [
+        "Processing a multi-dimensional input tuple where each dimension requires a different processing pipeline, and then recombining the results into a single output tuple.",
+        "Processing a multi-dimensional input tuple where each dimension requires a different processing pipeline.",
+        "Recombining the results of multiple independent workflows into a single output tuple."
+      ],
+      "groovy_code": "metadata = prepare_metadata(raw_metadata).metadata\nfastas = getInput().flatMap { it[1] }.collect()\nalignment = align(fastas, reference).alignment\ntree_raw = tree(alignment).tree_raw\ntree = refine(tree_raw, alignment, metadata).tree\nnt_muts = ancestral(tree, alignment, reference).nt_muts\naa_muts = translate(tree, nt_muts, reference).aa_muts\ntraits = traits(tree, metadata).traits\nexport(tree, metadata, refine.out.branch_lengths, traits, nt_muts, aa_muts, geodata)",
+      "caveats": [
+        "The `.branch()` operator is used to branch the workflow into multiple independent workflows. This is a non-trivial use of `.branch()` and requires careful handling of the input tuple structure.",
+        "The `.collect()` operator is used to collect the results of the `.flatMap()` operation into a single list. This is a non-trivial use of `.collect()` and requires careful handling of the input tuple structure.",
+        "The `.export()` operator is used to export the results of the workflow into a single output tuple. This is a non-trivial use of `.export()` and requires careful handling of the input tuple structure.",
+        "The `.flatMap()` operator is used to unpack the second element of the input tuple, which is a list of FASTA files. This is a non-trivial use of `.flatMap()` and requires careful handling of the input tuple structure."
+      ],
+      "tags": [
+        "branch",
+        "collect",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "flatMap",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "conditional_channel_branching_with_optional_parameters",
+      "title": "Conditional Channel Branching with Optional Parameters",
+      "description": "This pattern demonstrates how to conditionally branch a workflow based on the presence of optional parameters. It uses the `optional` function to check if certain parameters are provided, and then branches the workflow accordingly. This is useful when you want to run different parts of the workflow based on the availability of certain inputs or parameters.",
+      "use_cases": [
+        "Conditionally executing parts of a workflow based on user input or configuration.",
+        "Implementing optional features in a workflow that can be enabled or disabled based on the presence of certain parameters.",
+        "Running different parts of a workflow based on the availability of certain inputs or parameters."
+      ],
+      "groovy_code": "if (optional('multi_clustering__reportree__sample_of_interest') && optional('multi_clustering__reportree__report_threshold')) {\n    find_closest(matrix)\n}\nif (optional('multi_clustering__reportree__HC_threshold')) {\n    reportree_hc(vcfs, metadata)\n    augur(reportree_hc.out.nwk_hc, reportree_hc.out.metadata_hc, geodata)\n}",
+      "caveats": [
+        "The `optional` function is not a standard Groovy method, so it is important to ensure that the Nextflow environment is properly set up to use this function.",
+        "The `optional` function is specific to Nextflow and may not be available in other workflow management systems.",
+        "The `optional` function returns a boolean value, so it is important to ensure that the parameters being checked are indeed optional and not required for the workflow to function correctly."
+      ],
+      "tags": [
+        "branch",
+        "conditional",
+        "groovy",
+        "nextflow",
+        "optional",
+        "parameter",
+        "workflow"
+      ]
+    },
+    {
+      "id": "conditional_branch_multimap_cross_for_parallel_data_wiring",
+      "title": "Conditional Branch \u2192 MultiMap \u2192 Cross for Parallel Data Wiring",
+      "description": "A three-stage data-shaping pipeline that first branches a channel into multiple named sub-channels based on a predicate, then uses multiMap to unpack a cross product into two distinct output channels, and finally wires those channels into downstream processes.",
+      "use_cases": [
+        "Conditional routing of data streams based on metadata tags (e.g., isBacterium, isVirus).",
+        "Multi-species bioinformatics pipelines where each species requires different downstream processing.",
+        "Parallel processing of different data subsets without duplicating code paths."
+      ],
+      "groovy_code": "trimmed.branch {\n    bacteria: isBacterium(it)\n    sarscov2: isSarsCov2(it) || isNegativeControlSarsCov2(it) || isPositiveControlSarsCov2(it)\n    negative_control: isNegativeControl(it)\n    viruses: isVirus(it)\n    wnv: isWNV(it)\n    ampliseq: isAmpliseq(it)\n    other: true\n}\n.set { branched }\n\nassemblyBacteria = module_wgs_bacteria(branched.bacteria)\ncrossedBacteriaData = branched.bacteria.cross(assemblyBacteria) { extractKey(it) }.multiMap { \n  trimmed: it[0]\n  assembly: it[1]\n}\nmodule_typing_bacteria(crossedBacteriaData.trimmed, crossedBacteriaData.assembly)",
+      "caveats": [
+        "The cross operator creates a Cartesian product, so if branched.bacteria has N items and assemblyBacteria has M items, the result will have N\u00d7M items. This can lead to memory issues if N or M are large.",
+        "The extractKey function must return a unique key for each item in the cross product; otherwise, the multiMap will not unpack correctly.",
+        "The multiMap operator expects the cross product to be a tuple of two items; if the cross product is not a tuple, the multiMap will fail."
+      ],
+      "tags": [
+        "branch",
+        "conditional",
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "empty_channel_merge_for_conditional_processing",
+      "title": "Empty Channel Merge for Conditional Processing",
+      "description": "A pattern where an empty channel is merged with a conditional branch to create a unified data stream for downstream processing.",
+      "use_cases": [
+        "Conditional processing of data streams where some data streams are empty.",
+        "Parallel processing of different data subsets without duplicating code paths."
+      ],
+      "groovy_code": "module_typing_bacteria(Channel.empty(), branched.bacteria)",
+      "caveats": [
+        "The empty channel must be merged with the conditional branch before the downstream processing.",
+        "The empty channel must be of the same type as the conditional branch."
+      ],
+      "tags": [
+        "branch",
+        "channel-merge",
+        "conditional",
+        "data-shaping"
+      ]
+    },
+    {
+      "id": "combine_group_branch_tuple_unpacking_for_lineage_selection",
+      "title": "Combine \u2192 Group \u2192 Branch \u2192 Tuple Unpacking for Lineage Selection",
+      "description": "A four-stage data-shaping pipeline that first combines reference sequences with reads, then groups coverage tuples by reference, branches on lineage criteria, and finally unpacks the lineage tuple for downstream analysis.",
+      "use_cases": [
+        "Metagenomic binning where each bin must be grouped by its coverage and then branched into taxonomic lineage selection.",
+        "Multi-omics integration where each omics layer must be grouped by its coverage and then branched into lineage-specific analysis.",
+        "Multi-reference genome alignment where each reference must be grouped by its coverage statistics before branching into lineage-specific workflows."
+      ],
+      "groovy_code": "references = getWNVReferences()\ncomb = reads.combine(references)\nbam = snippy(comb).bam\ncoverages = samtools_depth(bam).coverage.groupTuple()\nlineage = lineage_selection(coverages).lineage",
+      "caveats": [
+        "The lineage tuple must be unpacked correctly; otherwise, the workflow will fail.",
+        "The lineage_selection() process must be able to handle the grouped tuples; otherwise, the workflow will fail.",
+        "groupTuple() requires that the incoming channel emits tuples with a consistent structure; otherwise, the grouping will fail."
+      ],
+      "tags": [
+        "branch",
+        "channel-merge",
+        "collect",
+        "combine",
+        "conditional",
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "flatMap",
+        "groupTuple",
+        "map",
+        "mix",
+        "multiMap",
+        "publishDir",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_multimap_tuple_unpacking",
+      "title": "Cross \u2192 MultiMap \u2192 Tuple Unpacking",
+      "description": "A three-stage data-shaping pipeline that first cross-joins two channels, then multiMaps the resulting tuples into separate sub-channels, and finally unpacks the tuples into individual process inputs.",
+      "use_cases": [
+        "Conditional branching where each branch needs a different subset of the original tuple.",
+        "Multi-reference mapping where each reference must be paired with a specific read set.",
+        "Parallel processing of multiple reference genomes against a single set of reads."
+      ],
+      "groovy_code": "getSingleInput().cross(getReference('fa')) { extractKey(it) }\n  .multiMap { \n      reads: it[0] // riscd, R[]\n      refs:  it[1][1..3] // riscd, code, path\n  }.set { input }",
+      "caveats": [
+        "The cross operator creates a Cartesian product, which can explode the number of tuples if the input channels are large.",
+        "The extractKey function must return a tuple that is compatible with the multiMap sub-channel names.",
+        "The multiMap operator requires that the tuple indices are correctly aligned with the sub-channel names."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_map_tuple_repacking",
+      "title": "Cross \u2192 Map \u2192 Tuple Repacking",
+      "description": "A two-stage data-shaping pipeline that first cross-joins two channels, then maps the resulting tuples into a new tuple structure.",
+      "use_cases": [
+        "Combining coverage data with consensus data for downstream analysis.",
+        "Repacking tuples to align with a specific process input structure."
+      ],
+      "groovy_code": "coverage.cross(medaka.out.consensus) { extractDsRef(it) }.map { \n    return [ it[0][0], it[1][1], it[0][1] ]\n}.set { coverageRefAndConsensus }",
+      "caveats": [
+        "The cross operator creates a Cartesian product, which can explode the number of tuples if the input channels are large.",
+        "The map operator must return a tuple that is compatible with the downstream process input structure."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "map",
+        "tuple-repacking"
+      ]
+    },
+    {
+      "id": "cross_multimap_fan_out",
+      "title": "Cross \u2192 multiMap \u2192 Fan-out",
+      "description": "A two-stage data-shaping pipeline that first cross-joins two channels, then uses multiMap to fan-out the combined tuple into two separate channels (reads and refs) that are then fed into a single process.",
+      "use_cases": [
+        "When the downstream process expects two separate inputs (e.g., reads and reference) but the upstream data is a single tuple.",
+        "When you need to split a complex tuple into two distinct inputs for a single process that expects two separate filesets.",
+        "When you want to avoid creating intermediate channels or temporary files just to split a tuple."
+      ],
+      "groovy_code": "getSingleInput().cross(getReference('fa')) { extractKey(it) } .multiMap { reads: it[0] refs: it[1][1..3] }.set { input }",
+      "caveats": [
+        "The cross operator must be used with a closure that returns a single tuple; otherwise, multiMap will fail.",
+        "The downstream process must be able to accept two separate channels (reads and refs) as inputs.",
+        "The multiMap keys (reads, refs) must match the exact parameter names of the downstream process.",
+        "The multiMap keys must be unique; otherwise, the downstream process will receive duplicate data."
+      ],
+      "tags": [
+        "conditional",
+        "cross",
+        "data-shaping",
+        "fan-out",
+        "multiMap",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_map_fan_in",
+      "title": "Cross \u2192 Map \u2192 Fan-in",
+      "description": "A three-stage data-shaping pipeline that first cross-joins two channels, then uses map to transform the combined tuple into a single tuple, and finally uses set to fan-in the transformed tuple into a single channel.",
+      "use_cases": [
+        "When the downstream process expects a single input but the upstream data is a complex tuple.",
+        "When you need to transform a complex tuple into a single tuple that can be fed into a single process.",
+        "When you want to avoid creating intermediate channels or temporary files just to transform a tuple."
+      ],
+      "groovy_code": "coverage.cross(consensus) { extractDsRef(it) }.map { return [ it[0][0], it[1][1], it[0][1] ] }.set { coverageRefAndConsensus }",
+      "caveats": [
+        "The cross operator must be used with a closure that returns a single tuple; otherwise, the map will fail.",
+        "The downstream process must be able to accept a single input channel.",
+        "The map closure must return a single tuple; otherwise, the downstream process will receive duplicate data."
+      ],
+      "tags": [
+        "conditional",
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "map",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_map_tuple_unpacking_for_consensus_aggregation",
+      "title": "Cross + Map + Tuple Unpacking for Consensus Aggregation",
+      "description": "A complex data-shaping pipeline that first crosses a single input channel with a multi-reference channel, then unpacks the resulting tuple into two separate channels (reads and refs) that are fed into a downstream process. This pattern is useful when you need to fan-out a single input into multiple parallel branches, each with its own reference data.",
+      "use_cases": [
+        "Fan-out/fan-in pattern where a single input is split into multiple branches, each with its own set of parameters",
+        "Running the same analysis on multiple reference genomes in parallel",
+        "Splitting a single input into multiple branches, each with its own set of parameters"
+      ],
+      "groovy_code": "reads.cross(consensus | groupTuple) {{ extractKey(it) }} .map { [ it[0][0], // riscd it[1][1], // reference codes it[1][2] // consensus file ]}.set { consensus_to_aggregate}",
+      "caveats": [
+        "The extractKey function must return a tuple of two elements, the first being the input and the second being the reference data.",
+        "The multiMap function must be used with caution, as it can lead to memory issues if the input channel is too large."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "multiMap",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "static_list_combination_for_conditional_processing",
+      "title": "Static List Combination for Conditional Processing",
+      "description": "A channel is combined with a static list to create a conditional processing path. This pattern is useful when you need to apply a specific process to a subset of data that is determined by a static condition.",
+      "use_cases": [
+        "Applying a specific process to a subset of data that is determined by a static condition.",
+        "Creating a conditional processing path based on a static list of conditions."
+      ],
+      "groovy_code": "getInput()\n    .combine(['viruses_TREF'])\n    .set { scaffoldsAbricatedb }",
+      "caveats": [
+        "The combine operation will create a cross product with the static list, so the resulting channel will have multiple entries for each input item.",
+        "The static list must be defined before the combine operation."
+      ],
+      "tags": [
+        "channel_operators",
+        "combine",
+        "conditional",
+        "data_shaping",
+        "static_list"
+      ]
+    },
+    {
+      "id": "cross_with_tuple_unpacking_and_re_mapping",
+      "title": "Cross with Tuple Unpacking and Re-mapping",
+      "description": "A cross operator followed by a map that unpacks tuples from both channels and re-maps them into a new tuple structure. This is useful when you need to merge data from two channels but only want specific fields from each channel.",
+      "use_cases": [
+        "Combining metadata from one channel with processed data from another channel, but only specific fields are relevant.",
+        "Merging coverage data with consensus sequences where only certain fields from each channel are needed."
+      ],
+      "groovy_code": "coverage.cross(consensus) { extractDsRef(it) }.map { return [ it[0][0], it[1][1], it[0][1] ] }",
+      "caveats": [
+        "Ensure that the tuple indices used in the map block match the expected structure of the channels being crossed.",
+        "The extractDsRef function must return a tuple that aligns with the expected structure of the map block."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "map",
+        "tuple-remapping",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_with_string_concatenation",
+      "title": "Cross with String Concatenation",
+      "description": "A cross operator followed by a map that concatenates strings from both channels. This is useful when you need to combine data from two channels into a single string.",
+      "use_cases": [
+        "Combining coverage data with consensus sequences where the output needs to be a single string.",
+        "Merging metadata from one channel with processed data from another channel into a single string."
+      ],
+      "groovy_code": "coverage_minmax.out.coverage_extra.cross(coverageBasic) { it[0] + \"-\" + it[1] }",
+      "caveats": [
+        "Ensure that the channels being crossed contain strings or can be converted to strings.",
+        "The concatenation operation must be compatible with the data types in the channels."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "map",
+        "string-concatenation"
+      ]
+    },
+    {
+      "id": "combine_a_keyed_channel_with_an_unkeyed_channel",
+      "title": "Combine a Keyed Channel with an Unkeyed Channel",
+      "description": "This pattern demonstrates how to combine a keyed channel (getSingleInput) with an unkeyed channel (getHostUnkeyed) using the .combine() operator. The keyed channel provides the primary data, while the unkeyed channel supplies additional data that is not tied to any specific key. This is useful when you need to enrich your primary data with supplementary data that does not have a direct relationship with the keys in the primary channel.",
+      "use_cases": [
+        "Combining a keyed channel with an unkeyed channel to provide additional context or data for processing.",
+        "Enriching a primary dataset with supplementary data that is not tied to any specific key."
+      ],
+      "groovy_code": "input = getSingleInput()\n  .combine(getHostUnkeyed())\nstep_1PP_hostdepl__bowtie(input)",
+      "caveats": [
+        "Be aware that the unkeyed channel will be combined with every element in the keyed channel, which can lead to a large number of combinations if the channels are large.",
+        "Ensure that the unkeyed channel (getHostUnkeyed) does not contain any keys that conflict with the keys in the keyed channel (getSingleInput)."
+      ],
+      "tags": [
+        "channel-merge",
+        "combine",
+        "data-enrichment",
+        "data-shaping",
+        "keyed-channel",
+        "unkeyed-channel"
+      ]
+    },
+    {
+      "id": "conditional_fan_out_fan_in_with_channel_mixing",
+      "title": "Conditional Fan-Out/Fan-In with Channel Mixing",
+      "description": "A workflow that fans out to two separate shovill processes (one for paired-end and one for single-end reads), then fans back in by mixing the resulting contigs channels. The mixed channel is then used to feed a quast process, and conditionally a checkm process if the skip_checkm parameter is not set.",
+      "use_cases": [
+        "Conditionally executing a process based on a parameter flag while maintaining a single data flow.",
+        "Merging multiple channels of the same type (e.g., contigs) into a single channel for uniform downstream processing.",
+        "Running two different assembly pipelines in parallel and merging their outputs before downstream analysis."
+      ],
+      "groovy_code": "contigs_from_pe = shovill(rawreads).assembly\ncontigs_from_se = shovill_se(rawreads).assembly\ncontigs = contigs_from_pe.mix(contigs_from_se)\nquast(contigs)\nif (!params.skip_checkm) {\n  checkm(contigs)\n}",
+      "caveats": [
+        "The conditional checkm process will only run if the skip_checkm parameter is false, but the contigs channel is still created and passed to quast regardless.",
+        "The mix operator does not guarantee any ordering of the mixed channels. If order matters, additional sorting or tagging is required.",
+        "The mix operator is a fan-in operator, but it does not guarantee that the channels will be merged in any particular order. If order matters, additional logic is required."
+      ],
+      "tags": [
+        "channel-merge",
+        "conditional",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "mix",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "chained_cross_with_conditional_branch_and_flatten",
+      "title": "Chained Cross with Conditional Branch and Flatten",
+      "description": "A data-shaping pipeline that uses two chained cross() operators to join input data with optional reference data, then branches on a key, flattens the result, and finally maps to a reduced tuple.",
+      "use_cases": [
+        "Conditional branching on a key (e.g., kingdom) to decide which reference data to include.",
+        "Flattening nested tuples after cross() to prepare for downstream mapping.",
+        "Joining a primary input channel with two optional reference channels (e.g., genome assembly + kingdom + optional reference genome).",
+        "Reducing tuple size by selecting specific indices after flattening."
+      ],
+      "groovy_code": "getInput()\n    .cross(getKingdom()) { extractKey(it) }\n    .cross(getReferenceOptional('gb')) { extractKey(it) }\n    .map { it.flatten() }\n    .map { [ it[0], it[1], it[3], it[5], it[6], it[7] ] }\n    .set { input }",
+      "caveats": [
+        "The extractKey(it) function must return a key that exists in the cross() channel; otherwise, the cross() will fail with a missing key error.",
+        "The flatten() operator assumes the cross() result is a list of lists; if the cross() result is not a list of lists, flatten() will throw an exception.",
+        "The map { [ it[0], it[1], it[3], it[5], it[6], it[7] ] } assumes the flattened tuple has at least 8 elements; if the tuple has fewer than 8 elements, the map will throw an exception."
+      ],
+      "tags": [
+        "branch",
+        "cross",
+        "data-shaping",
+        "flatten",
+        "map",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_multimap_unpacking_tuple",
+      "title": "Cross \u2192 MultiMap \u2192 Unpacking Tuple",
+      "description": "A three-stage data-shaping pipeline that first cross-products two channels, then multi-maps the resulting tuples into named slots, and finally unpacks those slots into separate process inputs.",
+      "use_cases": [
+        "When the downstream process expects named parameters (e.g., `assembly` and `species`) rather than a raw tuple.",
+        "When you need to feed a downstream process with two distinct inputs (e.g., assembly and species) that were originally produced by two separate channels.",
+        "When you want to avoid hard-coding index-based access (e.g., `it[0]`, `it[1]`) in the process call."
+      ],
+      "groovy_code": "assembly.cross(genus_species) { extractKey(it) }\n    .multiMap { \n        assembly: it[0]\n        species: it[1]\n    }.set { assemblyAndSpecies }\nstep_4AN_AMR__blast(assemblyAndSpecies.assembly, assemblyAndSpecies.species)",
+      "caveats": [
+        "The `cross` operator will generate a Cartesian product of the two channels, which can lead to a combinatorial explosion if the channels are large.",
+        "The `extractKey` function must return a tuple of exactly two elements; otherwise, the multiMap will fail with an index-out-of-bounds error.",
+        "The `multiMap` block expects the tuple to be unpacked into named slots (`assembly`, `species`). If the tuple has more or fewer elements, the multiMap will throw a runtime exception."
+      ],
+      "tags": [
+        "channel-merge",
+        "conditional",
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "multiMap",
+        "publishDir",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "chained_cross_multimap_for_multi_input_process",
+      "title": "Chained Cross + MultiMap for Multi-Input Process",
+      "description": "A reusable pattern where two independent cross operations are chained, then a multiMap unpacks the nested tuple structure into named outputs for a multi-input process.",
+      "use_cases": [
+        "Feeding a process that requires three distinct inputs: an assembly file, a reference file, and a database file, all derived from different upstream channels.",
+        "Scenario where each cross operation extracts a key from a different channel, and the multiMap then slices and names the resulting nested tuple for downstream consumption."
+      ],
+      "groovy_code": "denovoOut.assembled\n    .cross(reference) { extractKey(it) }\n    .cross(abricateDatabase) { extractKey(it) }\n    .multiMap { \n        assembly: it[0][0][0..1]\n        reference: it[0][1]\n        abricateDatabase: it[1]\n    }\n    .set { cARA }",
+      "caveats": [
+        "If any of the cross operations produce empty results, the entire pipeline will stall.",
+        "The extractKey function must return a tuple whose first element is the file path and the second is the key used in the cross operation.",
+        "The multiMap expects a nested tuple structure: it[0] is the result of the first cross, it[1] is the result of the second cross.",
+        "The slice it[0][0][0..1] assumes the first element of the first cross result is a tuple of at least two elements."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "chained_cross_multimap_for_depleted_data",
+      "title": "Chained Cross + MultiMap for Depleted Data",
+      "description": "A variant of the previous pattern where the depleted channel is cross-referenced with two different reference channels, then multiMap unpacks the nested tuple structure into named outputs.",
+      "use_cases": [
+        "Feeding a process that requires three distinct inputs: a depleted file, a reference file, and a referenceGB file, all derived from different upstream channels.",
+        "Scenario where each cross operation extracts a key from a different channel, and the multiMap then slices and names the resulting nested tuple for downstream consumption."
+      ],
+      "groovy_code": "denovoOut.depleted\n    .cross(reference) { extractKey(it) }\n    .cross(referenceGB) { extractKey(it) }\n    .multiMap {\n        depleted: it[0][0][0..1]\n        reference: it[0][1]\n        referenceGB: it[1]\n    }\n    .set { cDR }",
+      "caveats": [
+        "If any of the cross operations produce empty results, the entire pipeline will stall.",
+        "The extractKey function must return a tuple whose first element is the file path and the second is the key used in the cross operation.",
+        "The multiMap expects a nested tuple structure: it[0] is the result of the first cross, it[1] is the result of the second cross.",
+        "The slice it[0][0][0..1] assumes the first element of the first cross result is a tuple of at least two elements."
+      ],
+      "tags": [
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "map_tuple_reordering",
+      "title": "Map Tuple Reordering",
+      "description": "A map operator that reorders and selects specific elements from a cross product tuple.",
+      "use_cases": [
+        "When you need to flatten a cross product tuple into a simpler structure before feeding it to the next step.",
+        "When you want to discard certain elements of the cross product and only keep the ones that matter."
+      ],
+      "groovy_code": "assembled.cross(abricatedatabase) { extractKey(it) }.map { [ it[0][0], it[0][1], it[1][1] ] }",
+      "caveats": [
+        "The extractKey function must return a consistent key across both channels; otherwise the cross will fail.",
+        "The map assumes that the cross product tuple has exactly three elements; if it has more or fewer, the pipeline will crash."
+      ],
+      "tags": [
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "map",
+        "tuple-reordering"
+      ]
+    },
+    {
+      "id": "conditional_branch_with_mix_for_re_convergence",
+      "title": "Conditional Branch with Mix for Re-convergence",
+      "description": "A workflow that uses a branch to split a channel into two paths based on a condition, then later uses mix to re-converge the two paths after one of them has been processed by a separate step. This pattern is useful when you need to conditionally process data and then merge it back together later.",
+      "use_cases": [
+        "When you have a set of data that needs to be processed differently based on a condition, and then the results need to be merged back together.",
+        "When you need to conditionally process data and then merge it back together later."
+      ],
+      "groovy_code": "trimmedReads.cross(host) { extractKey(it) }\n.map { [ it[0][0], it[0][1], it[1][1] ] } //riscd, reads, host\n.branch {\n    with_host: it[1][1]\n    without_host: true\n}\n.set { branchedTrimmed }\n\ndepleted = step_1PP_hostdepl__bowtie(branchedTrimmed.with_host)\n\nbranchedTrimmed.without_host\n    .mix(depleted)\n    .map { it[0,1] }\n    .set{ denovoInput }\nassembled = step_2AS_denovo__spades(denovoInput)",
+      "caveats": [
+        "The branch operator requires a closure that returns a map of named channels. The keys in the map are the names of the channels that will be created.",
+        "The branch operator requires that the closure returns a map of named channels. The keys in the map are the names of the channels that will be created.",
+        "The map operator requires that the closure returns a list of the same length as the input tuple. If the closure returns a list of a different length, the map operator will not work as expected.",
+        "The mix operator requires that the channels being mixed have the same number of elements. If the channels have different numbers of elements, the mix operator will not work as expected."
+      ],
+      "tags": [
+        "branch",
+        "conditional",
+        "cross",
+        "data-shaping",
+        "map",
+        "mix",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "nested_branch_filtering_with_conditional_routing",
+      "title": "Nested Branch Filtering with Conditional Routing",
+      "description": "A multi-level branching pattern that progressively filters and routes data based on multiple criteria. Each branch is conditional and the output channels are named for clarity.",
+      "use_cases": [
+        "Conditional routing based on metadata (e.g., sequencing technology, organism type).",
+        "Multi-stage data validation where each stage has its own criteria.",
+        "Progressive filtering where each branch reduces the dataset further."
+      ],
+      "groovy_code": "rawReads.branch { with_data: hasFastqData(it[1]) no_reads: true }.set { rawreads_branched } step_0SQ_rawreads__fastq(rawreads_branched.with_data) rawreads_branched.with_data.branch { illumina: isIlluminaPaired(it[1]) ion: isIonTorrent(it[1]) nanopore: isNanopore(it[1]) other: true }.set { trimming_by_seqtype } trimming_by_seqtype.illumina.branch { bacteria: isBacterium(it) other: true }.set { trimming_illumina }",
+      "caveats": [
+        "Each branch must be mutually exclusive to avoid data loss or duplication.",
+        "The `it[1]` index assumes a tuple structure; incorrect indexing can cause runtime errors.",
+        "The `other` branch acts as a catch-all and must be explicitly handled."
+      ],
+      "tags": [
+        "branch",
+        "conditional",
+        "data-shaping",
+        "fan-out",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "multimap_branch_combine_split_a_tuple_into_two_channels_then",
+      "title": "MultiMap + Branch + Combine: Split a tuple into two channels, then recombine them with a flattened collection",
+      "description": "This pattern demonstrates how to use multiMap to split a single tuple into two named channels (riscd and plasmids), then branch them, and finally recombine them with a flattened collection using combine. This is useful when you need to process different parts of a tuple separately and then merge them back together in a controlled way.",
+      "use_cases": [
+        "When you have a complex tuple that needs to be split into multiple channels for separate processing, but you still need to recombine them later.",
+        "When you need to apply different operations to different parts of a tuple and then merge the results back together.",
+        "When you need to flatten a collection of tuples before combining them with another channel."
+      ],
+      "groovy_code": "plasmids.multiMap { it ->\n    riscd: it[0]\n    plasmids: it[1]\n}.set { branched }\n\ninput = branched.riscd.combine(branched.plasmids.flatten())",
+      "caveats": [
+        "Ensure that the tuple indices (it[0] and it[1]) match the expected structure of the input data. If the tuple has fewer or more elements, this will cause an error.",
+        "The combine operation will only work if the two channels have the same number of items. If one channel has more items than the other, the combine operation will fail.",
+        "The flatten() operation is applied to the plasmids channel before combining it with the riscd channel. This is important because it ensures that the plasmids channel is a single collection of items rather than a collection of collections."
+      ],
+      "tags": [
+        "branch",
+        "channel-merge",
+        "combine",
+        "data-shaping",
+        "flatten",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "cross_multimap_for_structured_fan_in",
+      "title": "Cross + multiMap for structured fan-in",
+      "description": "A channel pipeline that first cross-joins two channels and then uses multiMap to split the resulting tuples into named sub-channels. This is a classic fan-in pattern that allows downstream processes to consume only the parts of the data they need.",
+      "use_cases": [
+        "When you need to feed different parts of a complex tuple to different processes without having to unpack the tuple manually in each process.",
+        "When you need to pass a reference path to one process and a species name to another process, both derived from the same cross-join.",
+        "When you want to keep the data flow clean and avoid having to pass around large tuples that contain data only one process needs."
+      ],
+      "groovy_code": "assembly.cross(assigned_species) { extractKey(it) }.multiMap { \n  assembly: it[0]\n  species: it[1][1]\n}.set { assemblyAndSpecies }",
+      "caveats": [
+        "The extractKey function must return a key that matches the structure of the cross-join. If the key is not found, the cross-join will fail.",
+        "The multiMap operator expects the input tuple to be in a specific format. If the tuple is not in the expected format, the multiMap operator will fail.",
+        "The multiMap operator will create a new channel for each named sub-channel. If the named sub-channel is not used, the channel will be created but never consumed, leading to potential memory leaks."
+      ],
+      "tags": [
+        "channel-merge",
+        "conditional",
+        "cross",
+        "data-shaping",
+        "fan-in",
+        "multiMap",
+        "publishDir",
+        "scatter-gather",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "conditional_fan_out_with_re_unification",
+      "title": "Conditional Fan-Out with Re-Unification",
+      "description": "A branch operator splits a stream into two channels, one of which is later merged back into the main stream via mix. This is useful when you want to apply different processing paths to different subsets of data and then recombine them downstream.",
+      "use_cases": [
+        "Conditional feature extraction: when you need to apply different feature extraction logic based on the presence of a key in the data, and then merge the results back into a single stream.",
+        "Processing reads with and without host depletion: reads with host depletion go through a separate process (step_1PP_hostdepl__bowtie), while reads without host depletion bypass it. Both streams are later merged with mix to continue the pipeline."
+      ],
+      "groovy_code": "trimmedReads.cross(host) { extractKey(it) }\n            .map { [ it[0][0], it[0][1], it[1][1] ] } //riscd, reads, host\n            .branch {\n                with_host: it[1][1]\n                without_host: true\n            }\n        .set { branchedTrimmed }\n\n        depleted = step_1PP_hostdepl__bowtie(branchedTrimmed.with_host)\n\n        branchedTrimmed.without_host\n            .mix(depleted)\n            .map { it[0,1] }\n            .set { trimmedOrDepleted }",
+      "caveats": [
+        "The branch operator requires a closure that returns a map of channel names to predicates. The predicates must evaluate to true for the corresponding channel to receive the item.",
+        "The map operator after mix is used to strip out the third element (the host) from the tuple, which was added during the initial map operation. This is a form of tuple unpacking.",
+        "The mix operator combines two channels into one, but it does not guarantee any ordering. If ordering matters, you should use a different approach, such as collect and then re-emit."
+      ],
+      "tags": [
+        "branch",
+        "conditional",
+        "data-shaping",
+        "fan-in",
+        "fan-out",
+        "map",
+        "mix",
+        "tuple-unpacking"
+      ]
+    },
+    {
+      "id": "multimap_tuple_unpacking",
+      "title": "MultiMap Tuple Unpacking",
+      "description": "The multiMap operator is used to unpack a tuple into multiple channels, each with a different subset of the original tuple. This is useful when you want to pass different parts of the data to different inputs of a process.",
+      "use_cases": [
+        "Passing different parts of a tuple to different inputs of a process: in this case, the reads and references are passed to different inputs of the step_2AS_mapping__bowtie process.",
+        "Splitting a complex tuple into simpler tuples for downstream processing: when you have a complex tuple that you want to split into simpler tuples for downstream processing, you can use the multiMap operator to do this."
+      ],
+      "groovy_code": "trimmedOrDepleted.cross(reference) { extractKey(it) }\n        .multiMap { \n            reads: it[0] // riscd, reads\n            refs:  it[1][1..3] // riscd, code, path\n        }.set { readsAndReferences }",
+      "caveats": [
+        "The multiMap operator does not guarantee any ordering. If ordering matters, you should use a different approach, such as collect and then re-emit.",
+        "The multiMap operator is not a substitute for the map operator. The map operator is used to transform the data, while the multiMap operator is used to split the data into multiple channels.",
+        "The multiMap operator requires a closure that returns a map of channel names to values. The values can be any valid Nextflow expression, including tuples, lists, or other channels."
+      ],
+      "tags": [
+        "data-shaping",
+        "fan-out",
+        "multiMap",
+        "tuple-unpacking"
+      ]
+    }
+  ]
+}

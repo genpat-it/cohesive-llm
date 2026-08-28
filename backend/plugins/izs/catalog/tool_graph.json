@@ -1,0 +1,766 @@
+{
+  "nodes": [
+    {
+      "id": "multi_alignment__snippycore",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__augur",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__cfsan",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__grapetree",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__ksnp3",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__reportree_alignment",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__reportree_alleles",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__reportree_vcf",
+      "type": "component"
+    },
+    {
+      "id": "multi_clustering__vcf2mst",
+      "type": "component"
+    },
+    {
+      "id": "multi_pangenome__panaroo",
+      "type": "component"
+    },
+    {
+      "id": "step_0SQ_rawreads__fastq",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_downsampling__bbnorm",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_filtering__bowtie",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_filtering__krakentools",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_filtering__minimap2",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_generated__fasta2fastq",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_hostdepl__bowtie",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_hostdepl__minimap2",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_trimming__chopper",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_trimming__fastp",
+      "type": "component"
+    },
+    {
+      "id": "step_1PP_trimming__trimmomatic",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_denovo__flye",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_denovo__plasmidspades",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_denovo__shovill",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_denovo__spades",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_denovo__unicycler",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_filtering__seqio",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_hybrid__unicycler",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_mapping__bowtie",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_mapping__ivar",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_mapping__medaka",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_mapping__minimap2",
+      "type": "component"
+    },
+    {
+      "id": "step_2AS_mapping__snippy",
+      "type": "component"
+    },
+    {
+      "id": "step_2MG_denovo__metaspades",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_class__centrifuge",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_class__confindr",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_class__kraken",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_class__kraken2",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_species__kmerfinder",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_species__mash",
+      "type": "component"
+    },
+    {
+      "id": "step_3TX_species__vdabricate",
+      "type": "component"
+    },
+    {
+      "id": "step_4AN_AMR__abricate",
+      "type": "component"
+    },
+    {
+      "id": "step_4AN_AMR__filtering",
+      "type": "component"
+    },
+    {
+      "id": "step_4AN_AMR__resfinder",
+      "type": "component"
+    },
+    {
+      "id": "step_4AN_AMR__staramr",
+      "type": "component"
+    },
+    {
+      "id": "step_4AN_genes__prokka",
+      "type": "component"
+    },
+    {
+      "id": "step_4TY_MLST__mlst",
+      "type": "component"
+    },
+    {
+      "id": "step_4TY_cgMLST__chewbbaca",
+      "type": "component"
+    },
+    {
+      "id": "step_4TY_flaA__flaA",
+      "type": "component"
+    },
+    {
+      "id": "step_4TY_lineage__pangolin",
+      "type": "component"
+    },
+    {
+      "id": "step_4TY_lineage__westnile",
+      "type": "component"
+    },
+    {
+      "id": "step_4TY_plasmid__mobsuite",
+      "type": "component"
+    },
+    {
+      "id": "module_covid_emergency",
+      "type": "template"
+    },
+    {
+      "id": "module_denovo",
+      "type": "template"
+    },
+    {
+      "id": "module_draft_genome",
+      "type": "template"
+    },
+    {
+      "id": "module_enterotoxin_saureus_finder",
+      "type": "template"
+    },
+    {
+      "id": "module_filtered_denovo",
+      "type": "template"
+    },
+    {
+      "id": "module_plasmids",
+      "type": "template"
+    },
+    {
+      "id": "module_qc_fastqc",
+      "type": "template"
+    },
+    {
+      "id": "module_qc_nanoplot",
+      "type": "template"
+    },
+    {
+      "id": "module_qc_quast",
+      "type": "template"
+    },
+    {
+      "id": "module_reads_processing",
+      "type": "template"
+    },
+    {
+      "id": "module_scaffolds_filtering",
+      "type": "template"
+    },
+    {
+      "id": "module_segmented",
+      "type": "template"
+    },
+    {
+      "id": "module_typing_bacteria",
+      "type": "template"
+    },
+    {
+      "id": "module_vdraft",
+      "type": "template"
+    },
+    {
+      "id": "module_vdraft_light",
+      "type": "template"
+    },
+    {
+      "id": "module_westnile",
+      "type": "template"
+    },
+    {
+      "id": "module_wgs_bacteria",
+      "type": "template"
+    },
+    {
+      "id": "pipeline_ngsmanager",
+      "type": "template"
+    }
+  ],
+  "edges": [
+    {
+      "source": "step_1PP_trimming__chopper",
+      "target": "step_1PP_filtering__krakentools",
+      "via": [
+        "trimmed"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_1PP_trimming__fastp",
+      "target": "step_1PP_filtering__krakentools",
+      "via": [
+        "trimmed"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_1PP_trimming__trimmomatic",
+      "target": "step_1PP_filtering__krakentools",
+      "via": [
+        "trimmed"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__flye",
+      "target": "step_2AS_filtering__seqio",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__flye",
+      "target": "step_4AN_AMR__staramr",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__flye",
+      "target": "step_4TY_MLST__mlst",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__flye",
+      "target": "step_4TY_cgMLST__chewbbaca",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__flye",
+      "target": "step_4TY_flaA__flaA",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__shovill",
+      "target": "step_2AS_filtering__seqio",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__shovill",
+      "target": "step_4AN_AMR__staramr",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__shovill",
+      "target": "step_4TY_MLST__mlst",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__shovill",
+      "target": "step_4TY_cgMLST__chewbbaca",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_denovo__shovill",
+      "target": "step_4TY_flaA__flaA",
+      "via": [
+        "assembly"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_mapping__bowtie",
+      "target": "step_4TY_lineage__pangolin",
+      "via": [
+        "consensus"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_mapping__ivar",
+      "target": "step_4TY_lineage__pangolin",
+      "via": [
+        "consensus"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_mapping__medaka",
+      "target": "step_4TY_lineage__pangolin",
+      "via": [
+        "consensus"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_2AS_mapping__minimap2",
+      "target": "step_4TY_lineage__pangolin",
+      "via": [
+        "consensus"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "step_3TX_species__vdabricate",
+      "target": "step_2AS_filtering__seqio",
+      "via": [
+        "calls"
+      ],
+      "edge_type": "data_flow"
+    },
+    {
+      "source": "module_covid_emergency",
+      "target": "step_2AS_mapping__ivar",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_covid_emergency",
+      "target": "step_4TY_lineage__pangolin",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_denovo",
+      "target": "step_1PP_hostdepl__bowtie",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_denovo",
+      "target": "step_2AS_denovo__spades",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "step_1PP_hostdepl__bowtie",
+      "target": "step_2AS_denovo__spades",
+      "via": [
+        "co-use in module_denovo"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "module_draft_genome",
+      "target": "step_2AS_mapping__bowtie",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_draft_genome",
+      "target": "step_2AS_mapping__ivar",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_draft_genome",
+      "target": "step_4AN_genes__prokka",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "step_2AS_mapping__bowtie",
+      "target": "step_2AS_mapping__ivar",
+      "via": [
+        "co-use in module_draft_genome"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "step_2AS_mapping__ivar",
+      "target": "step_4AN_genes__prokka",
+      "via": [
+        "co-use in module_draft_genome"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "module_enterotoxin_saureus_finder",
+      "target": "step_2AS_denovo__unicycler",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_filtered_denovo",
+      "target": "step_1PP_filtering__bowtie",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_filtered_denovo",
+      "target": "step_2AS_denovo__spades",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "step_1PP_filtering__bowtie",
+      "target": "step_2AS_denovo__spades",
+      "via": [
+        "co-use in module_filtered_denovo"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "module_plasmids",
+      "target": "step_4TY_plasmid__mobsuite",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_reads_processing",
+      "target": "step_0SQ_rawreads__fastq",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_reads_processing",
+      "target": "step_1PP_trimming__trimmomatic",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_reads_processing",
+      "target": "step_1PP_trimming__fastp",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_reads_processing",
+      "target": "step_3TX_class__kraken",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "step_1PP_trimming__trimmomatic",
+      "target": "step_1PP_trimming__fastp",
+      "via": [
+        "co-use in module_reads_processing"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "module_scaffolds_filtering",
+      "target": "step_3TX_species__vdabricate",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_scaffolds_filtering",
+      "target": "step_2AS_filtering__seqio",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_segmented",
+      "target": "step_2AS_mapping__ivar",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_3TX_species__kmerfinder",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_2AS_mapping__bowtie",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_4AN_AMR__abricate",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_4AN_genes__prokka",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_4AN_AMR__staramr",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_4TY_MLST__mlst",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_4TY_flaA__flaA",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_typing_bacteria",
+      "target": "step_4TY_cgMLST__chewbbaca",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "step_2AS_mapping__bowtie",
+      "target": "step_4AN_AMR__abricate",
+      "via": [
+        "co-use in module_typing_bacteria"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "step_4AN_AMR__abricate",
+      "target": "step_4AN_genes__prokka",
+      "via": [
+        "co-use in module_typing_bacteria"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "step_4AN_AMR__staramr",
+      "target": "step_4TY_MLST__mlst",
+      "via": [
+        "co-use in module_typing_bacteria"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "step_4TY_MLST__mlst",
+      "target": "step_4TY_flaA__flaA",
+      "via": [
+        "co-use in module_typing_bacteria"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "step_4TY_flaA__flaA",
+      "target": "step_4TY_cgMLST__chewbbaca",
+      "via": [
+        "co-use in module_typing_bacteria"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "module_vdraft_light",
+      "target": "step_1PP_hostdepl__bowtie",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_vdraft_light",
+      "target": "step_2AS_mapping__bowtie",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "step_1PP_hostdepl__bowtie",
+      "target": "step_2AS_mapping__bowtie",
+      "via": [
+        "co-use in module_vdraft_light"
+      ],
+      "edge_type": "co_template"
+    },
+    {
+      "source": "module_westnile",
+      "target": "step_4TY_lineage__westnile",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_westnile",
+      "target": "step_2AS_mapping__ivar",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    },
+    {
+      "source": "module_wgs_bacteria",
+      "target": "step_2AS_denovo__shovill",
+      "via": [
+        "include"
+      ],
+      "edge_type": "template_include"
+    }
+  ]
+}

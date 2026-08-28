@@ -1,0 +1,19 @@
+[project]
+name = "cohesive-llm-backend"
+requires-python = ">=3.11"
+version = "2.0.0"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+include = ["app/**/*.py", "core/**/*.py", "main.py"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",   # line length
+    "E402",   # module import not at top
+    "B008",   # function call in default arg (FastAPI Depends)
+    "SIM103", # needless-bool
+    "SIM108", # ternary expression
+]

@@ -15,6 +15,7 @@ JWT_SECRET = os.getenv("JWT_SECRET", "change_me")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24 * 7  # 1 week
 COOKIE_NAME = "izs_session"
+AUTH_BYPASS = os.getenv("AUTH_BYPASS", "false").lower() in ("1", "true", "yes")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -48,6 +49,16 @@ def get_current_user(
     izs_session: Optional[str] = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
+    if os.getenv("AUTH_BYPASS", "false").lower() in ("1", "true", "yes"):
+        # Auto-resolve or create local development user
+        user = db.query(User).filter(User.username == "local_dev").first()
+        if not user:
+            user = User(username="local_dev", password_hash="disabled")
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        return user
+
     if not izs_session:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(izs_session)

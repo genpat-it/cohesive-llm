@@ -1,0 +1,121 @@
+{
+  "components": [
+    {
+      "id": "step_annotation__prokka",
+      "tool": "prokka",
+      "domain": "general",
+      "description": "Process 'PROKKA' using prokka",
+      "input_channels": [
+        "sample_id",
+        "assembly"
+      ],
+      "output_channels": [],
+      "container": "biocontainers/prokka:1.14.6",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_annotation__prokka.nf",
+      "relative_path": "step_annotation__prokka"
+    },
+    {
+      "id": "step_assembly__spades",
+      "tool": "spades",
+      "domain": "general",
+      "description": "Process 'SPADES' using spades",
+      "input_channels": [
+        "sample_id",
+        "reads"
+      ],
+      "output_channels": [
+        "assembly",
+        "log"
+      ],
+      "container": "biocontainers/spades:3.15.5",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_assembly__spades.nf",
+      "relative_path": "step_assembly__spades"
+    },
+    {
+      "id": "step_mapping__bwa_mem2",
+      "tool": "bwa-mem2",
+      "domain": "general",
+      "description": "Process 'BWA_MEM2' using bwa-mem2",
+      "input_channels": [
+        "sample_id",
+        "reads",
+        "ref_riscd",
+        "ref_code",
+        "reference"
+      ],
+      "output_channels": [
+        "aligned_bam",
+        "bam_index"
+      ],
+      "container": "biocontainers/bwa-mem2:2.2.1",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_mapping__bwa_mem2.nf",
+      "relative_path": "step_mapping__bwa_mem2"
+    },
+    {
+      "id": "step_mapping__bwa_mem2",
+      "tool": "samtools",
+      "domain": "general",
+      "description": "Process 'SAMTOOLS_DEPTH' using samtools",
+      "input_channels": [
+        "sample_id",
+        "bam"
+      ],
+      "output_channels": [
+        "coverage"
+      ],
+      "container": "biocontainers/samtools:1.17",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_mapping__bwa_mem2.nf",
+      "relative_path": "step_mapping__bwa_mem2"
+    },
+    {
+      "id": "step_qc__fastqc",
+      "tool": "fastqc",
+      "domain": "general",
+      "description": "Process 'FASTQC' using fastqc",
+      "input_channels": [
+        "sample_id",
+        "reads"
+      ],
+      "output_channels": [],
+      "container": "biocontainers/fastqc:0.12.1",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_qc__fastqc.nf",
+      "relative_path": "step_qc__fastqc"
+    },
+    {
+      "id": "step_trimming__trimmomatic",
+      "tool": "trimmomatic",
+      "domain": "general",
+      "description": "Process 'TRIMMOMATIC' using trimmomatic",
+      "input_channels": [
+        "sample_id",
+        "reads"
+      ],
+      "output_channels": [
+        "trimmed_reads",
+        "unpaired"
+      ],
+      "container": "biocontainers/trimmomatic:0.39",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_trimming__trimmomatic.nf",
+      "relative_path": "step_trimming__trimmomatic"
+    },
+    {
+      "id": "step_variant__bcftools",
+      "tool": "bcftools",
+      "domain": "general",
+      "description": "Process 'BCFTOOLS_CALL' using bcftools",
+      "input_channels": [
+        "sample_id",
+        "bam",
+        "ref_riscd",
+        "ref_code",
+        "reference"
+      ],
+      "output_channels": [
+        "variants"
+      ],
+      "container": "biocontainers/bcftools:1.19",
+      "source_file": "/Users/grady/Documents/DIE/cloud/izs-llm/plugins/synthetic/nf_source/step_variant__bcftools.nf",
+      "relative_path": "step_variant__bcftools"
+    }
+  ]
+}
