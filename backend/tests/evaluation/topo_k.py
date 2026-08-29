@@ -10,13 +10,9 @@ def parse_pipeline_to_graph(ast_dict: dict) -> tuple[dict[str, list[str]], dict[
       channel_bindings: list of (node_id, emit_channel, dest_id, take_channel)
     """
 
-    # We will track channels: channel_name -> producer_node_id
     channel_producers = {}
     edges = []
     nodes = {}
-
-    # Simplified parsing for the evaluation script
-    # Real AST logic is complex; this is a heuristic DAG builder for pass@k tests
 
     entrypoint = ast_dict.get('entrypoint', {})
     body_code = entrypoint.get('body_code', '')

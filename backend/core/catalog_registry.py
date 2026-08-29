@@ -1,23 +1,15 @@
-from typing import Any
-
-from core.utils.logger import logger
-
-"""
-Catalog Registry - Central registry for component metadata used by AST validators.
+"""Catalog Registry - Central registry for component metadata used by AST validators.
 
 Replaces hardcoded VOID_TOOL_SUFFIXES, FRAMEWORK_COMPONENTS, and import path
 conventions with a dynamic, plugin-driven registry.
-
-Usage:
-    from core.catalog_registry import get_registry
-    registry = get_registry()
-    registry.is_void_tool("process_final_report")  # True
-    registry.component_exists("process_data_prep")  # True
 """
 
 import difflib
 import json
 from pathlib import Path
+from typing import Any
+
+from core.utils.logger import logger
 
 
 class CatalogRegistry:

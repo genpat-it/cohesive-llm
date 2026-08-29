@@ -1,42 +1,32 @@
-# `plugins/izs/` - Production Intelligence Domain
+# IZS Bioinformatics Plugin (`backend/plugins/izs/`)
 
-> [!IMPORTANT]
-> This is the primary, production-grade domain plugin for the Institute. It defines the real-world domain catalog used by the domain-agnostic LangGraph agents. Modification of this directory fundamentally alters what the AI is capable of designing and generating.
+The **IZS Bioinformatics Plugin** is the production domain plugin for genomic surveillance and pathogen characterization at the Istituto Zooprofilattico Sperimentale (IZS).
 
-## 1. Plugin Data Topography
+---
 
-```mermaid
-erDiagram
-    PLUGIN_MANIFEST {
-        string plugin_name "izs-bioinformatics"
-        string embedding_model "Qwen3-Embedding-0.6B"
-    }
+## 1. Domain Coverage & Workflow Categories
 
-    VECTOR_SPACE {
-        vector_db index "Dynamic Embeddings"
-    }
+The plugin catalogs over 70 production Nextflow DSL2 steps covering:
+- **Preprocessing & QC**: FastQC (`step_0SQ_rawreads__fastq`), Trimmomatic (`step_1PP_trimming__trimmomatic`), fastp (`step_1PP_trimming__fastp`), Bowtie2 host depletion (`step_1PP_hostdepl__bowtie`).
+- **Assembly & Consensus**: SPAdes (`step_2AS_denovo__spades`), Shovill (`step_2AS_denovo__shovill`), Unicycler (`step_2AS_denovo__unicycler`), iVar consensus (`step_2AS_mapping__ivar`), Bowtie2 mapping (`step_2AS_mapping__bowtie`).
+- **Taxonomy & Species ID**: Kraken2 (`step_3TX_class__kraken`), KmerFinder (`step_3TX_species__kmerfinder`), VirDabricate (`step_3TX_species__vdabricate`).
+- **Typing & Annotation**: MLST (`step_4TY_MLST__mlst`), cgMLST / chewBBACA (`step_4TY_cgMLST__chewbbaca`), flaA (`step_4TY_flaA__flaA`), MOB-suite (`step_4TY_plasmid__mobsuite`), Pangolin (`step_4TY_lineage__pangolin`), Prokka (`step_4AN_genes__prokka`), ABRicate (`step_4AN_AMR__abricate`), StarAMR (`step_4AN_AMR__staramr`), BLAST (`step_4AN_AMR__blast`).
 
-    ONTOLOGY_CATALOG {
-        json templates "Vetted Production Workflows"
-        json components "Approved Tool Modules"
-        json resources "Helper Functions and Containers"
-    }
-    
-    KNOWLEDGE_BASE {
-        markdown rejection_rules "Safety guardrails"
-        markdown domain_context "Domain standards"
-        markdown idioms "DSL2 data-shaping patterns"
-    }
+---
 
-    PLUGIN_MANIFEST ||--|| ONTOLOGY_CATALOG : Orchestrates
-    PLUGIN_MANIFEST ||--|| VECTOR_SPACE : Orchestrates
-    PLUGIN_MANIFEST ||--|| KNOWLEDGE_BASE : Injects
+## 2. Directory Layout
+
 ```
-
-## 2. Directory Structure
-
-- **`plugin.yaml`**: The master configuration. Defines which vector index to load (e.g. `chroma_index` or `faiss_index`), the embedding model to use, static helper function imports, void tool detection rules, and RAG tuning parameters.
-- **`prompts/`**: Contains the strict rules of engagement for this specific laboratory. `rejection_rules.md` explicitly tells the AI to reject invalid logic. `idioms.md` defines the critical data-shaping patterns (`extractKey`, `.cross()`, `.multiMap`) that the AI must follow.
-- **`catalog/`**: The human-readable mapping of the lab's Nextflow tools (components, templates, resources).
-- **`code_store.jsonl`**: The physical Nextflow code snippets — loaded at render time for reference code and usage examples.
-- **`benchmark_data/`**: Tiered evaluation datasets (level 1–5) for testing AI code generation quality.
+backend/plugins/izs/
+├── plugin.yaml                      Plugin manifest with void tool definitions and FAISS index pointers
+├── catalog/
+│   ├── components.json              78 component definitions with typed takes and emits
+│   ├── templates.json               Production pipeline blueprints (WNV, COVID, bacterial WGS, de novo)
+│   └── resources.json               Helper function schemas (getSingleInput, getReference, param, extractKey)
+├── faiss_index/                     Qwen3-Embedding-0.6B vector database index of component cards
+├── patterns_index/                  FAISS vector index of Nextflow DSL2 data-shaping channel idioms
+├── prompts/
+│   └── domain_context.md            IZS laboratory conventions, naming standards, and channel types
+├── code_store.jsonl                 Verbatim Nextflow Groovy code for each module
+└── benchmark_data/                  Golden benchmark suites (L1-L5 + recreation test suites)
+```

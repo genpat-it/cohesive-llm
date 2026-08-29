@@ -678,7 +678,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
             "warnings": [],
         }, indent=2)
 
-    # we check if all ids are real
     valid_ids = []
     invalid_ids = []
     for comp_id in component_ids:
@@ -692,7 +691,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
 
     logger.info(f"--- [NODE] CONSULTANT TOOL found {len(invalid_ids)} invalid ids")
 
-    # ── Topological Knowledge Graph Validation ──
     from core.services.knowledge_graph import kg
     if not kg.is_built:
         kg.build_nx_graph(store)
@@ -708,13 +706,11 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
         except Exception:
             pass
 
-    # we look at how the data flows between the steps
     channel_report = []
     for i in range(len(valid_ids) - 1):
         src_id = valid_ids[i]
         tgt_id = valid_ids[i + 1]
 
-        # we get the channel info from the catalog
         src_comp = store.get(("components",), src_id)
         tgt_comp = store.get(("components",), tgt_id)
 
@@ -737,7 +733,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
             if tgt_tmpl:
                 tgt_inputs = (tgt_tmpl.value or {}).get("input_channels") or []
 
-        # we read the code to see the exact channels
         src_code_item = store.get(("code",), src_id)
         tgt_code_item = store.get(("code",), tgt_id)
 
@@ -760,7 +755,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
             "target_takes": effective_inputs,
         }
 
-        # Knowledge Graph edge confidence
         if kg.is_built and kg.G.has_edge(src_id, tgt_id):
             edata = kg.G[src_id][tgt_id]
             pair_info["graph_edge_confidence"] = edata.get("confidence", "AMBIGUOUS")
@@ -770,7 +764,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
         elif not effective_inputs:
             warnings.append(f"No input channels detected for '{tgt_id}' so we cannot verify connection from '{src_id}'")
         else:
-            # we check if the channels overlap
             out_lower = {ch.lower() for ch in effective_outputs}
             in_lower = {ch.lower() for ch in effective_inputs}
             if not (out_lower & in_lower):
@@ -782,7 +775,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
 
         channel_report.append(pair_info)
 
-    # we compare the plan with the template
     template_coverage = None
     if template_id:
         logger.info(f"--- [NODE] CONSULTANT TOOL comparing plan with template {template_id}")
@@ -797,19 +789,16 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
             missing_from_plan = tmpl_steps - plan_steps
             extra_in_plan = plan_steps - tmpl_steps
 
-            # we also look at the include lines in the template code
             code_item = store.get(("code",), template_id)
             includes_from_code = []
             if code_item:
                 tmpl_code = code_item.value.get("content", "")
                 includes_from_code = _parse_include_statements(tmpl_code)
 
-                # we only keep the includes that are recognized components in the catalog
                 from core.catalog_registry import get_registry
                 registry = get_registry()
                 code_steps = {inc for inc in includes_from_code if registry.component_exists(inc)}
 
-                # steps we found in the code but not in the catalog list
                 code_only = code_steps - tmpl_steps
                 if code_only:
                     warnings.append(
@@ -817,7 +806,6 @@ def check_plan_logic(component_ids: list, template_id: str, runtime: ToolRuntime
                         f"the template components_used list. they may be helper dependencies"
                     )
 
-                # steps we found in the code but not in our plan
                 code_missing = code_steps - plan_steps
                 if code_missing:
                     warnings.append(

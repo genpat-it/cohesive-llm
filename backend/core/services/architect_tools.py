@@ -53,7 +53,6 @@ def validate_body_code(code_snippet: str, workflow_name: str) -> str:  # noqa: C
         )
 
     # Check for active channels in sub-workflows
-    from core.catalog_registry import get_registry
     registry = get_registry()
     
     # Check if .out.X property accesses match the actual component signature

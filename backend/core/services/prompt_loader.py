@@ -1,19 +1,14 @@
-from core.utils.logger import logger
-
-"""
-Prompt Loader - Plugin-aware prompt assembly system.
+"""Prompt Loader - Plugin-aware prompt assembly system.
 
 Loads base prompts from core/prompts/ and merges domain-specific overlays
 from the active plugin's prompts/ directory.
-
-Usage:
-    from core.services.prompt_loader import load_consultant_prompt, load_architect_prompt
-    prompt = load_consultant_prompt()  # Returns assembled prompt string
 """
 
 import json
 from functools import lru_cache
 from pathlib import Path
+
+from core.utils.logger import logger
 
 # Base directories
 PROJECT_ROOT = Path(__file__).parent.parent.parent

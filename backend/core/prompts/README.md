@@ -1,64 +1,72 @@
-# `core/prompts/` - The Cognitive Architecture Base
+# Core Prompts (`backend/core/prompts/`) - Prompt Hierarchy & Dynamic Overlays
 
-> [!IMPORTANT]
-> This directory acts as the core personality and cognitive logic foundation for the LangGraph agents. It contains the base markdown templates that dictate exactly how the LLMs reason, validate constraints, and structure their outputs.
+The `backend/core/prompts/` directory contains the base markdown templates that establish the cognitive personas, reasoning constraints, and output formats for all LangGraph agent nodes.
 
-## 1. The Dynamic Injection Pipeline
+---
 
-The prompts in this directory are not static strings. They serve as massive string-interpolation templates. At runtime, the `core/services/prompt_loader.py` engine loads these files and injects highly specific, real-time context from the active Plugin before passing them to the LLM.
+## 1. Dynamic Prompt Assembly Pipeline
+
+Prompts in this directory are domain-agnostic templates. At boot time and during execution, `backend/core/services/prompt_loader.py` dynamically resolves the active plugin and injects domain-specific overlays and catalog metadata into template placeholders:
 
 ```mermaid
 flowchart TD
-    subgraph raw_assets ["1. Raw Prompt Assets"]
-        BaseConsult["consultant_base.md"]
-        BaseExtract["extractor.md"]
-        BaseArch["architect.md"]
-        BaseDiag["diagram.md"]
+    subgraph BasePrompts ["1. Base Core Prompts (backend/core/prompts/)"]
+        ConsultantBase["consultant_base.md"]
+        DrawerEnricherBase["drawer_enricher_base.md"]
+        ArchitectBase["architect.md"]
+        ExtractorBase["extractor.md"]
     end
 
-    subgraph dynamic_injection ["2. Dynamic Injection (prompt_loader.py)"]
-        Plugin["Active Plugin Vault"]
-        Plugin -->|"Injects: rejection_rules.md"| BaseConsult
-        Plugin -->|"Injects: idioms.md"| BaseArch
-        
-        Catalog["catalog/components.json"] 
-        Catalog -->|"Injects: Void Tools Matrix"| BaseArch
-        Catalog -->|"Injects: Emitting Tools Matrix"| BaseArch
+    subgraph DynamicInjection ["2. Dynamic Injection (prompt_loader.py)"]
+        PluginOverlay["plugins/<active_plugin>/prompts/domain_context.md"]
+        VoidToolsTable["catalog_registry.py -> %%void_tools%%"]
+        EmittingToolsTable["catalog_registry.py -> %%emitting_tools_table%%"]
     end
 
-    subgraph langgraph_execution ["3. LangGraph Execution"]
-        BaseConsult --> CNode("Consultant Node")
-        BaseExtract --> CExtractNode("Consultant Extract Node")
-        BaseArch --> ANode("Architect Generation Node")
-        BaseDiag --> DNode("Diagram Node")
+    subgraph AssembledPrompts ["3. Active System Prompts (LLM Execution)"]
+        ConsultantBase -->|Merged with domain_context.md| AssembledConsultant["Consultant ReAct System Prompt"]
+        DrawerEnricherBase -->|Merged with domain_context.md| AssembledDrawer["Visual Drawer Enricher Prompt"]
+        ArchitectBase -->|Injected with void/emitting tables| AssembledArchitect["Architect AST Generation Prompt"]
+        ExtractorBase --> AssembledExtractor["Structured Plan Extractor Prompt"]
     end
 
-    classDef base fill:#1e3d59,stroke:#fff,color:#fff
-    classDef inject fill:#ff6e40,stroke:#fff,color:#fff
-    class BaseConsult,BaseExtract,BaseArch,BaseDiag base
-    class Plugin,Catalog inject
+    PluginOverlay -.-> ConsultantBase
+    PluginOverlay -.-> DrawerEnricherBase
+    VoidToolsTable -.-> ArchitectBase
+    EmittingToolsTable -.-> ArchitectBase
 ```
 
-## 2. Core Prompt Definitions
+---
 
-### 2.1 `consultant_base.md` (The Planner)
-This is the master system instruction for the Consultant Subgraph. It establishes the "Expert Pipeline Consultant" persona.
-- **Tool Forcing**: Actively commands the LLM to use semantic vector search tools (`search_components`, `lookup_catalog_item`) instead of relying on its pre-trained intrinsic memory.
-- **Anti-Hallucination Directives**: Contains severe uppercase warnings to extract exact ID strings (`--- COMPONENT: <ID> ---`) from the RAG Context rather than guessing tool names.
-- **State Management**: Teaches the LLM how to trigger **Deterministic Approval Short-Circuiting** by commanding it to update its output schema status to `APPROVED` the moment human intent is satisfied.
+## 2. Core Prompt Template Specifications
 
-### 2.2 `extractor.md` (The Structurer)
-This is the fast-extraction prompt used during the `consultant_extract_node` phase. Since the main Consultant LLM speaks freely and executes tools, its raw text cannot natively map into structured JSON.
-- **Pydantic Force-Mapping**: Commands a secondary LLM to forcibly map the free-text conversation history, tool results, and the user's intent directly into the strict `ConsultantOutput` JSON schema.
-- **Approval Extraction**: Contains strict rules demanding the extraction of `strategy_selector`, `used_template_id`, and `draft_plan` whenever the user triggers a pipeline approval, ensuring Pydantic validation passes without crashing.
+### 2.1 `consultant_base.md` — ReAct Consultant Persona
+Establishes the **Senior Bioinformatics Pipeline Consultant** persona for conversational chat turns.
+- **Dynamic Tool Invocation**: Enforces that the LLM must search the Knowledge Graph (`query_knowledge_graph`) and catalog (`lookup_components_batch`, `search_components`) rather than relying on intrinsic hallucinations.
+- **Lossless Compaction Awareness**: Directs the agent to formulate concrete reasoning facts so they are preserved in `tool_memory`.
+- **Approval Intent Recognition**: Enforces explicit detection of user agreement (`APPROVED`) to transition seamlessly from planning into execution.
 
-### 2.3 `architect.md` (The Execution Engine)
-This is the master system instruction for the Generation Subgraph. It establishes the "Principal Systems Architect" persona.
-- **JSON Schema Enforcement**: Explicitly teaches the LLM how to populate the Pydantic `NextflowPipelineAST` object (breaking the code down into `globals`, `inline_processes`, `sub_workflows`, and `entrypoint`).
-- **Data-Shaping Idioms**: Contains strict rules on how to write Nextflow DSL2 Groovy code. It forbids arbitrary `.set` aliasing and teaches the LLM the correct arity for `.multiMap`, `.cross`, and `.mix` channel logic.
-- **Catalog Binding**: This file receives the dynamically injected `%%void_tools%%` and `%%emitting_tools_table%%`. It enforces a zero-tolerance policy against assigning outputs from tools that do not emit channels.
+---
 
-### 2.4 `diagram.md` (The Visual Renderer)
-This prompt powers the visual reasoning of the agent. Once the AST is generated and validated, this prompt is used to convert the Nextflow logic into a strictly formatted JSON array matching the `DiagramData` schema.
-- **Shape Enforcement**: Mandates standard shapes for components (e.g., Stadium shapes for Inputs, Hexagons for Channel Operators, Parallelograms for Outputs).
-- **JSON Alignment**: Explicitly prevents catastrophic markdown hallucinations by forcing the LLM to output valid Pydantic JSON instead of raw Mermaid text.
+### 2.2 `drawer_enricher_base.md` — Visual Canvas Enricher Persona
+Directs the LLM when synthesizing pipelines created on the Visual Canvas (`/drawer`).
+- **Knowledge Graph Path Reflection**: Instructs the agent to evaluate the components and wires against `kg` dataflow paths.
+- **Strict Nextflow DSL2 Channel Operator Synthesis**:
+  - Injects `param('...')` references when components require additional parameter inputs.
+  - Generates `.cross(extractKey(it))` or `.multiMap{}` before multi-input processes.
+  - Enforces cohort aggregation `.collect()` or `.toList()` before multi-sample summary tools.
+  - Injects `.map { ... }` closures to reconcile channel tuple arities.
+  - References exact named emit channels (e.g. `process.out.depleted_reads`).
+
+---
+
+### 2.3 `architect.md` — Principal AST Architect Persona
+Instructs the execution engine during `architect_generate_node`.
+- **Strict Pydantic AST Schema**: Directs the LLM to output valid `NextflowPipelineAST` with `globals`, `inline_processes`, `sub_workflows`, and `entrypoint`.
+- **Dynamic Void-Tool Constraint Enforcement**: Injects `%%void_tools%%` and `%%emitting_tools_table%%` to prevent assigning return values to void tools.
+- **Clean Nextflow Idioms**: Forbids deprecated Nextflow syntax and enforces typed take/emit blocks.
+
+---
+
+### 2.4 `extractor.md` — Structured Plan Extractor
+A focused extraction template used by `consultant_extract_node` to transform conversational chat dialogue into structured `ConsultantStructuredOutput` JSON without losing selected component IDs, strategy modes, or user directives.

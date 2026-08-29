@@ -1,75 +1,107 @@
-# `core/services/` - The Cognitive Engine & LangGraph AI Orchestration
+# Core Services (`backend/core/services/`) - Engine Modules & LangGraph Orchestration
 
-> [!CAUTION]
-> This directory houses the primary LangGraph topologies. It dictates *how* the Large Language Models think, what tools they can use, and how they recover from failure. Modifications to `graph.py` or the `core/nodes/` modules can drastically alter the behavioral safety of the entire agentic pipeline.
+The `backend/core/services/` directory contains the core algorithmic services, state graphs, compiler engines, and Knowledge Graph traversal tools that drive pipeline generation.
 
-## 1. High-Level Orchestration Flow
+---
 
-The service layer translates a simple web request into a massive, multi-agent processing pipeline. It enforces strict separation of concerns through **Execution Graph Modularity**—splitting the cognitive workload between Planning (Consultant) and Generation (Architect). This decoupling allows us to inject deterministic Python validation directly into the LLM's thought loop without losing conversation state.
-
-### 1.1 The Master State Routing Matrix
+## 1. Subsystem Architecture & Service Map
 
 ```mermaid
 flowchart TD
-    subgraph FastAPI Boundary
-        API[Incoming Request]
+    subgraph Services ["Core Services Layer"]
+        Graph["graph.py\n(Hierarchical LangGraph State Machine)"]
+        KG["knowledge_graph.py\n(Topological AST Knowledge Graph)"]
+        ASTComp["ast_compiler.py\n(Nextflow DSL2 AST to Code Compiler)"]
+        Renderer["renderer.py\n(Deterministic Mermaid & DSL2 Source Generator)"]
+        PromptLoader["prompt_loader.py\n(Plugin-Aware Prompt Assembly)"]
+        QueryNorm["query_normalizer.py\n(Semantic Query Normalizer & RRF)"]
+        CTools["consultant_tools.py\n(Registered @tool Functions)"]
+        ATools["architect_tools.py\n(Registered @tool Functions)"]
+        LLM["llm.py\n(LLM Client Factory & Retry Logic)"]
     end
 
-    subgraph The Consultant Subgraph (Planning)
-        C_Start([Entry]) --> CNode[Consultant LLM]
-        CNode -->|Requires Information| CTools[[Catalog Tools]]
-        CTools --> CNode
-        
-        CNode -->|No tools requested| Sanitize[Sanitize Drift]
-        Sanitize --> Extract[Extract JSON Plan]
-        Extract --> Compact[Lossless Memory Prune]
-    end
+    Graph --> KG
+    Graph --> CTools
+    Graph --> ATools
+    Graph --> PromptLoader
+    Graph --> ASTComp
+    Graph --> Renderer
 
-    subgraph The Execution Subgraph (Generation)
-        HNode[Hydrator: Fetch Groovy] --> Precheck[Math/Channel Validation]
-        Precheck --> AGen[Architect Generation]
-        
-        AGen --> Validate{Pydantic Valid?}
-        
-        Validate -->|Fail| Repair[Repair Logic Trigger]
-        Repair --> AReason[Architect Reason]
-        AReason -->|Needs Info| ATools[[Investigative Tools]]
-        ATools --> AReason
-        AReason -->|Max Retries / Done| ASanitize[Sanitize Drift]
-        ASanitize --> AGen
-        
-        Validate -->|Success or Fail Max| Render[Jinja2 Rendering]
-        Render --> DetDia[Deterministic Mermaid]
-        DetDia --> ProbDia[Agentic Diagram]
-    end
-
-    API --> C_Start
-    Compact --> CheckState{Status?}
-    CheckState -->|CHATTING| Return_Early((Return Chat Reply))
-    CheckState -->|APPROVED| HNode
-    ProbDia --> Return_Success((Return Payload))
+    KG --> QueryNorm
+    CTools --> KG
+    PromptLoader --> LLM
 ```
 
-## 2. Core Service Modules
+---
 
-### 2.1 The Topologies (`graph.py` & `core/nodes/*.py`)
-These files define the actual LangGraph nodes and their wiring. They utilize `LLMs` strictly bound to the domain-agnostic tools defined in the active plugin's tool registries.
-- **Lossless Tool-Trajectory Compaction (`compact_memory_node`)**: LLMs crash if their context window overflows (attention collapse). This node implements a surgical memory pruning algorithm that extracts concrete semantic facts from a tool's output into a structured `tool_memory` buffer, completely deleting raw tool call tokens from the chat history. The LLM retains the "knowledge" without the token bloat.
-- **Deterministic Approval Short-Circuiting**: Bypasses the LLM for terminal routing in the Consultant Subgraph. It uses an internal heuristic alongside structured output to forcibly sever the planning loop and route directly to execution the moment human intent is satisfied, preventing endless planning loops.
-- **`sanitize_orphaned_tool_calls`**: In highly restricted loops (where `MAX_TOOL_ITERATIONS` hits a ceiling), LLMs may leave dangling tool invocations. This node surgically injects mock `ToolMessage` stubs to satisfy the provider's API constraints and prevent HTTP 400 crashes.
+## 2. Service Module Specifications
 
-### 2.2 The Epistemic Toolkits (`consultant_tools.py` & `architect_tools.py`)
-Tools are the only way the AI interacts with reality. The AI cannot "guess" code; it must retrieve it.
-- **Consultant Tools**: Capable of hybrid vector semantic search and catalog exploration (`search_components`, `lookup_catalog_item`). Used to dynamically explore the catalog and build the high-level `draft_plan`.
-- **Architect Tools**: Heavily restricted to exact ID lookups and channel compatibility matching. Used strictly during repair loops to investigate *why* a generation failed (e.g., verifying if a component actually emits a `.results` channel).
+### 2.1 `graph.py` — Hierarchical LangGraph State Machine
+Defines the `StateGraph` workflows and manages thread checkpoints using `InMemorySaver` and `InMemoryStore`.
+- **`build_consultant_subgraph(store)`**:
+  - **Dual Entry Point**:
+    - If `state["visual_topology"]` is present $\rightarrow$ routes to `drawer_enrich_node`.
+    - Otherwise $\rightarrow$ routes to `consultant_node` for conversational chat.
+  - **ReAct Loop**: Calls `ToolNode(get_consultant_tools())` when tool calls are generated.
+  - **Loop Circuit Breakers**:
+    - Identifies silent repeating tool loops and automatically forces extraction.
+    - Applies `MAX_TOOL_ITERATIONS` (5 for standard turns) and `MAX_TOOL_ITERATIONS_APPROVAL` (10 for approval turns).
+  - **`sanitize_orphaned_tool_calls`**: Injects stub `ToolMessage` instances for unanswered tool calls when the iteration limit forces routing away from the tool node.
+  - **`compact_memory_node`**: Performs lossless conversational compaction by extracting tool facts into structured `tool_memory` and removing raw intermediate tool message bloat.
+- **`build_execution_subgraph(store)`**:
+  - Linear deterministic pipeline: `architect_precheck_node` $\rightarrow$ `architect_generate_node` $\rightarrow$ `renderer_node`.
+  - Zero repair loops — the Pydantic AST schema eliminates syntax compilation errors.
+- **`build_graph()`**:
+  - Combines the Planner and Execution subgraphs into a unified top-level workflow with conditional routing on `consultant_status == "APPROVED"`.
 
-### 2.3 The Multi-Turn Recovery Engine (`repair.py`)
-If the Pydantic models in `core/models/ast_structure.py` catch a fatal logic error, the execution state routes here. 
-- This module builds a highly aggressive "Correction Prompt" that injects the exact Python `ValueError` traceback back into the LLM. 
-- It actively forces the Architect LLM to debug its own hallucinated Nextflow channels in a retry loop (bounded by `MAX_REPAIR_RETRIES`).
-- If it fails beyond the retry maximum, it proceeds to the renderer but explicitly flags the pipeline as a best-effort draft with a strict warning injected into the final code and payload, preventing the pipeline failure from silently crashing the UI.
+---
 
-### 2.4 Model Agnosticism (`llm.py` & `prompt_loader.py`)
-- **LLM Provider Agnosticism**: Uses a `get_llm()` factory pattern to dynamically bind standard LLM providers (OpenAI, Anthropic, Google, local Mistral/Llama instances) via the `LLM_PROVIDER` environment configuration. This ensures that no logic nodes are locked into a specific AI vendor.
-- **Cloud Resilience**: Implements rigorous exponential backoff wrappers (`with_exponential_backoff`) to survive `HTTP 429 Too Many Requests` or `HTTP 502 Bad Gateway` errors from cloud AI providers during heavy concurrent load.
-- **Dynamic Prompt Injection**: Continuously pulls component channel compatibility tables and syntax definitions from the active plugin catalogs, injecting them into the base prompts at runtime.
+### 2.2 `knowledge_graph.py` — Graphify Topological Knowledge Graph
+An AST-derived graph reasoning engine built on NetworkX representing the entire component catalog and verified dataflow connections.
+- **3 Edge Confidence Tiers**:
+  - `EXTRACTED`: Verified Nextflow AST wiring extracted from production pipelines (`source.out.channel | target`).
+  - `INFERRED`: Co-occurrence extracted from production workflow templates.
+  - `AMBIGUOUS`: Heuristic semantic match between channel names.
+- **Traversals & Analytics**:
+  - **`query_graph(question, mode, depth, token_budget)`**: Natural-language structural search supporting BFS (broad exploration) and DFS (linear chain tracing).
+  - **`find_path_detailed(source, target)`**: Finds the shortest verified dataflow path between components, prioritizing `EXTRACTED` edges.
+  - **`get_community(community_id)`**: Discovers modular functional clusters via Louvain community detection.
+  - **`get_god_nodes(top_n)`**: Discovers central dataflow hub components.
+
+---
+
+### 2.3 `ast_compiler.py` — Deterministic Nextflow DSL2 Compiler
+Converts a Pydantic `NextflowPipelineAST` object into clean, formatted Nextflow DSL2 source code.
+- **`compile_ast_to_nextflow(ast)`**:
+  1. Emits `nextflow.enable.dsl=2` header.
+  2. Resolves imports for all used processes from `../steps/` and helper functions from `../functions/`.
+  3. Synthesizes `globals` declarations and inline process blocks.
+  4. Formats subworkflows with typed `take:`, `main:`, and `emit:` blocks.
+  5. Formats the main `workflow {}` entrypoint with proper input instantiations (`getSingleInput()`, etc.).
+
+---
+
+### 2.4 `renderer.py` — Deterministic AST-to-Mermaid Flowchart Generator
+Constructs high-fidelity Mermaid flowcharts directly from AST objects.
+- **`render_mermaid_from_ast(ast_json)`**:
+  - Renders subworkflow boundaries (`subgraph sg_<name>`), input ports (`in_<wf>_<channel>`), process vertices (`n_<wf>_<proc>_<idx>`), channel transformations, and output ports (`out_<wf>_<channel>`).
+  - Completely eliminates phantom nodes, unassigned floating boxes, and duplicate process artifacts.
+
+---
+
+### 2.5 `consultant_tools.py` & `architect_tools.py` — LangGraph Tool Registries
+Provides the registered `@tool` functions bound to the agent LLMs:
+- **`search_components(query)`**: Fast hybrid search (Exact Keyword + FAISS semantic vector search with Reciprocal Rank Fusion) over catalog component descriptions and keywords.
+- **`lookup_components_batch(item_ids, include_code)`**: Resolves metadata, take/emit channel signatures, and source code for multiple components in a single tool invocation.
+- **`query_knowledge_graph(question, mode, depth)`**: Natural-language topological search and traversal over the structural Knowledge Graph.
+- **`check_plan_logic(workflow_name, sub_workflows, component_sequence)`**: Static logical check validating dataflow compatibility, channel arity matching, and missing prerequisite steps.
+- **`search_design_patterns(query)`**: Semantic retrieval of proven Nextflow DSL2 channel data-shaping patterns (`.cross()`, `.multiMap{}`, `.branch{}`, `.mix()`).
+- **`search_helper_functions(query)`**: Finds built-in input parameter and data retrieval helper functions.
+
+---
+
+### 2.6 `prompt_loader.py` — Plugin-Aware Prompt Assembly
+Assembles base prompt templates and merges domain-specific overlays dynamically.
+- Merges `core/prompts/*.md` with active plugin overlays (`plugins/<name>/prompts/domain_context.md`).
+- Populates template placeholders (`%%void_tools%%`, `%%emitting_tools_table%%`, `%%domain_context%%`) directly from `catalog_registry.py`.
+- Employs LRU caching with `reload_prompts()` for zero-restart prompt experimentation.

@@ -1,19 +1,14 @@
-from core.utils.logger import logger
-
-"""
-Tool Registry — Discovers and merges core + plugin tools for the LangGraph agents.
+"""Tool Registry — Discovers and merges core + plugin tools for the LangGraph agents.
 
 Core tools live in core/services/consultant_tools.py and architect_tools.py.
 Plugin tools are discovered from plugins/<name>/tools.py (if it exists).
-
-Usage:
-    from core.tool_registry import get_consultant_tools, get_architect_tools
-    tools = get_consultant_tools()   # Returns merged list of @tool functions
 """
 
 import importlib.util
 import sys
 from collections.abc import Callable
+
+from core.utils.logger import logger
 
 
 def _load_plugin_tools(module_attr: str) -> list[Callable]:

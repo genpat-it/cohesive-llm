@@ -1,72 +1,72 @@
-# `plugins/` - The Agentic Domain Registries
+# Plugin System (`backend/plugins/`) - Dynamic Domain Registries & Catalogs
 
-> [!CAUTION]
-> This directory houses dynamically generated, isolated logic domains for the Nextflow AI Agent. Each plugin acts as an independent "brain module" for the AI, loaded dynamically.
+The `backend/plugins/` directory houses self-contained, modular domain plugins. Each plugin provides the domain knowledge, component catalog, workflow templates, vector indices, and prompt overlays required by the domain-agnostic core engine.
 
-## 1. Plugin Architecture
+---
 
-A plugin is not code; it is a mathematical and semantic definition of a specific domain. The LangGraph agent reads a plugin to learn what tools it possesses, how they connect, and what rules it must obey. This makes the core framework entirely tool-agnostic.
-
-```mermaid
-erDiagram
-    PLUGIN_VAULT {
-        string plugin_name "e.g. synthetic"
-    }
-
-    PLUGIN_YAML {
-        string name
-        array void_tools "Tools that do not emit channels"
-        dict prompts "Pointers to domain specific rules"
-    }
-
-    CATALOGS {
-        json components
-        json templates
-        json resources
-    }
-
-    VECTOR_SPACE {
-        binary index_vector "Nearest neighbor semantic store"
-    }
-
-    CODE_STORE {
-        jsonl code_store "Raw Groovy Code"
-    }
-
-    PROMPTS {
-        markdown idioms "Nextflow syntax rules"
-        markdown rejection_rules "When to say NO"
-        markdown domain_context "Domain background logic"
-    }
-
-    PLUGIN_VAULT ||--|| PLUGIN_YAML : Contains
-    PLUGIN_YAML ||--|| CATALOGS : Defines
-    PLUGIN_YAML ||--|| VECTOR_SPACE : Defines
-    PLUGIN_YAML ||--|| CODE_STORE : Defines
-    PLUGIN_YAML ||--|| PROMPTS : Injects
-```
-
-## 2. Folder Mechanics
-
-### `synthetic/` (The Sandbox)
-The default testing domain. It contains:
-- `nf_source/`: Raw nextflow code used to test the ingestion pipeline (`task_a`, `process_b`, etc.).
-- `chroma_index/` or `faiss_index/`: The pre-computed Qwen3 embedding vectors.
-- `prompts/`: Domain rules. For example, `rejection_rules.md` explicitly teaches the AI when to refuse to build a pipeline based on domain impossibilities or logical constraints.
-
-### `izs/` (Production Domain)
-Reserved for the primary institute's private logic base. Structurally identical to the synthetic domain but populated with real-world, production-grade pipelines.
-
-## 3. Why Use Plugins?
-
-By abstracting pipelines into isolated plugins, the core `FastAPI` system is entirely tool-agnostic. To switch the AI from a "Bioinformatics Consultant" to a "Financial Data Architect", the API simply loads a different plugin configuration.
+## 1. Plugin Architecture & Separation of Concerns
 
 ```mermaid
-flowchart LR
-    API[LangGraph Executor]
-    Plugin1[(Plugin: Bioinformatics)]
-    Plugin2[(Plugin: Financial Data)]
-    
-    API -.->|Load configuration| Plugin1
-    API -.->|Hot swap| Plugin2
+classDiagram
+    class PluginManifest {
+        +str name
+        +str version
+        +str embedding_model
+        +list void_tools
+        +dict prompt_paths
+        +dict catalog_paths
+    }
+
+    class ComponentCatalog {
+        +dict components
+        +list input_channels
+        +list output_channels
+        +list parameters
+    }
+
+    class TemplateCatalog {
+        +dict templates
+        +str base_code
+        +list steps
+    }
+
+    class SemanticIndices {
+        +FAISSIndex faiss_index
+        +FAISSIndex patterns_index
+    }
+
+    PluginManifest *-- ComponentCatalog
+    PluginManifest *-- TemplateCatalog
+    PluginManifest *-- SemanticIndices
 ```
+
+---
+
+## 2. Standard Plugin Directory Specification
+
+Every plugin directory must conform to the standard layout:
+
+```
+plugins/<plugin_name>/
+├── plugin.yaml                      Master plugin manifest and metadata
+├── catalog/
+│   ├── components.json              Component registry with input/output channels and descriptions
+│   ├── templates.json               Production workflow templates and steps
+│   └── resources.json               Helper functions, parameter definitions, and container images
+├── faiss_index/                     Pre-computed FAISS vector index of component documentation
+├── patterns_index/                  Pre-computed FAISS vector index of Nextflow DSL2 channel patterns
+├── prompts/
+│   └── domain_context.md            Domain-specific guidelines merged into core prompts
+├── code_store.jsonl                 Verbatim Nextflow source code for each component
+└── benchmark_data/                  Evaluation datasets (L1-L5) for continuous benchmarking
+```
+
+---
+
+## 3. How to Create a New Plugin
+
+1. Create directory `backend/plugins/<new_plugin_name>/`.
+2. Author `plugin.yaml` specifying `name`, `version`, `embedding_model`, and `void_tools`.
+3. Ingest your DSL2 processes into `catalog/components.json` and `code_store.jsonl`.
+4. Generate the FAISS vector indices using the ingestion embedding CLI.
+5. Set `ACTIVE_PLUGIN=<new_plugin_name>` in `.env`.

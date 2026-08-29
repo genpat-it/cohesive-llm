@@ -131,8 +131,7 @@ export function initChatUi(onSendMessage) {
             chatHistory.appendChild(caption);
         }
 
-        // Optional inline "Approve & Build" button attached to this bubble.
-        // We render it on bot replies that return status CHATTING with a proposed plan.
+        // Inline "Approve & Build" button attached to bubble
         if (options.showApproveButton && typeof options.onApprove === 'function') {
             disableExistingApproveButtons();
             const row = document.createElement('div');

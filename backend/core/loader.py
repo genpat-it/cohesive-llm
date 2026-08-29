@@ -287,6 +287,4 @@ class DataLoader:
         else:
             logger.info("patterns_vector_store_not_found_skipping")
 
-# Global Instance - Note: We keep this for now to prevent breaking existing imports,
-# but it should ideally be injected using FastAPI Depends.
 data_loader = DataLoader()

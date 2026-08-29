@@ -1,306 +1,172 @@
-# Nextflow AI Agent API (`izs-llm`) - Comprehensive Documentation
+# Backend Engine Architecture & Internal Guide
 
-Welcome to the **IZS Nextflow AI Agent API** (`izs-llm`). This repository contains an intelligent, multi-agent AI backend built with **FastAPI** and **LangGraph** designed to consult, architect, and generate production-ready Nextflow DSL2 pipelines on demand. 
+The **Backend Engine** is a high-throughput, multi-agent AI backend powered by **FastAPI** and **LangGraph**. It synthesizes valid, fully tested Nextflow DSL2 pipelines from either natural language consultations or visual canvas designs (`/drawer`).
 
-This document serves as the exhaustive "per-folder, per-file" guide to the repository's internals, alongside architectural diagrams explaining how the system operates.
+This document details the backend execution lifecycle, StateGraph topology, dynamic catalog reflection, Knowledge Graph indexing, and API surface.
 
 ---
 
-## 🏗️ System Architecture & Agent Workflow
+## 1. Execution Lifecycle & StateGraph Topology
 
-The core of the system is a two-phase cyclic state machine powered by **LangGraph**. It is divided into a **Planner Subgraph** (for user interaction and RAG retrieval) and an **Execution Subgraph** (for code generation, repair, and diagram compilation).
+The backend execution lifecycle is managed by a hierarchical LangGraph state machine partitioned into two subgraphs: the **Planner Subgraph** (for intent classification, tool reflection, and visual graph enrichment) and the **Execution Subgraph** (for AST prechecking, direct code synthesis, and deterministic Mermaid rendering).
 
 ```mermaid
 flowchart TD
-    %% Styling
-    classDef user fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef agent fill:#d4e157,stroke:#558b2f,stroke-width:2px;
-    classDef logic fill:#81d4fa,stroke:#0277bd,stroke-width:2px;
-    classDef store fill:#ffcc80,stroke:#ef6c00,stroke-width:2px;
-
-    User([👤 User Request]):::user --> API
-    API[FastAPI /chat Endpoint]:::logic --> Route
-    
-    Route{New Request?} -->|Yes| Planner
-    
-    subgraph Planner [1. Consultant Subgraph Phase]
-        direction TB
-        CNode[Consultant Agent]:::agent
-        RAG[(FAISS Vector DB \n & In-Memory Store)]:::store
-        DMNode[Memory Trimmer]:::logic
-        
-        CNode <-->|Retrieves Docs & Templates| RAG
-        CNode --> DMNode
+    subgraph Planner ["1. Planner Subgraph"]
+        EntryRoute{"Entry Router"}
+        ConsultantNode["Consultant Agent (ReAct Loop)"]
+        ConsultantTools["Consultant Tools (KG Traversal, Batch Lookup, Plan Logic)"]
+        DrawerEnrichNode["Drawer Enricher Node (KG Path Reflection & Operator Inference)"]
+        SanitizeNode["Sanitize Orphaned Tool Calls"]
+        ExtractNode["Consultant Structured Extractor"]
+        CompactNode["Lossless Memory Compactor"]
     end
-    
-    API -.-> CNode
-    
-    DMNode --> CheckState{User Approved?}:::logic
-    CheckState -->|Wait for Feedback| API
-    
-    CheckState -->|APPROVED| Executor
-    
-    subgraph Executor [2. Execution Subgraph Phase]
-        direction TB
-        HNode[Hydrator Node]:::logic
-        ANode[Architect Agent]:::agent
-        ValCheck{AST Valid?}:::logic
-        RepNode[Repair Node]:::agent
-        RenNode[Renderer Node]:::logic
-        DNode[Diagram Agent]:::agent
-        
-        HNode -->|Assembles Source Code Context| ANode
-        ANode -->|Generates Pydantic AST| ValCheck
-        ValCheck -->|Fails Validation| RepNode
-        RepNode -->|Self-Correction Prompt| ANode
-        
-        ValCheck -->|Passes| RenNode
-        RenNode -->|Compiles to Groovy String| DNode
-        DNode -->|Maps Code to Flowchart| EndExec((Execution Complete))
+
+    subgraph Execution ["2. Execution Subgraph"]
+        PrecheckNode["Architect Precheck Node (Void Tool Filter & Helper Injection)"]
+        GenerateNode["Architect Generate Node (Direct NextflowPipelineAST Synthesis)"]
+        RendererNode["Deterministic AST Renderer (Nextflow DSL2 + Mermaid Flowchart)"]
     end
-    
-    EndExec --> API
+
+    Client([Client HTTP / SSE]) -->|POST /chat| EntryRoute
+    Client -->|POST /generate-from-graph| EntryRoute
+
+    EntryRoute -->|Chat Workflow| ConsultantNode
+    EntryRoute -->|Visual Topology Present| DrawerEnrichNode
+
+    ConsultantNode -->|Tool Calls| ConsultantTools
+    ConsultantTools -->|Tool Results| ConsultantNode
+    ConsultantNode -->|No Tool Calls / Iteration Cap| SanitizeNode
+    SanitizeNode --> ExtractNode
+    ExtractNode --> CompactNode
+
+    DrawerEnrichNode --> CompactNode
+
+    CompactNode -->|consultant_status == 'APPROVED'| PrecheckNode
+    CompactNode -->|consultant_status == 'CHATTING'| EndPlanner([Return Chat Response to Client])
+
+    PrecheckNode --> GenerateNode
+    GenerateNode --> RendererNode
+    RendererNode --> EndExec([Return Nextflow Code & Diagram])
 ```
 
 ---
 
-## 📂 Directory & File Index
+## 2. Core Reasoning Nodes
 
-Below is the exhaustive file-by-file breakdown of the repository.
+### 1. `consultant_node` (`backend/core/nodes/consultant.py`)
+- **Role**: Conversational bioinformatics specialist.
+- **Operation**: Operates inside a dynamic ReAct tool-calling loop using `CONSULTANT_TOOLS`.
+- **Key Features**:
+  - Automatically queries the topological Knowledge Graph (`query_knowledge_graph`).
+  - Batch-resolves component signatures and source code (`lookup_components_batch`).
+  - Performs logical cross-check of proposed component chains (`check_plan_logic`).
+  - Evaluates conversational user approval (`_detect_approval`) without relying on hardcoded tool strings.
+  - Compresses conversation sliding context under `MEMORY_KEEP_LAST_N = 60` and cleans duplicate revision headers to prevent token overflow.
 
-### 📁 Root Directory
+### 2. `drawer_enrich_node` (`backend/core/nodes/drawer_enricher.py`)
+- **Role**: Visual Canvas pipeline bridge & operator synthesizer.
+- **Operation**: When a user creates a pipeline visually on `/drawer`, the raw nodes and port wires are passed to this node.
+- **Key Features**:
+  - Dynamically queries the Knowledge Graph (`kg.G.nodes`) and component database for each placed component to retrieve takes, emits, and argument counts.
+  - Resolves multi-hop AST dataflow paths between connected components (`kg.find_path(src, tgt)`).
+  - Automatically infers and injects required Nextflow DSL2 channel operators:
+    - **Multi-Argument / Reference Injection**: Injects `param('reference')`, `param('index')`, or `.combine()`.
+    - **Keyed Stream Matching**: Injects `.cross()`, `.join()`, or `.multiMap{}` before pairing sample streams.
+    - **Cohort Aggregation**: Injects `.collect()` or `.toList()` before clustering or multi-sample summary tools.
+    - **Tuple Reshaping**: Injects `.map { meta, reads -> ... }` closures to reconcile arities.
+    - **Exact Named Emits**: Resolves real emit channel names (e.g. `process.out.depleted_reads`).
+  - Directly sets `consultant_status = "APPROVED"` to route immediately into the execution subgraph.
 
-| File / Folder | Purpose / Description |
-|---|---|
-| `main.py` | The main Uvicorn entrypoint script. Reads the `PORT` environment variable and launches the FastAPI application from `app.api`. |
-| `Dockerfile` | Defines the lightweight Linux container for the API. Uses Python 3.12-slim. Configures the environment for compatibility with restricted container platforms by forcing group ownership (`chgrp -R 0`) and setting the `HF_HOME` to `/tmp`. |
-| `docker-compose.yml` | Local orchestration file. It builds the `api` service and links it to a `caddy` service to automatically serve the application over HTTP/HTTPS locally. |
-| `Caddyfile` | Configuration for the Caddy web server acting as a reverse proxy for the API. |
-| `requirements.txt` | Python dependency lockfile. Includes `fastapi`, `langgraph`, `langchain-mistralai` (or other LLMs), `pydantic`, `faiss-cpu`, and `sentence-transformers`. |
-| `langgraph.json` | Configuration file that defines the location of the graph (`app.services.graph:app_graph`) for use with LangGraph Studio or CLI testing. |
-| `test_graph.py` | A CLI testing script used to test the graph logic directly in the terminal without spinning up the FastAPI server. |
-| `test_consultant_rag.py` | A unit test script specifically for testing the Consultant Agent's RAG retrieval accuracy and graph traversal. |
+### 3. `architect_precheck_node` (`backend/core/nodes/architect.py`)
+- **Role**: Algorithmic technical context assembler and constraint builder.
+- **Operation**: Runs deterministically before AST generation.
+- **Key Features**:
+  - **Void Tool Detection**: Automatically identifies tools that produce no output channels (e.g. reports, publishDir endpoints) and instructs the AST architect not to assign their output variables.
+  - **Template Base Injection**: Pulls verified template code from the active plugin catalog when adapting existing templates.
+  - **Helper Function Discovery**: Identifies unmet channel takes across the pipeline and dynamically scores/injects relevant input retrieval helpers (e.g. `getSingleInput()`, `getReference()`).
+  - **Knowledge Graph Wireframe Injection**: Injects verified dataflow path constraints directly into `technical_context`.
 
----
+### 4. `architect_generate_node` (`backend/core/nodes/architect.py`)
+- **Role**: Pydantic AST Synthesizer.
+- **Operation**: Calls the LLM using `with_structured_output(NextflowPipelineAST)` to generate the complete pipeline Abstract Syntax Tree.
+- **Key Features**:
+  - Focuses strictly on logical pipeline structure: subworkflows, take/emit declarations, process invocations, channel transformations, and main entrypoint.
+  - Enforces 0 repair loops — the structured AST format eliminates Nextflow syntax compilation errors by construction.
 
-### 📁 `app/` Directory (Core Logic)
-
-This folder contains the python backend application logic.
-
-#### 📄 `app/api.py`
-The FastAPI application definition. 
-- Defines the `ChatRequest` and `ChatResponse` Pydantic models.
-- Uses a `@asynccontextmanager` lifespan to trigger `data_loader.load_all()` to boot up FAISS and the in-memory store before serving requests.
-- Exposes `GET /health` and `POST /chat`. The `/chat` endpoint interacts directly with the compiled LangGraph object.
-
-#### 📁 `app/core/` (Configurations & Loaders)
-- **`config.py`**: A centralized settings class defining all absolute path names for the vector store, code JSONs, and catalog components, ensuring no paths are hardcoded.
-- **`loader.py`**: Defines the `DataLoader` class. On application startup, this reads `.json` and `.jsonl` files from `data/catalog/` and spins up the FAISS index (`HuggingFaceEmbeddings`) for semantic RAG search.
-
----
-
-#### 📁 `app/models/` (Data Structures & Validation)
-Strict Pydantic typing used by the standard API and LangChain structured outputs (`with_structured_output`). These act as the Guardrails for the Agents.
-
-- **`consultant_structure.py`**: Defines `ConsultantOutput`. Forces the Consultant LLM to return a `response_to_user`, a `status` (CHATTING or APPROVED), a `draft_plan`, and strict extracted arrays for `selected_module_ids` and `used_template_id`.
-- **`ast_structure.py`**: The most critical and complex file in the system. Defines the Abstract Syntax Tree schema (e.g., `NextflowPipelineAST`, `WorkflowBlock`, `InlineProcess`, `GlobalDef`). It contains dozens of `@field_validator` and `@model_validator` functions that actively analyze the Groovy code synthesized by the Architect LLM to block Nextflow hallucinations (e.g., preventing Void tool assignment, enforcing `.multiMap` structures, checking scope).
-- **`diagram_structure.py`**: Defines `DiagramData` featuring `Node` and `Edge` arrays. It enforces valid Mermaid syntax (e.g., preventing reserved keywords / floating nodes) for the Diagram Agent.
-
----
-
-#### 📁 `app/services/` (Agents, Tools & Graphs)
-The brains of the operation. This hooks everything together.
-
-- **`graph_state.py`**: Defines the `GraphState` `TypedDict` utilized by LangGraph to pass contextual data around the nodes (e.g., `messages`, `ast_json`, `mermaid_code`, `nextflow_code`).
-- **`graph.py`**: Contains the visual node map (defined in code using `StateGraph`). Defines the `build_consultant_subgraph` and `build_execution_subgraph`, adding the conditional edges controlling logic flow between the Consultant, Hydrator, Architect, and Renderer.
-- **`agents.py`**: Contains the actual LLM wrappers and **System Prompts**.
-  - `consultant_node`: Merges the user request with RAG data to chat with the user.
-  - `hydrator_node`: An algorithmic (non-LLM) node that evaluates the Consultant's `strategy_selector` (Exact Match, Adapted Match, Custom) and assembles the raw `code_store_hollow.jsonl` Groovy string into context for the Architect.
-  - `architect_node`: Instructed by massive system prompts dictating internal Nextflow DSL idioms, translating the Consultant's `draft_plan` into the `NextflowPipelineAST`.
-  - `diagram_node`: Tells an LLM to read the final Groovy code and create nodes/edges.
-- **`llm.py`**: A factory function (`get_llm()`) that parses the configured `settings.LLM_MODEL` to return the appropriate LangChain Chat Model initialization (e.g., ChatHuggingFace vs ChatMistralAI).
-- **`tools.py`**: Contains the `retrieve_rag_context()` function. This handles **Hybrid Search**: first scanning metadata json via keyword matches, and supplementing it via FAISS semantic search. Used heavily by the Consultant.
-- **`repair.py`**: The error handling loop. If `ast_structure.py` throws a Python Validation Error, the `repair_node` wraps that exact error in a strict prompt ("YOU ARE DRIFTING FROM THE SCHEMA... FIX IT") and routes back to the Architect node.
-- **`renderer.py`**: Contains the `renderer_node` which extracts the generated AST JSON and passes it to Jinja2 to render the final `main.nf` script. Contains `render_mermaid_from_json()` to parse diagram state.
-
-#### 📁 `app/utils/`
-- **`rendering.py`**: Contains the `NF_TEMPLATE_AST` variable, a gigantic Jinja2 string template mapping the AST JSON properties (`imports`, `globals`, `sub_workflows`, `entrypoint`) into beautifully spaced Groovy code.
+### 5. `renderer_node` (`backend/core/services/renderer.py`)
+- **Role**: Deterministic AST-to-Code and AST-to-Mermaid compiler.
+- **Operation**: Traverses the `NextflowPipelineAST` object to emit:
+  1. Production Nextflow DSL2 `.nf` source code with correct includes, subworkflows, channel operators, and entrypoint blocks.
+  2. High-fidelity Mermaid flowchart diagram accurately depicting subworkflow boundaries, take/emit ports, and dataflow connections with zero phantom or floating boxes.
 
 ---
 
-### 📁 `data/` Directory (RAG Knowledge Base)
+## 3. Directory Layout & Module Overview
 
-The data source for truth in the agentic system.
-
-- **`faiss_index/`**: Auto-generated by `FAISS` running locally using `sentence-transformers`. Stores the vector embeddings utilized by the `loader.py`.
-- **`code_store_hollow.jsonl`**: A JSON Lines file containing the actual stringified source code (`.nf` contents) mapped to the specific ID of standard components/templates. The Hydrator grabs code from here.
-- **`catalog/`**:
-  - `catalog_part1_components.json`: Metadata for standalone Nextflow steps (Tools, Inputs, Outputs).
-  - `catalog_part2_templates.json`: Metadata defining predefined graph structures/blueprints (e.g., standard mapping+assembly pipelines).
-  - `catalog_part3_resources.json`: Definitions of helper Groovy functions (`extractKey()`, `groupTuple`, etc.) available in the environment to prevent LLM hallucination of Nextflow features.
-
----
-
-## Changes from base branch
-
-### Anti-Hallucination System
-- **AST Pydantic validators**: sub-workflow names with `module_` prefix are validated against the real framework filesystem. Invented names are blocked and trigger the repair loop with actionable error messages.
-- **Framework component validator**: all `step_*`/`module_*` references in generated code are checked against the `.nf` files in `NGSMANAGER_DIR`. If a component doesn't exist, the pipeline is rejected before rendering.
-- **Architect prompt rewrite**: explicit rules against single-process wrappers and invented `module_` names. Custom sub-workflows must use `wf_` prefix.
-
-### Catalog & RAG Improvements
-- **Regenerated catalog with input arity**: `generate_catalog.py` now extracts `input_channels` from every step's `take:` block. The whitelist and RAG context show `takes: assembly, genus_species` so the LLM knows how many arguments to pass.
-- **RAG noise reduction**: tighter FAISS thresholds (`k=10`, `max_L2=1.2`, `margin=0.25`), keyword component cap reduced from 15 to 8, excluded debug/test templates (`module_variant_lineage_FIXED`, `_MINIMAL`, etc.).
-- **Centralized RAG tuning**: all retrieval parameters extracted to `app/core/config.py` — one file to adjust thresholds without touching retrieval logic.
-
-### Deterministic Mermaid Diagrams
-- Replaced LLM-based diagram generation with a deterministic renderer from the AST JSON
-- `render_mermaid_from_ast()` parses sub-workflows, entrypoint, globals, and tracks data flow
-- Same pipeline always produces identical Mermaid output (no more random variation)
-- Saves one LLM API call per request
-
-### Consultant Improvements
-- **Approval detection**: consultant prompt updated to recognize approval phrases ("yes", "ok", "proceed", etc.) and set APPROVED immediately instead of asking follow-up questions.
-
-### Configuration & DevOps
-- **Environment-based config**: `NGSMANAGER_DIR` and `MISTRAL_API_KEY` via `.env` / env vars. No hardcoded user paths in codebase.
-- **`.env.example`**: template for required environment variables.
-- **`main.py` loads `.env`** automatically via `python-dotenv`.
-- **`.gitignore` cleanup**: added `__pycache__/`, `.DS_Store`, generated reports, Nextflow work dirs.
-
-### Testing & Validation
-- **`test_e2e.py`**: end-to-end test script that prompts the LLM and validates generated Nextflow code against the real framework with `nextflow run -preview`. Distinguishes code errors from missing-data errors.
-- **`test_e2e_params.config`**: Nextflow config with dummy params for all framework tools, enabling `-preview` validation without real data.
-- **Improved `evaluate_llm.py`**: better auto-approve message for consistent test results.
-
-### Validation Results (E2E)
-- **12/13 scenarios pass (92%)**
-- **0 hallucinations** across all tests
-- **4/4 negative tests correctly rejected** (BWA, Canu, Pangolin on bacteria, de novo with iVar)
+```
+backend/
+├── app/                             Application layer (FastAPI server, SQLite DB, Auth, Routes)
+│   ├── models/                      SQLAlchemy database models and auth schemas
+│   ├── routes/                      FastAPI route controllers (chat, auth, conversations, drawings)
+│   ├── services/                    Application services (JWT tokens, password hashing, rate limiters)
+│   ├── api.py                       FastAPI route registration and startup lifecycle
+│   └── db.py                        SQLite database engine and session management
+├── core/                            100% Plugin-Agnostic Nextflow Generation Engine
+│   ├── adapters/                    LLM provider (OpenAI/vLLM) and Vector Store (FAISS) adapters
+│   ├── models/                      Pydantic data models (NextflowPipelineAST, ConsultantOutput, GraphState)
+│   ├── nodes/                       Executable LangGraph agent nodes (Consultant, Drawer Enricher, Architect)
+│   ├── prompts/                     Prompt templates (consultant_base.md, drawer_enricher_base.md, architect.md)
+│   ├── services/                    Engine services (graph.py, knowledge_graph.py, ast_compiler.py, renderer.py)
+│   ├── utils/                       Structured JSON logging, retry helpers
+│   ├── catalog_registry.py          Central registry for component takes, emits, void tools, and exports
+│   ├── config.py                    Application settings and configuration parameters
+│   ├── loader.py                    Central DataLoader booting FAISS, Knowledge Graph, and component store
+│   └── plugin_loader.py             Dynamic domain plugin loader and validator
+├── plugins/                         Domain-specific bioinformatics catalogs
+│   ├── izs/                         Production IZS bioinformatics plugin (components, FAISS index, templates)
+│   └── synthetic/                   Minimal plugin for continuous integration testing
+├── tests/                           Comprehensive unit and evaluation test suite
+│   ├── unit/                        Offline unit tests (33 tests covering topology, AST, error patterns, Mermaid)
+│   ├── evaluation/                  Pairwise LLM evaluation battery with Glicko-2 ratings
+│   └── run_unit_tests.py            Offline test runner script
+├── Dockerfile                       Production Docker container recipe
+├── main.py                          FastAPI application bootstrap script
+└── requirements.txt                 Python package dependencies
+```
 
 ---
 
-## Setup
+## 4. API Surface & Endpoints
 
-### Prerequisites
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/chat` | Conversational multi-turn chat endpoint with Server-Sent Events (SSE) streaming updates. |
+| `POST` | `/generate-from-graph` | Visual canvas pipeline generation endpoint accepting Drawflow JSON nodes and wires. |
+| `GET` | `/catalog/components` | Returns all available components, input/output channels, and descriptions from the active plugin. |
+| `GET` | `/system-info` | Returns real-time telemetry (active LLM model, RAM/CPU load, vLLM prefix cache hit rate, active plugin). |
+| `GET` | `/drawings` / `POST` `/drawings` | Lists and saves visual pipeline canvas designs for the authenticated user. |
+| `POST` | `/auth/token` | OAuth2 password authentication endpoint returning JWT bearer token. |
+| `GET` | `/auth/me` | Returns current authenticated user profile. |
 
-- Python 3.11+
-- Nextflow 23+ (for pipeline validation)
-- [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) cloned as a sibling directory
+---
 
-### Installation
+## 5. Running the Backend
 
+### Local Execution:
 ```bash
-git clone <this-repo> izs-llm
-cd izs-llm
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Start backend server
+PYTHONPATH=backend python3 backend/main.py
 ```
 
-### Configuration
-
-Copy the example env and fill in your values:
-
+### Running Unit Tests:
 ```bash
-cp .env.example .env
+# Execute all 33 offline unit tests
+PYTHONPATH=backend python3 backend/tests/run_unit_tests.py
 ```
 
-`.env` contents:
-```
-MISTRAL_API_KEY=your_mistral_api_key
-NGSMANAGER_DIR=/path/to/cohesive-ngsmanager-cli/cohesive-ngsmanager
-```
-
-The `NGSMANAGER_DIR` defaults to `../cohesive-ngsmanager-cli/cohesive-ngsmanager` (sibling directory).
-
-### Catalog Sync
-
-When the framework changes, regenerate the catalog:
-
+### Updating Knowledge Graph Index:
 ```bash
-python generate_catalog.py
-python rebuild_faiss_index.py
+# Keep the Knowledge Graph synchronized with codebase changes
+graphify update .
 ```
-
-This parses all steps/modules/helpers from the framework and rebuilds the RAG knowledge base.
-
-### Run the Server
-
-```bash
-python main.py
-```
-
-The API starts on `http://localhost:8080`. Health check: `GET /health`.
-
-### Docker
-
-```bash
-docker compose up --build
-```
-
----
-
-## Testing & Validation
-
-### Unit Evaluation (`evaluate_llm.py`)
-
-Tests the LLM on 13 scenarios (L1-L4) checking component selection, syntax, and rejection of impossible requests:
-
-```bash
-python evaluate_llm.py --output report.md
-python evaluate_llm.py --levels 3 4          # Only complex + negative tests
-```
-
-### End-to-End Validation (`test_e2e.py`)
-
-Full pipeline: prompt -> LLM generates code -> Nextflow validates it against the real framework:
-
-```bash
-python test_e2e.py --output e2e_report.md
-python test_e2e.py --levels 1 2              # Only simple + medium
-python test_e2e.py --prompt "I want to trim reads with fastp"  # Custom prompt
-```
-
-Requires `NGSMANAGER_DIR` to be set and Nextflow installed.
-
-### Pipeline Syntax Validation (`validate_pipeline.py`)
-
-Validate a single pipeline file or prompt:
-
-```bash
-python validate_pipeline.py --file my_pipeline.nf
-python validate_pipeline.py --prompt "I want to do MLST" --verbose
-python validate_pipeline.py --file my_pipeline.nf --stub  # Stub run
-```
-
----
-
-## RAG Tuning
-
-All retrieval parameters are in `app/core/config.py`:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `RAG_MAX_KEYWORD_COMPONENTS` | 8 | Max components from keyword scan |
-| `RAG_MAX_KEYWORD_TEMPLATES` | 2 | Max templates from keyword scan |
-| `RAG_FAISS_K` | 10 | FAISS nearest neighbors |
-| `RAG_FAISS_MAX_L2_DISTANCE` | 1.2 | Max absolute L2 distance |
-| `RAG_FAISS_RELATIVE_MARGIN` | 0.25 | Max distance above best match |
-| `RAG_EXCLUDED_TEMPLATES` | (set) | Debug/test templates to skip |
-
----
-
-## 🛠️ Usage Flow
-
-1. **User asks:** *"I want to do viral host depletion using bowtie, then assembly."*
-2. **Consultant API:** Hits `/chat`. The system spins up the Planner Graph.
-3. **RAG Tool:** Grabs metadata for `bowtie`, `spades`, and an existing depletion template.
-4. **Consultant AI:** *"Great, I'll use Bowtie and SPAdes. Does that work?"* (Status: `CHATTING`).
-5. --- User explicitly says "Yes, looks good" ---
-6. **Consultant AI:** Switches Status to `APPROVED`. Spits out `selected_module_ids=[...]`.
-7. **Graph Switch:** Planner finishes. Execution Subgraph triggers automatically.
-8. **Hydrator Node:** Pulls the actual `.nf` strings from the JSONL for Bowtie and SPAdes.
-9. **Architect AI:** Synthesizes the final pipeline into JSON AST format via strict Pydantic rules.
-10. **Renderer Node:** Turns JSON into `.nf`. Diagram turns `.nf` into Mermaid graph.
-11. **API Returns:** A payload containing the finished code and Mermaid diagram!

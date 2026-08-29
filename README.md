@@ -1,569 +1,208 @@
-# Cohesive LLM — IZS Bioinformatics AI Platform
+# Cohesive LLM — AI-Driven Nextflow DSL2 Pipeline Synthesis Platform
 
-[![Status](https://img.shields.io/badge/status-under%20development-orange?style=flat-square)](#)
+[![Status](https://img.shields.io/badge/status-active%20development-orange?style=flat-square)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.12-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-1.0-1c3c3c?style=flat-square)](https://langchain-ai.github.io/langgraph/)
-[![Mistral](https://img.shields.io/badge/LLM-Mistral-ff7000?style=flat-square)](https://mistral.ai/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Caddy](https://img.shields.io/badge/Caddy-2-1f88c0?style=flat-square&logo=caddy&logoColor=white)](https://caddyserver.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-1c3c3c?style=flat-square)](https://langchain-ai.github.io/langgraph/)
+[![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?style=flat-square&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-[![Last commit](https://img.shields.io/github/last-commit/genpat-it/cohesive-llm?style=flat-square)](https://github.com/genpat-it/cohesive-llm/commits/main)
-[![Issues](https://img.shields.io/github/issues/genpat-it/cohesive-llm?style=flat-square)](https://github.com/genpat-it/cohesive-llm/issues)
 
-> ⚠️ **Status: under active development.** APIs, the database schema, the
-> docker-compose layout and the configuration variables can all change between
-> commits without notice. Do **not** use this in production yet — it has no
-> stable release, no formal security audit and no upgrade story.
+A self-hostable, production-grade AI platform that transforms natural language biological inquiries or visual drag-and-drop workflow canvas diagrams into valid, fully executable, and deterministic Nextflow DSL2 pipelines targeting production bioinformatic frameworks (e.g. [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager)).
 
-Self-hostable platform that lets bioinformaticians describe a sequencing analysis in plain English and get back a valid Nextflow DSL2 pipeline for the [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) framework.
+---
 
-## Credits
+## 1. System Overview & Key Capabilities
 
-This platform was started as a master thesis project by three students of the
-[**EDISS — European Master in Digital Innovation for Sustainable Society**](https://www.master-ediss.eu/),
-carried out remotely in collaboration with the **Istituto Zooprofilattico
-Sperimentale dell'Abruzzo e del Molise "G. Caporale" (IZS Teramo)**:
+Cohesive LLM eliminates the trial-and-error manual scripting of complex bioinformatics pipelines by combining an **Abstract Syntax Tree (AST) Generation Engine**, a **Topological Knowledge Graph**, and a **Dual-Mode LangGraph State Machine**.
 
-- **Martinus Grady** — [@mgradyn](https://github.com/mgradyn)
-- **Ligan Cai** — [@Tsailgan](https://github.com/Tsailgan)
-- **Zeynal Mardanli** — [@Lshiroc](https://github.com/Lshiroc)
+### Key Architectural Capabilities:
 
-Upstream repositories:
+- **Dual Interaction Interfaces**:
+  - **Conversational Chat**: Interactive multi-turn consultation with conversational approval detection, plan formulation, and real-time streaming SSE output.
+  - **Visual Canvas Drawer (`/drawer`)**: Interactive drag-and-drop node-wire canvas. Users place modules and connect wires; the backend hydrates component schemas from the Knowledge Graph and automatically synthesizes required Nextflow DSL2 operators (`.cross()`, `.map{}`, `.multiMap{}`, `.combine()`, `param()`).
+- **100% Plugin-Agnostic Core Invariant**:
+  - The core reasoning engine (`backend/core/`) contains **zero hardcoded tool names, organism types, or domain-specific logic**. All components, input/output channels, void tool rules, and parameter signatures are loaded dynamically at runtime through plugin catalogs (`backend/plugins/<plugin_name>/`).
+- **Topological Knowledge Graph (`kg`)**:
+  - A Graphify-powered knowledge graph indexing all components, templates, and dataflow connections across 3 confidence tiers:
+    - `EXTRACTED`: Real, verified AST wiring from existing production Nextflow DSL2 pipelines.
+    - `INFERRED`: Co-occurrence patterns extracted from pipeline templates.
+    - `AMBIGUOUS`: Heuristic channel-name semantic matches.
+  - Supports BFS broad exploration, DFS linear chain tracing, community clustering, and god-node hub discovery.
+- **Deterministic AST Compilation & Zero-Repair Generation**:
+  - The LLM acts solely as a high-level AST architect, outputting a strictly typed Pydantic `NextflowPipelineAST` object.
+  - A deterministic AST compiler converts the AST directly into valid Nextflow DSL2 code and Mermaid architecture flowcharts with **0 reliance on brittle error-repair loops**.
+- **Lossless Memory Compaction & 16k Generation Headroom**:
+  - Optimized for long-context reasoning models (`Qwen/Qwen3.8-27B-FP8`) with 65k context window and 16,384 maximum completion tokens.
+  - Multi-turn tool execution facts are losslessly compacted into structured `tool_memory` without losing verified component properties across long chat sessions.
 
-- **Backend** (LangGraph + FastAPI LLM agent) — [mgradyn/izs-llm](https://github.com/mgradyn/izs-llm)
-- **Frontend** (chat UI) — [mgradyn/izs-bioinformatics-AI-demo](https://github.com/mgradyn/izs-bioinformatics-AI-demo)
+---
 
-The Nextflow framework being targeted is [genpat-it/cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager).
+## 2. Architecture & StateGraph Topology
 
-## What's inside
+The execution workflow is orchestrated as a hierarchical LangGraph state machine partitioned into a **Planner Subgraph** and an **Execution Subgraph**:
+
+```mermaid
+flowchart TD
+    subgraph UI ["User Interfaces"]
+        ChatUI["Conversational Web Chat (/)"]
+        DrawerUI["Visual Canvas Drawer (/drawer)"]
+    end
+
+    subgraph StateGraph ["Hierarchical LangGraph State Machine"]
+        subgraph PlannerSubgraph ["Planner Subgraph"]
+            EntryRoute{"Entry Condition"}
+            ConsultantNode["Consultant Agent (ReAct)"]
+            ToolsNode["Consultant Tools\n(KG Traversal, Batch Lookup, Plan Logic)"]
+            DrawerEnrichNode["Visual Drawer Enricher\n(KG Path Reflection & Operator Synthesis)"]
+            ExtractNode["Consultant Structured Extractor"]
+            SanitizeNode["Orphaned Tool Call Sanitizer"]
+            CompactNode["Lossless Memory Compaction"]
+        end
+
+        subgraph ExecutionSubgraph ["Execution Subgraph"]
+            PrecheckNode["Architect Precheck Node\n(Void Tool Detection & Helper Injection)"]
+            GenerateNode["Architect Generate Node\n(Direct NextflowPipelineAST Synthesis)"]
+            RendererNode["Deterministic AST Renderer\n(Mermaid Diagram & DSL2 Nextflow Code)"]
+        end
+    end
+
+    ChatUI -->|Natural Language Prompt| EntryRoute
+    DrawerUI -->|Canvas Nodes & Wires| EntryRoute
+
+    EntryRoute -->|Chat Mode| ConsultantNode
+    EntryRoute -->|Visual Canvas Mode| DrawerEnrichNode
+
+    ConsultantNode -->|Tool Calls| ToolsNode
+    ToolsNode -->|Tool Results| ConsultantNode
+    ConsultantNode -->|No Tool Calls / Approved| SanitizeNode
+    SanitizeNode --> ExtractNode
+    ExtractNode --> CompactNode
+
+    DrawerEnrichNode --> CompactNode
+
+    CompactNode -->|Consultant Status == APPROVED| PrecheckNode
+    CompactNode -->|Consultant Status == CHATTING| ChatUI
+
+    PrecheckNode --> GenerateNode
+    GenerateNode --> RendererNode
+    RendererNode -->|Final Code & Mermaid Flowchart| ChatUI
+    RendererNode -->|Final Code & Mermaid Flowchart| DrawerUI
+```
+
+---
+
+## 3. Repository Layout
 
 ```
 cohesive-llm/
-├── backend/             FastAPI + LangGraph LLM (anti-hallucination, AST validation)
-├── frontend/            Static UI (HTML/CSS/JS) — served by Caddy
-│   ├── index.html       Chat interface
-│   ├── drawer.html      Visual drag-and-drop pipeline editor
-│   ├── login.html       Authentication page
-│   └── js/              ES modules (chat, sidebar, results, drawer, api, modal)
-├── caddy/               Caddy image (reverse proxy + static file server)
-├── scripts/             Render configs and start the stack
-├── docker-compose.yml   All services orchestrated
-└── .env.example         Configuration template
+├── backend/                         FastAPI backend, LangGraph engine, and test suites
+│   ├── app/                         Application layer (FastAPI, SQLite, Auth, Routes)
+│   │   ├── models/                  Database schemas & authentication models
+│   │   ├── routes/                  HTTP & SSE streaming route handlers
+│   │   ├── services/                Auth token management & rate limiters
+│   │   └── api.py                   FastAPI entrypoint and endpoint registration
+│   ├── core/                        100% Plugin-Agnostic Reasoning Engine
+│   │   ├── adapters/                LLM provider and vector store adapters
+│   │   ├── models/                  Pydantic AST structures and structured outputs
+│   │   ├── nodes/                   LangGraph executable agent nodes (Architect, Consultant, Drawer Enricher)
+│   │   ├── prompts/                 Base prompt templates and dynamic overlay builders
+│   │   ├── services/                StateGraph, Knowledge Graph, AST Compiler, Deterministic Renderer
+│   │   ├── utils/                   Structured logging and exponential backoff retries
+│   │   ├── catalog_registry.py      Dynamic catalog and void-tool registry
+│   │   ├── config.py                Pydantic settings and environment management
+│   │   ├── loader.py                DataLoader for FAISS, catalogs, and knowledge graphs
+│   │   └── plugin_loader.py         Plugin discovery, loading, and validation
+│   ├── plugins/                     Domain plugins containing bioinformatics catalogs
+│   │   ├── izs/                     IZS Bioinformatics domain plugin (components, FAISS index, templates)
+│   │   └── synthetic/               Minimal test plugin for benchmark & CI tests
+│   ├── tests/                       Unit tests, competency batteries, and pairwise evaluation harness
+│   │   ├── unit/                    Fast offline unit tests (33 tests, ~0.5s execution)
+│   │   ├── evaluation/              LLM-as-a-judge pairwise evaluation battery
+│   │   └── run_unit_tests.py        Standard offline test runner
+│   ├── Dockerfile                   Production backend container image definition
+│   └── main.py                      Backend application server bootstrap
+├── frontend/                        Modern vanilla HTML5/CSS3/ES6 web interface
+│   ├── index.html                   Conversational chat interface with markdown table & code highlighting
+│   ├── drawer.html                  Visual drag-and-drop Drawflow pipeline designer
+│   ├── login.html                   Authentication & session sign-in interface
+│   ├── css/ & style.css             Modular design system, glassmorphism, and responsive styling
+│   └── js/                          ES6 frontend modules (chat, drawer, api, sidebar, modal)
+├── caddy/                           Caddy reverse proxy configuration and static file server
+├── deploy/                          Deployment configurations and service definitions
+├── docker-compose.yml               Complete multi-container production orchestration
+└── README.md                        Top-level platform documentation
 ```
 
-## Quick start (local development)
+---
 
+## 4. Quickstart & Local Setup
+
+### Prerequisites
+- Python 3.11 or 3.12
+- Local vLLM instance or OpenAI-compatible LLM endpoint (e.g. `Qwen/Qwen3.8-27B-FP8`)
+- Node.js (optional, for frontend asset tooling)
+
+### Step 1: Clone the Repository
 ```bash
-git clone <this-repo>
+git clone https://github.com/genpat-it/cohesive-llm.git
 cd cohesive-llm
-cp .env.example .env
 ```
 
-Open `.env` and at minimum set:
-
-```env
-MISTRAL_API_KEY=your_real_key_here
-JWT_SECRET=$(openssl rand -hex 32)
-DEMO_PASSWORD=pick_something_strong
+### Step 2: Set Up Virtual Environment & Dependencies
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r backend/requirements.txt
 ```
 
-Then start the stack:
+### Step 3: Configure Environment Variables
+Create a `.env` file in the project root:
+```ini
+# LLM Endpoint Configuration
+LLM_PROVIDER=openai
+LLM_MODEL=Qwen/Qwen3.8-27B-FP8
+LOCAL_LLM_URL=http://localhost:8000/v1
+OPENAI_API_KEY=dummy-key
+
+# Memory & Context Settings
+MEMORY_KEEP_LAST_N=60
+MAX_COMPLETION_TOKENS=16384
+
+# Active Plugin
+ACTIVE_PLUGIN=izs
+```
+
+### Step 4: Run the Backend Server
+```bash
+PYTHONPATH=backend python3 backend/main.py
+```
+The server will start at `http://localhost:8080`.
+
+### Step 5: Access the Interfaces
+- **Chat Interface**: Navigate to `http://localhost:8080`
+- **Visual Canvas Drawer**: Navigate to `http://localhost:8080/drawer`
+- **System Telemetry**: Check health and token metrics at `http://localhost:8080/system-info`
+
+---
+
+## 5. Running Automated Verification & Tests
+
+The test suite is divided into fast, offline unit/competency tests and live LLM evaluation benchmarks:
 
 ```bash
-./scripts/up.sh
+# Run all offline unit tests (33 tests, ~0.5s execution)
+PYTHONPATH=backend python3 backend/tests/run_unit_tests.py
+
+# Update the graphify knowledge graph after code modifications
+graphify update .
 ```
 
-The first run will:
-1. Clone `cohesive-ngsmanager` into a Docker volume (one-time, ~1 min)
-2. Build the backend image (downloads Python deps and embeddings, ~5 min)
-3. Start Postgres, the backend, the frontend and Caddy
+---
 
-Open **http://localhost:9000** and log in with `demo` / the password you set in `DEMO_PASSWORD`.
+## 6. Credits & Collaboration
 
-To stop everything:
-
-```bash
-docker compose down
-```
-
-To wipe state and start fresh (re-clones ngsmanager, drops the DB, rebuilds FAISS):
-
-```bash
-docker compose down -v
-```
-
-### Tail the logs
-
-```bash
-docker compose logs -f backend
-docker compose logs -f caddy
-```
-
-### Test the API directly (bypass the frontend)
-
-```bash
-curl -c cookies.txt -X POST http://localhost:9000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"demo","password":"<your password>"}'
-
-curl -b cookies.txt http://localhost:9000/api/health
-curl -b cookies.txt http://localhost:9000/api/system-info
-curl -b cookies.txt -X POST http://localhost:9000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"session_id":"dev","message":"I want to trim with fastp"}'
-
-# Validate generated Nextflow code
-curl -b cookies.txt -X POST http://localhost:9000/api/validate \
-  -H "Content-Type: application/json" \
-  -d '{"nextflow_code":"workflow { println \"hello\" }"}'
-
-# Drawer APIs
-curl -b cookies.txt http://localhost:9000/api/catalog/components
-curl -b cookies.txt http://localhost:9000/api/drawings
-```
-
-## Authentication
-
-Login is built into the backend itself: a single demo user is seeded automatically
-on first start with the credentials taken from `DEMO_USER` / `DEMO_PASSWORD` in `.env`.
-
-The session uses a stateless JWT stored in an `HttpOnly` cookie. Requests with no
-valid cookie get a 401 from any `/api/*` route except `/api/auth/login`. The frontend
-intercepts that 401 and redirects the browser to `/login.html`.
-
-Failed login attempts are rate-limited per real client IP via `slowapi`
-(default `5/minute`, tunable with `LOGIN_RATE_LIMIT`).
-
-> Multi-user / corporate SSO (LDAP, OIDC) is **not** included on purpose — drop in
-> a proxy-level auth layer (Authelia, oauth2-proxy, ...) in front of Caddy if you
-> need it for production.
-
-## Deployment modes
-
-### Local development (HTTP, single demo user)
-```env
-DOMAIN=localhost
-HTTPS_MODE=off
-COOKIE_SECURE=false
-```
-
-### Behind a corporate reverse proxy (e.g. `https://intranet.example.com/llm`)
-
-When you can't expose ports 80/443 directly and an upstream proxy
-(nginx, F5, Caddy, IIS, …) handles TLS for a public URL like
-`https://intranet.example.com/llm`, run the platform on a custom HTTP port and
-let the upstream proxy forward to it.
-
-```env
-DOMAIN=intranet.example.com
-HTTPS_MODE=off                # upstream proxy handles TLS
-CADDY_HOST_PORT=9000          # host port Caddy listens on (HTTP)
-TRUSTED_PROXIES=10.0.0.0/8    # CIDR of the upstream proxy network
-CORS_ORIGINS=https://intranet.example.com
-COOKIE_SECURE=true            # cookie sent only over HTTPS
-COOKIE_PATH=/llm              # scope the session cookie to the sub-path
-COOKIE_SAMESITE=lax
-BASE_PATH=/llm/               # MUST end with a trailing slash
-```
-
-`BASE_PATH` is what makes the app sub-path-aware: Caddy substitutes the
-`{{env "BASE_PATH"}}` placeholder in `index.html` and `login.html` at
-request time (via the built-in Go `templates` directive), so all relative
-URLs and fetch calls resolve under `/llm/...`. Set it once in `.env`,
-restart Caddy, done. No code changes.
-
-`PROXY_PREFIX` is **only** needed if you want to test the sub-path
-locally without an upstream proxy: set `PROXY_PREFIX=/llm` and Caddy
-itself handles `/llm/*` so `http://localhost:9000/llm/` works
-end-to-end. In production, leave it empty — the corporate proxy strips
-the prefix before reaching Caddy.
-
-Then ask the sysadmins to configure the upstream proxy to:
-
-1. Forward `https://intranet.example.com/llm/*` → `http://your-server:9000/*`
-2. **Strip the `/llm` path prefix** before forwarding
-3. Set the headers: `X-Forwarded-Proto: https`, `X-Forwarded-Host: intranet.example.com`, `X-Real-IP`, `X-Forwarded-For`
-4. Allow body sizes up to ~10 MB
-5. Tell you the proxy IP/CIDR so you can set `TRUSTED_PROXIES` correctly
-
-### Self-signed HTTPS (no upstream proxy)
-```env
-DOMAIN=ai.izs.intra
-HTTPS_MODE=internal
-COOKIE_SECURE=true
-```
-Browser will warn about the self-signed cert on first visit (one click to accept).
-
-### Public deployment (real domain, Let's Encrypt)
-```env
-DOMAIN=ai.example.com
-HTTPS_MODE=auto
-ACME_EMAIL=ops@example.com
-COOKIE_SECURE=true
-```
-Requires ports 80 and 443 reachable from the internet and DNS pointing at the server.
-
-## How it works
-
-The container layout is intentionally minimal (3 services + 1 init container):
-
-1. `ngsmanager-init` clones [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager) into a Docker volume on first start.
-2. `postgres` stores users, conversations and messages.
-3. `backend` (FastAPI + LangGraph) reads the framework from `/ngsmanager`, builds the RAG knowledge base on first start, and serves `/api/auth/*`, `/api/chat`, `/api/conversations/*`, `/api/validate`, `/api/catalog/*`, `/api/drawings/*`, `/api/system-info`. Includes Java + Nextflow for in-container pipeline validation.
-4. `caddy` is the single entry point: serves the static frontend (HTML/JS/CSS) from `/srv` via `file_server` + `templates`, and reverse-proxies `/api/*` to the backend.
-
-```
-                  ┌──────────┐
-   browser   ───▶ │  caddy   │  serves frontend at /llm/* (file_server)
-                  │  :9000   │  proxies /llm/api/* → backend:8080
-                  └────┬─────┘
-                       │
-              ┌────────┴────────┐
-              ▼                 ▼
-        ┌──────────┐      ┌──────────┐
-        │ backend  │      │ postgres │
-        │  :8080   │◀────▶│  :5432   │
-        └──────────┘      └──────────┘
-              │
-              │ reads (read-only)
-              ▼
-        ┌──────────────┐
-        │ /ngsmanager  │  (Docker volume, cloned by ngsmanager-init)
-        └──────────────┘
-```
-
-## Visual Pipeline Drawer
-
-The platform includes a **drag-and-drop pipeline editor** at `/drawer` where
-users can visually design Nextflow pipelines without writing prompts.
-
-### How it works
-
-1. **Drag** components from the categorized palette onto the canvas
-2. **Connect** outputs to inputs by dragging between port dots
-3. **Click "Generate Pipeline"** — the graph is sent to the architect LLM,
-   which generates the Nextflow code including data shaping and channel operations
-4. **Validate** the generated code directly against the framework with `nextflow -preview`
-
-### Features
-
-- **Named I/O ports** on each node, derived from the framework catalog
-- **Color-coded ports**: blue = data channels (reads, assembly), orange = runtime parameters (reference, schema, host)
-- **Save/load drawings** to the database, with version stamping (framework commit + LLM model)
-- **Version mismatch warning** when loading a drawing created with an older framework version
-- **Shareable links**: `/drawer?drawing=ID` — any logged-in user can open the same drawing
-- **Export**: SVG and PNG download of the canvas
-- **GitHub links**: each node links to its source `.nf` file on GitHub
-
-### Relationship with the chat
-
-The drawer skips the consultant (conversation) phase and goes straight to the
-executor subgraph (hydrator → architect → repair → renderer → diagram). The
-visual graph replaces the design plan that the consultant normally produces.
-
-Drawings generated from the drawer appear in the chat sidebar with a pipeline
-preview thumbnail and a link back to the drawer.
-
-## System stats dashboard
-
-A live status bar at the bottom of the chat shows:
-
-- **LLM model** currently configured (e.g. `labs-devstral-small-2512`)
-- **GPU**: name, VRAM usage, temperature (requires NVIDIA Container Toolkit)
-- **RAM**: usage percentage
-- **Framework commit**: clickable link to the ngsmanager commit on GitHub
-
-Stats refresh every 30 seconds via `GET /api/system-info`.
-
-## Pipeline validation
-
-Generated Nextflow code can be validated in-browser against the real framework
-using `nextflow -preview`. The backend container includes Java and Nextflow,
-so validation is fully self-contained.
-
-- **Green** = syntactically valid
-- **Green + warning** = valid syntax, missing runtime parameters (expected for framework pipelines)
-- **Red** = syntax or structural errors, shown in a styled dialog
-
-Available both in the chat results panel and in the drawer.
-
-## LLM architecture
-
-The "AI" of the platform is a **LangGraph state machine** with grounded RAG.
-The whole point is to make it impossible for the LLM to hallucinate tools
-that don't exist in the cohesive-ngsmanager framework.
-
-### The agent graph
-
-```
-         ┌──────────────┐
-         │   /api/chat  │
-         └──────┬───────┘
-                ▼
-       ┌──────────────────┐
-       │ planner subgraph │
-       │  ┌────────────┐  │
-       │  │ consultant │  │  ← natural-language conversation,
-       │  └────────────┘  │    builds the design plan with
-       │  ┌────────────┐  │    RAG-validated component IDs
-       │  │  trim msgs │  │
-       │  └────────────┘  │
-       └────────┬─────────┘
-                │ status == APPROVED?
-        ┌───────┴───────┐
-        │ no            │ yes
-        ▼               ▼
-       END    ┌─────────────────────┐
-              │ executor subgraph   │
-              │  ┌─────────────┐    │
-              │  │  hydrator   │    │  ← injects the actual .nf source
-              │  └──────┬──────┘    │    code for every selected step
-              │         ▼           │
-              │  ┌─────────────┐    │
-              │  │  architect  │◀──┐│  ← generates a strict Pydantic AST
-              │  └──────┬──────┘   ││    (NextflowPipelineAST)
-              │         │ valid?   ││
-              │      ┌──┴──┐       ││
-              │      │ no  │ yes   ││
-              │      ▼     │       ││
-              │   ┌──────┐ │       ││
-              │   │repair├─┘       ││  ← max 8 retries with the
-              │   └──┬───┘         ││    validation error injected
-              │      │             ││
-              │      └─────────────┘│
-              │         ▼           │
-              │  ┌─────────────┐    │
-              │  │  renderer   │    │  ← AST → Nextflow Groovy via Jinja2
-              │  └──────┬──────┘    │
-              │         ▼           │
-              │  ┌─────────────┐    │
-              │  │   diagram   │    │  ← AST → Mermaid (deterministic)
-              │  └─────────────┘    │
-              └─────────────────────┘
-                         │
-                         ▼
-                 nextflow_code, mermaid_code, ast_json
-```
-
-Source: `backend/app/services/graph.py` and `backend/app/services/agents.py`.
-
-### Models
-
-| Role | Model | Provider |
-|---|---|---|
-| Main LLM (consultant + architect) | `labs-devstral-small-2512` | Mistral (`langchain-mistralai`) |
-| Embeddings (RAG semantic search) | `Qwen/Qwen3-Embedding-0.6B` | local (`langchain-huggingface`) |
-| Judge LLM (eval / `test_consultant_rag.py` only) | `llama-3.3-70b-versatile` | Groq (optional, only for evaluation) |
-
-Configured in `backend/app/services/llm.py` and `backend/app/core/config.py`.
-The Mistral key is **required** at runtime; the Groq key is only needed for the evaluation suite.
-
-### Knowledge base
-
-Lives in `backend/data/`:
-
-| File / dir | What it is | Generated by |
-|---|---|---|
-| `data/catalog/catalog_part1_components.json` | Per-step metadata: tool, domain, inputs, outputs, keywords | `sync_framework.py` |
-| `data/catalog/catalog_part2_templates.json` | Per-pipeline-template metadata + `logic_flow` | `sync_framework.py` |
-| `data/catalog/catalog_part3_resources.json` | Helper Groovy functions extracted from the framework | `sync_framework.py` |
-| `data/catalog/tool_whitelist.json` | Flat allow-list of every tool the LLM is allowed to mention | `sync_framework.py` |
-| `data/code_store_hollow.jsonl` | The **actual** Groovy source of every step / template, indexed by ID | `sync_framework.py` |
-| `data/faiss_index/` | Binary FAISS index built from the catalog text, used for semantic search | `rebuild_faiss_index.py` |
-
-The two-stage retrieval inside `backend/app/services/tools.py` first does
-**keyword + metadata scoring** over the JSON catalogs, then falls back to a
-**FAISS semantic search** with relative-distance pruning, and finally
-**hydrates** every selected ID with the verbatim Groovy source from
-`code_store_hollow.jsonl` so the architect LLM never has to invent tool flags.
-
-A diagram of the same flow lives in [`backend/data/README.md`](backend/data/README.md).
-
-## Updating the framework and rebuilding the knowledge base
-
-The catalog and FAISS index are derived artifacts that must be regenerated
-whenever the upstream `cohesive-ngsmanager` framework changes (new step,
-renamed module, updated params, …).
-
-### Update only the framework checkout
-
-```bash
-docker compose run --rm ngsmanager-init   # git pull inside the volume
-docker compose restart backend
-```
-
-This refreshes the source files under `/ngsmanager` but **does not** rebuild
-the catalog or the embeddings — the backend keeps using the previously
-generated `data/catalog/*.json` and `data/faiss_index/`.
-
-### Full sync (catalog + whitelist + FAISS)
-
-When the framework changed in a meaningful way, run the full sync. It walks
-`/ngsmanager`, regenerates all catalog files, the tool whitelist, and the
-FAISS index:
-
-```bash
-# inside the backend container, with the framework already mounted at /ngsmanager
-docker compose exec backend python sync_framework.py
-
-# or, if you want to skip the (slower) FAISS rebuild during iteration:
-docker compose exec backend python sync_framework.py --skip-faiss
-
-# from the host, pointing at any local checkout:
-docker compose exec backend python sync_framework.py --ngsmanager-dir /ngsmanager
-```
-
-After it finishes, **restart the backend** so the new index is loaded into memory:
-
-```bash
-docker compose restart backend
-```
-
-### Only rebuild the FAISS index
-
-If you tweaked one of the `catalog_part*.json` files by hand and just want
-to refresh the embeddings (no framework re-scan):
-
-```bash
-docker compose exec backend python rebuild_faiss_index.py
-docker compose restart backend
-```
-
-The first run downloads the `Qwen/Qwen3-Embedding-0.6B` model (~1.2 GB)
-into `HF_HOME=/tmp/huggingface`, so it takes a couple of minutes; subsequent
-rebuilds reuse the cached model and finish in seconds.
-
-## Testing the LLM pipeline
-
-The backend ships with several test/eval scripts under `backend/`. They are
-**not** wired into the runtime container and use `subprocess` against the
-real Nextflow CLI for validation, so they're meant to be run manually
-(typically from a host with `nextflow` installed and the framework cloned
-side-by-side).
-
-### Quick smoke test of the LangGraph state machine
-
-`backend/test_graph.py` runs a single in-process invocation, useful to
-verify the graph compiles and can produce a Nextflow string:
-
-```bash
-docker compose exec backend python test_graph.py
-```
-
-### Mermaid renderer unit tests
-
-`backend/test_mermaid.py` validates the deterministic AST → Mermaid renderer
-in isolation (no LLM call, no Mistral key required):
-
-```bash
-docker compose exec backend python test_mermaid.py
-```
-
-### End-to-end pipeline validation against the real framework
-
-`backend/test_e2e.py` is the heavy one: it sends a curated list of
-user prompts (`L1` simple → `L4` complex) to `POST /api/chat`, extracts the
-generated `.nf` code, drops it into the framework's `pipelines/` dir as
-`_llm_e2e_test.nf`, and runs `nextflow -preview` on it to make sure the
-generated workflow is syntactically and semantically valid against the
-actual cohesive-ngsmanager modules.
-
-```bash
-# all scenarios
-python backend/test_e2e.py
-
-# only the L1 + L2 levels
-python backend/test_e2e.py --levels 1 2
-
-# single ad-hoc prompt
-python backend/test_e2e.py --prompt "Trim Illumina paired-end reads with fastp"
-```
-
-Requires:
-- The backend reachable at `http://localhost:8080` (override with `API_URL`)
-- A working `nextflow` binary on the host
-- The `cohesive-ngsmanager` repo cloned locally and pointed at via `NGSMANAGER_DIR`
-
-### LLM-as-judge academic evaluation
-
-`backend/test_consultant_rag.py` uses **pytest** plus a Groq-hosted Llama-3.3
-"strict academic reviewer" to score the consultant, architect and diagram
-nodes on faithfulness, relevance, syntax, logic and mapping. Needs both
-`MISTRAL_API_KEY` and `GROQ_API_KEY` in the environment:
-
-```bash
-docker compose exec -e GROQ_API_KEY=... backend pytest -v test_consultant_rag.py
-```
-
-### Full evaluation report
-
-`backend/evaluate_llm.py` is the most exhaustive: it walks every prompt
-scenario, validates every generated pipeline against a hard-coded allow-list
-of valid framework components, and writes a full markdown report.
-
-```bash
-docker compose exec backend python evaluate_llm.py --output report.md
-```
-
-### Single-pipeline validator
-
-`backend/validate_pipeline.py` takes one `.nf` file (or one prompt) and runs
-just the `nextflow -preview` validation step against the framework. Handy
-when iterating on a single failing scenario:
-
-```bash
-python backend/validate_pipeline.py path/to/pipeline.nf
-```
-
-## Scripts
-
-### Repo-level (`scripts/`)
-- `up.sh` — render Caddyfile from `.env` and `docker compose up -d`
-- `render-caddyfile.sh` — generate `caddy/Caddyfile` from the env vars
-- `check-secrets.sh` — secret scanner, runs as a git pre-push hook
-
-Install the pre-push hook:
-```bash
-ln -sf ../../scripts/check-secrets.sh .git/hooks/pre-push
-```
-
-### Backend-level (`backend/`, run inside the container)
-- `sync_framework.py` — full sync from cohesive-ngsmanager: code store, catalog, whitelist, FAISS
-- `rebuild_faiss_index.py` — only rebuild the FAISS index from the existing catalog JSONs
-- `generate_catalog.py` — only regenerate the catalog (sub-step of `sync_framework.py`)
-- `test_graph.py` — quick LangGraph smoke test
-- `test_mermaid.py` — unit tests for the AST → Mermaid renderer
-- `test_e2e.py` — end-to-end pipeline generation + `nextflow -preview` validation
-- `test_consultant_rag.py` — pytest + Groq-judged academic evaluation
-- `evaluate_llm.py` — full markdown evaluation report
-- `validate_pipeline.py` — single-`.nf`/single-prompt validator
-- `generate_report.py` — assemble a report from previously cached results
-- `generate_catalog.py` — regenerate catalog files from the framework
-
-## Configuration reference
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DOMAIN` | `localhost` | Hostname users access the platform with |
-| `HTTPS_MODE` | `off` | `off` / `internal` / `auto` |
-| `CADDY_HOST_PORT` | `9000` | Host port for the HTTP listener |
-| `CADDY_HOST_HTTPS_PORT` | `9443` | Host port for the HTTPS listener |
-| `TRUSTED_PROXIES` | `private_ranges` | CIDR(s) of upstream proxies |
-| `MISTRAL_API_KEY` | _required_ | API key for the LLM provider |
-| `NGSMANAGER_REPO` | github.com/genpat-it/cohesive-ngsmanager | Framework repo to clone |
-| `NGSMANAGER_BRANCH` | `main` | Framework branch |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `cohesive` / dev / `cohesive` | Database credentials |
-| `DATABASE_URL` | `postgresql+psycopg2://...` | Connection string for SQLAlchemy |
-| `JWT_SECRET` | _required_ | 32-byte random string for signing JWTs |
-| `DEMO_USER` / `DEMO_PASSWORD` | `demo` / placeholder | Initial seed user |
-| `CORS_ORIGINS` | `http://localhost:9000,...` | Comma-separated allowed origins |
-| `COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
-| `COOKIE_PATH` | `/` | Set to `/llm` if behind a path-prefix proxy |
-| `COOKIE_SAMESITE` | `lax` | `lax` / `strict` / `none` |
-| `LOGIN_RATE_LIMIT` | `5/minute` | Per-IP rate limit on `/auth/login` |
-| `BASE_PATH` | `/` | Sub-path the app is served under (must end with `/`) |
-| `NVIDIA_VISIBLE_DEVICES` | `all` | GPU visibility for the backend container (system stats) |
-
-Full reference with comments: [`.env.example`](.env.example)
+This platform was developed as a thesis research project by three students of the **Erasmus Mundus Joint Master Degree Programme on the Engineering of Data-intensive Intelligent Software Systems (EDISS)**, carried out in collaboration with the **Istituto Zooprofilattico Sperimentale dell'Abruzzo e del Molise "G. Caporale" (IZS Teramo)**:
+- **Martinus Grady** — Lead Architecture & Agent Engineering ([@mgradyn](https://github.com/mgradyn))
+- **Ligan Cai** — Co-Author & Evaluation ([@Tsailgan](https://github.com/Tsailgan))
+- **Zeynal Mardanli** — Co-Author & Frontend ([@Lshiroc](https://github.com/Lshiroc))

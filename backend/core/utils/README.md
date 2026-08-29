@@ -1,46 +1,34 @@
-# `core/utils/` - Algorithmic Translators & Templating
+# Core Utilities (`backend/core/utils/`) - Cross-Cutting Tools & Helpers
 
-> [!TIP]
-> This directory handles the physical manifestation of abstract logic. It contains zero AI processing. It strictly translates heavily validated Python dictionaries (from `core/models/`) into beautiful, formatted `Groovy` and `Mermaid.js` syntax.
+The `backend/core/utils/` directory provides foundational, deterministic utilities including structured JSON logging, exponential retry decorators, Jinja2 AST formatting, and debug trace extractors.
 
-## 1. The Jinja2 Rendering Engine
+---
 
-The translation from a deeply nested JSON Abstract Syntax Tree (AST) back into a human-readable Nextflow DSL2 file is orchestrated by `rendering.py`. It uses a massive, multi-stage Jinja2 template matrix to guarantee valid syntax.
-
-### 1.1 The Generation Gantt Flow
-
-This chart shows the deterministic order of operations as the Jinja2 engine iterates over the Pydantic AST.
+## 1. Modules Overview
 
 ```mermaid
-gantt
-    title Nextflow DSL2 String Synthesis
-    dateFormat  X
-    axisFormat %s
-    
-    section Pre-Processing
-    Load Pydantic AST Payload       :a1, 0, 1
-    Initialize Jinja Environment    :a2, after a1, 1
-    
-    section String Assembly
-    1. Render Imports      :b1, after a2, 2
-    2. Render Globals      :b2, after b1, 2
-    3. Render Inline Procs :b3, after b2, 3
-    4. Render Sub-workflows:b4, after b3, 4
-    5. Render Entrypoint   :b5, after b4, 2
-    
-    section Post-Processing
-    Whitespace Regularization       :c1, after b5, 1
-    Return Final DSL2 String        :c2, after c1, 1
+flowchart LR
+    Logger["logger.py\n(Structured JSON Logging)"]
+    Retry["retry.py\n(Exponential Backoff & Rate-Limit Retries)"]
+    Rendering["rendering.py\n(AST Jinja2 Template Definition)"]
+    TraceDumper["trace_dumper.py\n(LangGraph State Trace Extractor)"]
 ```
 
-## 2. Core Modules
+---
 
-### 2.1 `rendering.py` (The Code Generator)
-- Contains `NF_TEMPLATE_AST`: The master string template. It uses highly specific Jinja2 loops (`{% for imp in ast_json.imports %}`) to systematically construct the Nextflow script block by block.
-- **Whitespace Regularization**: It applies strict regex and formatting logic (e.g., ensuring exactly two blank lines between major workflow blocks, indenting sub-workflow bodies to 4 spaces) to ensure the AI-generated code looks indistinguishable from code written by a senior systems engineer.
-- **Hydration Output**: It safely handles the injection of the raw Groovy strings that were fetched from `code_store_hollow.jsonl` during the earlier graph execution phases.
+## 2. Utility Specifications
 
-### 2.2 `diagrams.py` (The Visual Generator)
-- Processes the `DiagramData` Pydantic models.
-- Generates the final Mermaid.js string blocks that power the UI visualization.
-- Acts as the final safety buffer, ensuring that the generated graphs conform perfectly to the `graph TD` standard before passing the string payload back to the FastAPI layer.
+### 2.1 `logger.py` — Structured JSON Logger
+- Configures Python standard logging with `structlog` / JSON formatting.
+- Automatically outputs structured key-value context attributes (`node`, `event`, `level`, `timestamp`, `extracted_ids`, `plugin_name`) for downstream observability and log aggregation.
+
+### 2.2 `retry.py` — Resilience & Exponential Backoff
+- Implements intelligent retry decorators with exponential backoff and jitter (`tenacity`-backed).
+- Intercepts transient HTTP 429 (rate limits), connection resets, and LLM server timeouts, protecting agentic execution loops from transient network drops.
+
+### 2.3 `rendering.py` — Nextflow DSL2 Jinja2 AST Template
+- Defines `NF_TEMPLATE_AST`: the master Jinja2 template utilized by the AST compiler to serialize `NextflowPipelineAST` objects into production-grade Nextflow DSL2 source code.
+- Enforces strict indentation (8 spaces for subworkflow main blocks, 4 spaces for entrypoints) and clean separation between imports, globals, inline processes, subworkflows, and entrypoint blocks.
+
+### 2.4 `trace_dumper.py` — LangGraph State Trace Extractor
+- Utility to extract and format internal LangGraph state transitions, system prompts, tool invocations, and agent thoughts into human-readable Markdown traces for debugging and benchmarking.
