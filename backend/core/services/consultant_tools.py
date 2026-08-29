@@ -1336,6 +1336,56 @@ def find_dataflow_path(source_component: str, target_component: str, directed: b
     return kg.find_path_detailed(source_component, target_component, directed=directed)
 
 
+@tool
+def classify_pipeline_intent(user_query: str) -> str:
+    """Classify a user query semantically to determine input data level, workflow scope, requested operations, and any negated/excluded tools without relying on brittle regex patterns.
+
+    Args:
+        user_query: The natural language request or chat message from the user.
+
+    Returns:
+        JSON string containing data_level, workflow_scope, excluded_items, and analysis_goals.
+    """
+    from core.models.consultant_structure import PipelineIntentClassification
+    from core.services.llm import get_llm
+    from langchain_core.prompts import ChatPromptTemplate
+
+    llm = get_llm()
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", (
+            "You are an expert scientific pipeline intent classifier. Analyze the user query and classify:\n"
+            "- data_level: 'raw_reads' (unprocessed FASTQ reads), 'intermediate_sequence' (FASTA contigs, assemblies), 'variant_data' (VCF), 'alignment_data' (BAM/SAM), 'tabular_metadata' (sample sheets), 'hybrid_multimodal' (both short and long reads), or 'unspecified'.\n"
+            "- domain_category: 'virology', 'bacteriology', 'metagenomics', 'parasitology_mycology', 'epidemiological_surveillance', 'general_bioinformatics', or 'unspecified'.\n"
+            "- workflow_scope:\n"
+            "  * 'diagnostic_probe': conceptual questions, questions asking what tools/databases/algorithms are supported, or inquiries without instruction to build or run a workflow.\n"
+            "  * 'targeted': request to perform/run a specific analysis goal on data (e.g. assemble contigs, screen resistance).\n"
+            "  * 'full_pipeline': request to build an end-to-end multi-stage pipeline from raw files to final report.\n"
+            "  * 'qc_only': request to inspect or calculate quality metrics only.\n"
+            "- skip_preprocessing: True if the user explicitly asks to skip QC/trimming or states data is pre-cleaned/assembled.\n"
+            "- technology: 'illumina', 'nanopore', 'pacbio', 'sanger', 'hybrid', or 'unspecified'.\n"
+            "- explicit_tool_requests: list of tool names explicitly named to be used.\n"
+            "- excluded_items: list of tool names or operations explicitly asked to be excluded, avoided, or omitted.\n"
+            "- analysis_goals: list of generic analysis operations requested (e.g. QC, Preprocessing, Trimming, Assembly, Mapping, Variant Calling, Annotation, AMR Screening, Typing, Lineage, Clustering, Metagenomics).\n"
+            "Remain 100% domain-agnostic and strictly faithful to the user's intent."
+        )),
+        ("human", "{query}")
+    ])
+    try:
+        classifier = llm.with_structured_output(PipelineIntentClassification, method="json_schema", include_raw=False)
+        chain = prompt | classifier
+        result = chain.invoke({"query": user_query})
+        return result.model_dump_json(indent=2)
+    except Exception as e:
+        logger.warning(f"classify_pipeline_intent_error: {e}")
+        return json.dumps({
+            "data_level": "unspecified",
+            "workflow_scope": "targeted",
+            "excluded_items": [],
+            "analysis_goals": [],
+            "error": str(e)
+        })
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 CONSULTANT_TOOLS = [
@@ -1346,5 +1396,6 @@ CONSULTANT_TOOLS = [
     search_design_patterns,
     search_helper_functions,
 ]
+
 
 

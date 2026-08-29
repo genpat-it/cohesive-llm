@@ -1,12 +1,14 @@
+import json
+import re
 from typing import Any
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.messages import ToolMessage as LCToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langgraph.store.base import BaseStore
 
 from core.config import settings
-from core.models.consultant_structure import ConsultantOutput
+from core.models.consultant_structure import ConsultantOutput, PipelineIntentClassification
 from core.services.graph_state import GraphState
 from core.services.llm import get_llm
 from core.services.prompt_loader import load_consultant_prompt, load_extractor_prompt
@@ -17,7 +19,7 @@ CONSULTANT_SYSTEM_PROMPT = load_consultant_prompt()
 EXTRACTOR_SYSTEM_PROMPT = load_extractor_prompt()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Approval detection utility
+# Approval & Intent Detection utilities
 # ──────────────────────────────────────────────────────────────────────────────
 
 _APPROVAL_PHRASES = (
@@ -30,37 +32,8 @@ _APPROVAL_PHRASES = (
 
 
 def _detect_approval(messages: list) -> bool:
-    """Return True if the LAST human message is a short approval of the proposed plan.
-
-    Guards:
-    - Only inspects the very last HumanMessage (not all messages) to avoid
-      false positives when a long pipeline request happens to contain a phrase
-      like "pipeline for" or "proceed".
-    - Short-circuits to False if the message is longer than 300 characters
-      (genuine approvals are brief; full pipeline descriptions are long).
-    """
-    for m in reversed(messages):
-        if isinstance(m, HumanMessage):
-            content = m.content
-            if isinstance(content, list):
-                text = " ".join(
-                    c.get("text", "") for c in content
-                    if isinstance(c, dict) and c.get("type") == "text"
-                )
-            elif isinstance(content, str):
-                text = content
-            else:
-                text = ""
-            text = text.strip()
-            # A real approval is short — reject long messages immediately
-            if len(text) > 300:
-                return False
-            text_lower = text.lower().rstrip("!.,;:?")
-            words = text_lower.split()
-            # Exact 1-2 word affirmations
-            if text_lower in ("yes", "yep", "yeah", "sure", "ok", "okay", "lgtm", "approved", "proceed", "build", "continue"):
-                return True
-            return any(phrase in text_lower for phrase in _APPROVAL_PHRASES)
+    """Abolished: All conversational user messages are processed by the Consultant LLM reasoning node.
+    Approval is triggered explicitly via state action='approve' or consultant_status='APPROVED'."""
     return False
 
 
@@ -78,16 +51,74 @@ def _detect_explicit_build_request(messages: list) -> bool:
     return False
 
 
+def _classify_intent_with_llm(messages: list) -> PipelineIntentClassification:
+    """Classify the user intent semantically using LLM structured output without brittle regexes."""
+    combined_text = ""
+    for m in messages:
+        if isinstance(m, HumanMessage):
+            content = m.content
+            if isinstance(content, list):
+                combined_text += " " + " ".join(c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text")
+            elif isinstance(content, str):
+                combined_text += " " + content
+
+    if not combined_text.strip():
+        return PipelineIntentClassification()
+
+    try:
+        llm = get_llm()
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", (
+                "You are an expert scientific pipeline intent classifier. Analyze the user query and classify:\n"
+                "- data_level: 'raw_reads' (unprocessed FASTQ reads), 'intermediate_sequence' (FASTA contigs, assemblies), 'variant_data' (VCF), 'alignment_data' (BAM/SAM), 'tabular_metadata' (sample sheets), 'hybrid_multimodal' (both short and long reads), or 'unspecified'.\n"
+                "- domain_category: 'virology', 'bacteriology', 'metagenomics', 'parasitology_mycology', 'epidemiological_surveillance', 'general_bioinformatics', or 'unspecified'.\n"
+                "- workflow_scope:\n"
+                "  * 'diagnostic_probe': conceptual questions, questions asking what tools/databases/algorithms are supported, or inquiries without instruction to build or run a workflow.\n"
+                "  * 'targeted': request to perform/run a specific analysis goal on data (e.g. assemble contigs, screen resistance).\n"
+                "  * 'full_pipeline': request to build an end-to-end multi-stage pipeline from raw files to final report.\n"
+                "  * 'qc_only': request to inspect or calculate quality metrics only.\n"
+                "- skip_preprocessing: True if the user explicitly asks to skip QC/trimming or states data is pre-cleaned/assembled.\n"
+                "- technology: 'illumina', 'nanopore', 'pacbio', 'sanger', 'hybrid', or 'unspecified'.\n"
+                "- explicit_tool_requests: list of tool names explicitly named to be used.\n"
+                "- excluded_items: list of tool names or operations explicitly asked to be excluded, avoided, or omitted.\n"
+                "- analysis_goals: list of generic analysis operations requested (e.g. QC, Preprocessing, Trimming, Assembly, Mapping, Variant Calling, Annotation, AMR Screening, Typing, Lineage, Clustering, Metagenomics).\n"
+                "Remain 100% domain-agnostic and strictly faithful to the user's intent."
+            )),
+            ("human", "{query}")
+        ])
+        classifier = llm.with_structured_output(PipelineIntentClassification, method="json_schema", include_raw=False)
+        chain = prompt | classifier
+        return chain.invoke({"query": combined_text.strip()})
+    except Exception as e:
+        logger.warning(f"intent_classification_fallback: {e}")
+        return PipelineIntentClassification()
+
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Message sanitisation
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _sanitize_messages_for_api(messages: list) -> list:
-    """Ensures every tool call has a corresponding tool response for strict API compliance."""
-    answered_ids = {m.tool_call_id for m in messages if isinstance(m, LCToolMessage)}
+    """Ensures every tool call has a corresponding tool response, strips redundant older revision headers,
+    truncates oversized tool outputs, and filters duplicate embedded SystemMessages."""
+    filtered_messages = []
+    for m in messages:
+        if isinstance(m, SystemMessage):
+            continue
+        # Strip legacy/older revision context headers from prior HumanMessages to avoid quadratic prompt bloat
+        if isinstance(m, HumanMessage) and "### CURRENT PIPELINE STATE & REVISION CONTEXT" in str(m.content):
+            content_str = str(m.content)
+            parts = content_str.split("\n\n", 1)
+            clean_content = parts[1] if len(parts) > 1 else content_str
+            filtered_messages.append(HumanMessage(content=clean_content))
+        else:
+            filtered_messages.append(m)
+
+    answered_ids = {m.tool_call_id for m in filtered_messages if isinstance(m, LCToolMessage)}
 
     patched = []
-    for msg in messages:
+    for msg in filtered_messages:
         patched.append(msg)
         if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
             for tc in msg.tool_calls:
@@ -99,6 +130,37 @@ def _sanitize_messages_for_api(messages: list) -> list:
                         name=tc.get("name", "unknown"),
                     ))
                     answered_ids.add(tc_id)
+
+    # ── Context Headroom Protection (Guard against input_tokens + max_tokens > 65536) ──
+    # If the message history character count exceeds ~140,000 chars (~38,000 tokens),
+    # safely prune intermediate tool executions from older completed turns while keeping:
+    # 1) The first 2 messages (original user request)
+    # 2) The last 10 messages (current active turn & recent context)
+    # 3) All HumanMessages and content-bearing AIMessages (all plans and discussions)
+    total_chars = sum(len(str(m.content)) for m in patched)
+    if total_chars > 140000 and len(patched) > 12:
+        keep_indices = set(range(min(2, len(patched))))
+        keep_indices.update(range(max(0, len(patched) - 10), len(patched)))
+        for i, m in enumerate(patched):
+            if isinstance(m, HumanMessage) or (isinstance(m, AIMessage) and m.content and not getattr(m, "tool_calls", None)):
+                keep_indices.add(i)
+
+        pruned = [m for i, m in enumerate(patched) if i in keep_indices]
+        pruned_answered = {m.tool_call_id for m in pruned if isinstance(m, LCToolMessage)}
+        final_patched = []
+        for msg in pruned:
+            final_patched.append(msg)
+            if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+                for tc in msg.tool_calls:
+                    tc_id = tc.get("id") or tc.get("tool_call_id")
+                    if tc_id and tc_id not in pruned_answered:
+                        final_patched.append(LCToolMessage(
+                            content="[Historical tool call compacted]",
+                            tool_call_id=tc_id,
+                            name=tc.get("name", "unknown"),
+                        ))
+                        pruned_answered.add(tc_id)
+        return final_patched
 
     return patched
 
@@ -129,7 +191,7 @@ def consultant_node(state: GraphState) -> Any:
                 fact_lines.append(f"  - {fact}")
         formatted_facts = "\n".join(fact_lines)
 
-    is_approval_turn = _detect_approval(current_messages)
+    is_approval_turn = (state.get("action") == "approve") or _detect_approval(current_messages)
 
     revision_context = f"""### CURRENT PIPELINE STATE & REVISION CONTEXT
 - Current Modules: {current_components}
@@ -155,19 +217,24 @@ def consultant_node(state: GraphState) -> Any:
         logger.info("consultant_approval_turn_no_tools")
         approval_msg = AIMessage(content="Understood — proceeding to build the pipeline as planned.")
         logger.info("consultant_tool_calls", count=0)
-        return {"messages": [approval_msg]}
+        return {"messages": [approval_msg], "consultant_status": "APPROVED"}
 
     llm_with_tools = llm.bind_tools(get_consultant_tools())
     chain = prompt | llm_with_tools
     safe_messages = _sanitize_messages_for_api(current_messages)
 
-    # [Middle-Tail / Dynamic Context]: Prepend revision state to dynamic messages if state/facts exist
+    # [Middle-Tail / Dynamic Context]: Attach revision state to latest human message if state/facts exist
     has_active_state = (current_plan != "No plan generated yet.") or bool(current_components) or bool(formatted_facts)
     if has_active_state and safe_messages:
-        # If the first message is a HumanMessage, prepend the revision context into the prompt stream
-        if isinstance(safe_messages[0], HumanMessage) and "### CURRENT PIPELINE STATE" not in str(safe_messages[0].content):
-            safe_messages = [HumanMessage(content=f"{revision_context.strip()}\n\n{safe_messages[0].content}")] + safe_messages[1:]
-        elif not isinstance(safe_messages[0], HumanMessage):
+        # Prepend revision context to the latest HumanMessage in the current turn:
+        injected = False
+        for i in range(len(safe_messages) - 1, -1, -1):
+            if isinstance(safe_messages[i], HumanMessage):
+                if "### CURRENT PIPELINE STATE" not in str(safe_messages[i].content):
+                    safe_messages = safe_messages[:i] + [HumanMessage(content=f"{revision_context.strip()}\n\n{safe_messages[i].content}")] + safe_messages[i+1:]
+                injected = True
+                break
+        if not injected:
             safe_messages = [HumanMessage(content=revision_context.strip())] + safe_messages
 
     try:
@@ -234,7 +301,12 @@ def _get_ai_content(messages: list) -> str:
     return ""
 
 
-def _validate_approved_components(result: ConsultantOutput, store: BaseStore) -> None:
+def _validate_approved_components(
+    result: ConsultantOutput,
+    store: BaseStore,
+    input_datatype: str = "unspecified",
+    allow_auto_trimming: bool = False,
+) -> None:
     from core.services.knowledge_graph import kg
     if store and not kg.is_built:
         kg.build_nx_graph(store)
@@ -249,7 +321,11 @@ def _validate_approved_components(result: ConsultantOutput, store: BaseStore) ->
 
     if kg.is_built and result.selected_component_ids:
         # Check and bridge topological path reachability
-        bridged = kg.bridge_pipeline_path(result.selected_component_ids)
+        bridged = kg.bridge_pipeline_path(
+            result.selected_component_ids,
+            input_datatype=input_datatype,
+            allow_auto_trimming=allow_auto_trimming,
+        )
         result.selected_component_ids = bridged
 
     for mod_id in result.selected_component_ids:
@@ -317,7 +393,7 @@ def _get_verified_plan_shortcircuit(messages: list, state: GraphState, store: Ba
 
     # Check if approval or direct execution mode
     is_direct_mode = state.get("execution_mode") == "direct"
-    is_approved = is_direct_mode or _detect_approval(messages) or _detect_explicit_build_request(messages)
+    is_approved = is_direct_mode or (state.get("consultant_status") == "APPROVED") or (state.get("action") == "approve")
     status = "APPROVED" if is_approved else "CHATTING"
 
     from core.services.knowledge_graph import kg
@@ -325,33 +401,57 @@ def _get_verified_plan_shortcircuit(messages: list, state: GraphState, store: Ba
         kg.build_nx_graph(store)
 
     if kg.is_built and verified_comps:
-        # Dynamic query decomposition to capture all scientific sub-goals from user prompt
-        user_msg = ""
-        for m in state.get("messages", []):
-            if hasattr(m, "content") and m.content and type(m).__name__ in ("HumanMessage", "UserMessage"):
-                user_msg = str(m.content).lower()
-                break
-            elif hasattr(m, "content") and m.content and not getattr(m, "tool_calls", None) and type(m).__name__ not in ("AIMessage", "SystemMessage", "ToolMessage"):
-                user_msg = str(m.content).lower()
-                break
-
-        if user_msg:
-            sub_queries = kg.decompose_conjunction_query(user_msg)
-            if len(sub_queries) > 1:
-                projected_comps = []
-                for sub_q in sub_queries:
-                    proj_id = kg.project_vertex(sub_q)
-                    if proj_id and proj_id in kg.G and proj_id not in projected_comps:
-                        projected_comps.append(proj_id)
-                if len(projected_comps) >= 8:
-                    verified_comps = projected_comps
-                else:
-                    for p in projected_comps:
-                        if p not in verified_comps:
-                            verified_comps.append(p)
+        # Dynamic query decomposition to capture all scientific sub-goals across conversation turns
+        user_msgs = [
+            str(m.content).lower() for m in state.get("messages", [])
+            if hasattr(m, "content") and m.content and type(m).__name__ in ("HumanMessage", "UserMessage")
+        ]
+        user_msg = " ".join(user_msgs)
 
         valid_comps, _ = kg.partition_raw_ids(verified_comps)
         verified_comps = kg.expand_composite_components(valid_comps, store=store)
+
+        intent = _classify_intent_with_llm(state.get("messages", []))
+        excluded_set = set(intent.excluded_items) if intent.excluded_items else set()
+
+        if excluded_set:
+            verified_comps = [
+                c for c in verified_comps
+                if not any(ex.lower() in c.lower() for ex in excluded_set)
+            ]
+
+        if not template_id and user_msg:
+            # 1. Project all explicitly mentioned tools from user prompt, respecting LLM-detected exclusions
+            all_named = kg.project_all_vertices(user_msg, excluded_items=excluded_set)
+            if len(all_named) >= 8:
+                verified_comps = all_named
+            else:
+                for p in all_named:
+                    p_prefix = "_".join(p.split("_")[:3]) if "_" in p else p
+                    replaced = False
+                    for i, vc in enumerate(verified_comps):
+                        vc_prefix = "_".join(vc.split("_")[:3]) if "_" in vc else vc
+                        if p_prefix == vc_prefix and p != vc:
+                            tool_name_p = p.split("__")[-1] if "__" in p else p
+                            tool_name_vc = vc.split("__")[-1] if "__" in vc else vc
+                            if tool_name_p.lower() in user_msg and (tool_name_vc.lower() not in user_msg or tool_name_vc.lower() in excluded_set):
+                                verified_comps[i] = p
+                                replaced = True
+                                break
+                    if not replaced and p not in verified_comps:
+                        verified_comps.append(p)
+
+        allow_trim = (
+            intent.workflow_scope == "full_pipeline"
+            and intent.data_level in ("raw_reads", "hybrid_multimodal")
+            and not intent.skip_preprocessing
+        )
+        if not template_id:
+            verified_comps = kg.bridge_pipeline_path(
+                verified_comps,
+                input_datatype=intent.data_level,
+                allow_auto_trimming=allow_trim,
+            )
 
     logger.info("consultant_extract_fastpath_hit", status=status, components=verified_comps)
 
@@ -371,7 +471,8 @@ def consultant_extract_node(state: GraphState, store: BaseStore) -> Any:  # noqa
     logger.info("node_start", node="consultant_extract")
     messages = state.get("messages", [])
 
-    if _detect_approval(messages) and state.get("selected_component_ids"):
+    is_approval_action = (state.get("consultant_status") == "APPROVED") or (state.get("action") == "approve") or _detect_approval(messages)
+    if is_approval_action and state.get("selected_component_ids"):
         return _get_approval_shortcircuit(messages, state)
 
     # ── Fast-Path Deterministic Extraction (0ms, 0 GPU tokens) ───────────────
@@ -404,8 +505,11 @@ def consultant_extract_node(state: GraphState, store: BaseStore) -> Any:  # noqa
         })
 
         is_direct_mode = state.get("execution_mode") == "direct"
-        if is_direct_mode or _detect_approval(messages) or (_detect_explicit_build_request(messages) and result.selected_component_ids and len(result.selected_component_ids) >= 1):
+        is_approved = is_direct_mode or (state.get("consultant_status") == "APPROVED") or (state.get("action") == "approve")
+        if is_approved:
             result.status = "APPROVED"
+        else:
+            result.status = "CHATTING"
 
         logger.info("consultant_extract_status", status=result.status)
 
@@ -414,23 +518,36 @@ def consultant_extract_node(state: GraphState, store: BaseStore) -> Any:  # noqa
         if store and not kg.is_built:
             kg.build_nx_graph(store)
 
-        if kg.is_built and result.selected_component_ids:
-            # Context-aware disambiguation based on original user prompt
-            user_msg = ""
-            for m in state.get("messages", []):
-                if hasattr(m, "content") and m.content and type(m).__name__ in ("HumanMessage", "UserMessage"):
-                    user_msg = str(m.content).lower()
-                    break
-                elif hasattr(m, "content") and m.content and not getattr(m, "tool_calls", None) and type(m).__name__ not in ("AIMessage", "SystemMessage", "ToolMessage"):
-                    user_msg = str(m.content).lower()
-                    break
+        intent = _classify_intent_with_llm(messages)
+        excluded_set = set(intent.excluded_items) if intent.excluded_items else set()
 
-            valid_comps, _helper_funcs = kg.partition_raw_ids(result.selected_component_ids)
-            result.selected_component_ids = kg.expand_composite_components(valid_comps, store=store)
+        if kg.is_built:
+            # Context-aware disambiguation based on conversation user prompts
+            user_msgs = [
+                str(m.content).lower() for m in state.get("messages", [])
+                if hasattr(m, "content") and m.content and type(m).__name__ in ("HumanMessage", "UserMessage")
+            ]
+            user_msg = " ".join(user_msgs)
 
+            named_tools = kg.project_all_vertices(user_msg, excluded_items=excluded_set) if user_msg else []
+            if len(named_tools) >= 8:
+                result.selected_component_ids = named_tools
+            elif result.selected_component_ids:
+                if excluded_set:
+                    result.selected_component_ids = [
+                        c for c in result.selected_component_ids
+                        if not any(ex.lower() in c.lower() for ex in excluded_set)
+                    ]
+                valid_comps, _helper_funcs = kg.partition_raw_ids(result.selected_component_ids)
+                result.selected_component_ids = kg.expand_composite_components(valid_comps, store=store)
+
+        allow_trim = (
+            intent.workflow_scope == "full_pipeline"
+            and intent.data_level in ("raw_reads", "hybrid_multimodal")
+            and not intent.skip_preprocessing
+        )
         if result.status == "APPROVED":
             if not result.selected_component_ids:
-                import json
                 extracted = []
                 # Fallback: extract from verified tool memory
                 for fact in ((state.get("tool_memory", []) or []) + tool_memory_new):
@@ -447,9 +564,28 @@ def consultant_extract_node(state: GraphState, store: BaseStore) -> Any:  # noqa
                                     extracted.append(data.get("id"))
                         except Exception:
                             pass
+                if not extracted and is_direct_mode and kg.is_built:
+                    user_msg = ""
+                    for m in state.get("messages", []):
+                        if hasattr(m, "content") and m.content and type(m).__name__ in ("HumanMessage", "UserMessage"):
+                            user_msg = str(m.content).lower()
+                            break
+                    if user_msg:
+                        named_tools = kg.project_all_vertices(user_msg, excluded_items=excluded_set)
+                        if named_tools:
+                            extracted = kg.bridge_pipeline_path(
+                                named_tools,
+                                input_datatype=intent.data_level,
+                                allow_auto_trimming=allow_trim,
+                            )
                 result.selected_component_ids = kg.expand_composite_components(extracted, store=store) if kg.is_built else extracted
 
-            _validate_approved_components(result, store)
+            _validate_approved_components(
+                result,
+                store,
+                input_datatype=intent.data_level,
+                allow_auto_trimming=allow_trim,
+            )
 
         is_hard_reset = (result.status == "CHATTING" and not result.draft_plan and len(result.selected_component_ids) == 0)
 

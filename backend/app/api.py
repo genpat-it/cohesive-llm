@@ -1,5 +1,8 @@
 import asyncio
+import json
 import os
+import re
+import urllib.request
 import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
@@ -37,7 +40,9 @@ from app.services.rate_limit import limiter
 # --- 1. DATA MODELS ---
 class ChatRequest(BaseModel):
     session_id: str = Field(..., description="Unique ID for the user session to remember chat history")
-    message: str = Field(..., description="The user's prompt or reply")
+    message: Optional[str] = Field("", description="The user's prompt or reply")
+    action: Optional[str] = Field(None, description="Optional action flag (e.g. 'approve')")
+    execution_mode: Optional[str] = Field("interactive", description="'interactive' (plan review) or 'direct' (1-shot build)")
     generate_diagrams: bool = Field(True, description="Whether to run diagram generation nodes for this turn")
     idempotency_key: Optional[str] = Field(None, description="Optional key to prevent duplicate requests")
 
@@ -51,6 +56,8 @@ class ChatResponse(BaseModel):
     ast_json: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     tool_calls: Optional[List[str]] = None
+    has_plan: bool = False
+    selected_components: Optional[List[str]] = None
 
 
 class ValidateRequest(BaseModel):
@@ -177,9 +184,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# Routers
+# Routers (mounted under both root and /api for direct dev access)
 app.include_router(auth_router)
 app.include_router(conversations_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(conversations_router, prefix="/api")
 
 
 # --- 5. ENDPOINTS ---
@@ -252,8 +261,77 @@ def system_info() -> Dict[str, Any]:
         info["ram"] = {
             "used_mb": int(vm.used / 1024 / 1024),
             "total_mb": int(vm.total / 1024 / 1024),
-            "percent": vm.percent,
+            "available_mb": int(vm.available / 1024 / 1024),
+            "percent": round(vm.percent, 1),
         }
+    except Exception:
+        pass
+
+    # CPU stats
+    try:
+        import psutil
+        cpu_pct = psutil.cpu_percent(interval=None)
+        cpu_name = None
+        try:
+            cpu_name = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True, timeout=2).strip()
+        except Exception:
+            pass
+        info["cpu"] = {
+            "percent": round(cpu_pct, 1),
+            "cores": psutil.cpu_count(logical=True),
+            "name": cpu_name,
+        }
+    except Exception:
+        pass
+
+    # LLM Server Telemetry (vLLM / remote inference engine)
+    try:
+        import urllib.request
+        base_endpoint = os.environ.get("OPENAI_BASE_URL") or os.environ.get("LOCAL_LLM_URL") or "http://localhost:8000/v1"
+        root_url = base_endpoint.rstrip("/").removesuffix("/v1")
+        server_stats: Dict[str, Any] = {}
+
+        # 1. Active Model & Max Context Window
+        try:
+            req = urllib.request.urlopen(f"{root_url}/v1/models", timeout=1.5)
+            models_data = json.loads(req.read().decode())
+            if models_data.get("data"):
+                m0 = models_data["data"][0]
+                server_stats["model_id"] = m0.get("id")
+                server_stats["max_model_len"] = m0.get("max_model_len")
+                server_stats["engine"] = m0.get("owned_by")
+        except Exception:
+            pass
+
+        # 2. Real-time KV Cache & Prefix Cache Telemetry
+        try:
+            req_m = urllib.request.urlopen(f"{root_url}/metrics", timeout=1.5)
+            metrics_text = req_m.read().decode()
+
+            def _parse_gauge(metric_name: str, text: str) -> float | None:
+                m = re.search(r'^' + re.escape(metric_name) + r'(?:\{[^}]*\})?\s+([0-9.eE+-]+)', text, re.M)
+                return float(m.group(1)) if m else None
+
+            kv_cache = _parse_gauge("vllm:kv_cache_usage_perc", metrics_text)
+            if kv_cache is not None:
+                server_stats["kv_cache_percent"] = round(kv_cache * 100, 1)
+
+            running = _parse_gauge("vllm:num_requests_running", metrics_text)
+            if running is not None:
+                server_stats["requests_running"] = int(running)
+
+            hit_m = re.search(r'vllm:prompt_tokens_by_source_total\{[^}]*source=\"local_cache_hit\"\}\s+([0-9.eE+-]+)', metrics_text)
+            comp_m = re.search(r'vllm:prompt_tokens_by_source_total\{[^}]*source=\"local_compute\"\}\s+([0-9.eE+-]+)', metrics_text)
+            if hit_m and comp_m:
+                hits = float(hit_m.group(1))
+                comp = float(comp_m.group(1))
+                if (hits + comp) > 0:
+                    server_stats["prefix_cache_hit_rate"] = round(hits / (hits + comp) * 100, 1)
+        except Exception:
+            pass
+
+        if server_stats:
+            info["llm_server"] = server_stats
     except Exception:
         pass
 
@@ -411,22 +489,52 @@ async def generate_from_graph(
 ) -> ChatResponse:
     """Generate a pipeline from a visual graph, executing the pipeline generation subgraph directly."""
     component_ids = [n["component_id"] for n in request.nodes if "component_id" in n]
-    connections = []
+    visual_wires = []
+    connections_text = []
+
     for e in request.edges:
         src = next((n for n in request.nodes if n.get("node_id") == e.get("source")), None)
         tgt = next((n for n in request.nodes if n.get("node_id") == e.get("target")), None)
         if src and tgt:
-            connections.append(f"{src.get('component_id')} -> {tgt.get('component_id')}")
+            src_cid = src.get("component_id")
+            tgt_cid = tgt.get("component_id")
+
+            src_port_key = str(e.get("source_port", "output_1"))
+            tgt_port_key = str(e.get("target_port", "input_1"))
+
+            src_outputs = src.get("outputs") or []
+            tgt_inputs = tgt.get("inputs") or []
+
+            src_idx = int(src_port_key.split("_")[-1]) - 1 if "_" in src_port_key and src_port_key.split("_")[-1].isdigit() else 0
+            tgt_idx = int(tgt_port_key.split("_")[-1]) - 1 if "_" in tgt_port_key and tgt_port_key.split("_")[-1].isdigit() else 0
+
+            src_channel = src_outputs[src_idx] if 0 <= src_idx < len(src_outputs) else src_port_key
+            tgt_channel = tgt_inputs[tgt_idx] if 0 <= tgt_idx < len(tgt_inputs) else tgt_port_key
+
+            visual_wires.append({
+                "source_id": src_cid,
+                "source_channel": src_channel,
+                "source_port": src_port_key,
+                "target_id": tgt_cid,
+                "target_channel": tgt_channel,
+                "target_port": tgt_port_key,
+            })
+            connections_text.append(f"{src_cid} ({src_channel}) -> {tgt_cid} ({tgt_channel})")
 
     plan = "## Visual Pipeline Design\n\n"
     plan += "### Components (in order):\n"
     for cid in component_ids:
         plan += f"- {cid}\n"
     plan += "\n### Data Flow:\n"
-    for conn in connections:
+    for conn in connections_text:
         plan += f"- {conn}\n"
     plan += "\n### Instructions:\n"
-    plan += "Generate a Nextflow DSL2 pipeline using exactly these components in the order and connections shown above.\n"
+    plan += "Generate a Nextflow DSL2 pipeline using exactly these components and explicit visual channel connections.\n"
+
+    visual_topology = {
+        "components": component_ids,
+        "wires": visual_wires,
+    }
 
     drawing_id = request.drawing_id
     if request.graph_json:
@@ -459,12 +567,15 @@ async def generate_from_graph(
             {
                 "user_query": plan,
                 "messages": [("user", plan)],
-                "consultant_status": "APPROVED",
+                "consultant_status": None,
+                "action": "approve",
+                "execution_mode": "direct",
                 "design_plan": plan,
-                "selected_module_ids": component_ids,
+                "selected_component_ids": component_ids,
                 "strategy_selector": "CUSTOM_BUILD",
                 "used_template_id": None,
                 "generate_diagrams": True,
+                "visual_topology": visual_topology,
             },
             config=config,
         )
@@ -473,6 +584,7 @@ async def generate_from_graph(
         ast_json = result.get("ast_json")
         mermaid = result.get("mermaid_deterministic") or result.get("mermaid_agent") or result.get("mermaid_code")
         error = result.get("error")
+        validation_error = result.get("validation_error")
 
         messages = result.get("messages", [])
         reply = "Pipeline successfully generated and validated from your visual design."
@@ -480,6 +592,9 @@ async def generate_from_graph(
             if isinstance(msg, AIMessage) and msg.content:
                 reply = msg.content
                 break
+
+        if validation_error and nf_code:
+            reply += f"\n\n⚠️ **Validation Notice**: {validation_error}"
 
         append_message(
             db, conv, "assistant", reply,
@@ -493,7 +608,7 @@ async def generate_from_graph(
             nextflow_code=nf_code,
             mermaid_code=mermaid,
             ast_json=ast_json,
-            error=error,
+            error=error or validation_error,
         )
     except Exception as e:
         logger.error("graph_generation_failed", error=str(e))
@@ -510,19 +625,34 @@ async def chat_with_agent(
     structlog.contextvars.bind_contextvars(trace_id=trace_id, session_id=request.session_id, user_id=user.id)
 
     try:
-        conv = get_or_create_conversation(db, user, request.session_id, request.message)
-        append_message(db, conv, "user", request.message)
+        user_msg = request.message or ""
+        if request.action == "approve":
+            conv = get_or_create_conversation(db, user, request.session_id, "Pipeline Approved")
+            append_message(db, conv, "user", "[⚡ Approved Plan via UI]")
+            input_payload = {
+                "consultant_status": "APPROVED",
+                "action": "approve",
+                "execution_mode": "direct",
+                "generate_diagrams": request.generate_diagrams,
+            }
+        else:
+            conv = get_or_create_conversation(db, user, request.session_id, user_msg)
+            append_message(db, conv, "user", user_msg)
+            input_payload = {
+                "user_query": user_msg,
+                "consultant_status": None,
+                "action": None,
+                "execution_mode": request.execution_mode or "interactive",
+                "generate_diagrams": request.generate_diagrams,
+                "messages": [("user", user_msg)],
+            }
 
         thread_id = f"u{user.id}:{request.session_id}"
         config = {"configurable": {"thread_id": thread_id}}
 
         result = await asyncio.wait_for(
             app_graph.ainvoke(
-                {
-                    "user_query": request.message,
-                    "generate_diagrams": request.generate_diagrams,
-                    "messages": [("user", request.message)],
-                },
+                input_payload,
                 config=config,
             ),
             timeout=600.0,
@@ -550,7 +680,10 @@ async def chat_with_agent(
             if result.get("error"):
                 ai_reply = f"I encountered an error while building the pipeline: {result.get('error')}"
             elif result.get("validation_error"):
-                ai_reply = f"I could not fix the pipeline validation errors after multiple attempts. The last error was:\n\n{result.get('validation_error')}"
+                if nf_code or ast_json:
+                    ai_reply = f"I have generated the Nextflow pipeline based on your approved plan.\n\n⚠️ **Validation Notice**: {result.get('validation_error')}\n\nPlease review the generated workflow code below."
+                else:
+                    ai_reply = f"I could not complete the pipeline AST validation. Details:\n\n{result.get('validation_error')}"
             else:
                 ai_reply = "I have successfully generated and validated the Nextflow pipeline based on your approved plan."
         else:
@@ -585,6 +718,9 @@ async def chat_with_agent(
             ast_json=ast_json,
         )
 
+        selected_comps = result.get("selected_component_ids") or []
+        has_plan_flag = bool(selected_comps) and (status_val == "CHATTING")
+
         return ChatResponse(
             status=status_val,
             reply=ai_reply,
@@ -594,6 +730,8 @@ async def chat_with_agent(
             ast_json=ast_json,
             error=None,
             tool_calls=tool_calls,
+            has_plan=has_plan_flag,
+            selected_components=selected_comps if has_plan_flag else None,
         )
 
     except TimeoutError:
@@ -612,3 +750,21 @@ async def chat_with_agent(
         )
     finally:
         structlog.contextvars.clear_contextvars()
+
+
+# --- 6. STATIC FRONTEND MOUNT ---
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+_frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend"))
+
+@app.get("/drawer")
+async def get_drawer_page():
+    drawer_file = os.path.join(_frontend_dir, "drawer.html")
+    if os.path.isfile(drawer_file):
+        return FileResponse(drawer_file, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Drawer page not found")
+
+if os.path.isdir(_frontend_dir):
+    app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")
+

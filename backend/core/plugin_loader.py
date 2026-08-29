@@ -143,7 +143,7 @@ class PluginConfig:
 
     @property
     def query_synonyms(self) -> dict[str, list[str]]:
-        """Dynamic synonyms mapping for Graph normalization (e.g. 'assembly': ['contigs', 'spades'])."""
+        """Dynamic synonyms mapping for Graph normalization (e.g. 'domain_a': ['synonym_1', 'synonym_2'])."""
         return self._rag_config.get("query_synonyms", {})
 
     @property

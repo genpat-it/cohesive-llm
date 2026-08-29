@@ -49,15 +49,18 @@ class Settings(BaseSettings):
     JUDGE_MODEL: str | None = Field(default=None)
     JUDGE_BASE_URL: str | None = Field(default=None)
 
+    # Model Token Budgets
+    MAX_COMPLETION_TOKENS: int = 16384
+
     # RAG Retrieval Tuning
-    RAG_MAX_KEYWORD_COMPONENTS: int = 15
-    RAG_MAX_KEYWORD_TEMPLATES: int = 2
+    RAG_MAX_KEYWORD_COMPONENTS: int = 25
+    RAG_MAX_KEYWORD_TEMPLATES: int = 3
     RAG_KEYWORD_TEMPLATE_MIN_SCORE: int = 5
-    RAG_KEYWORD_COMPONENT_THRESHOLD: float = 0.20
-    RAG_FAISS_K: int = 20
-    RAG_FAISS_MAX_L2_DISTANCE: float = 2.5
-    RAG_FAISS_RELATIVE_MARGIN: float = 0.35
-    RAG_MAX_HELPER_FUNCTIONS: int = 5
+    RAG_KEYWORD_COMPONENT_THRESHOLD: float = 0.15
+    RAG_FAISS_K: int = 30
+    RAG_FAISS_MAX_L2_DISTANCE: float = 2.8
+    RAG_FAISS_RELATIVE_MARGIN: float = 0.40
+    RAG_MAX_HELPER_FUNCTIONS: int = 8
 
     # Templates to exclude from RAG
     RAG_EXCLUDED_TEMPLATES: set[str] = Field(default_factory=set)
@@ -70,22 +73,22 @@ class Settings(BaseSettings):
     MAX_REPAIR_RETRIES: int = 3
     MAX_DIAGRAM_RETRIES: int = 3
 
-    # Memory & Context Windows
-    MEMORY_KEEP_LAST_N: int = 40
-    MEMORY_MAX_TOOL_FACTS: int = 10
-    CONTEXT_WINDOW_EXTRACT: int = 40
-    CONTEXT_WINDOW_REASON: int = 10
-    CONTEXT_WINDOW_REPAIR: int = 30
+    # Memory & Context Windows (Optimized for 65,536 tokens)
+    MEMORY_KEEP_LAST_N: int = 60
+    MEMORY_MAX_TOOL_FACTS: int = 20
+    CONTEXT_WINDOW_EXTRACT: int = 60
+    CONTEXT_WINDOW_REASON: int = 20
+    CONTEXT_WINDOW_REPAIR: int = 40
 
     # Tool Result & Code Truncation
-    MAX_CODE_DISPLAY_LENGTH: int = 3000
-    MAX_TOOL_RESULT_PREVIEW: int = 500
-    MAX_SEARCH_RESULTS: int = 15
+    MAX_CODE_DISPLAY_LENGTH: int = 8000
+    MAX_TOOL_RESULT_PREVIEW: int = 1500
+    MAX_SEARCH_RESULTS: int = 25
 
     # Search & Discovery
     SEARCH_SCAN_LIMIT: int = 10000
-    DESCRIPTION_TRUNCATE_TMPL: int = 150
-    DESCRIPTION_TRUNCATE_COMP: int = 120
+    DESCRIPTION_TRUNCATE_TMPL: int = 250
+    DESCRIPTION_TRUNCATE_COMP: int = 200
 
 
 settings = Settings()

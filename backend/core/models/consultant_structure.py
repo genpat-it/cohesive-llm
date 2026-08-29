@@ -60,3 +60,58 @@ class ConsultantOutput(BaseModel):
             if not self.strategy_selector:
                 self.strategy_selector = "CUSTOM_BUILD"
         return self
+
+
+class PipelineIntentClassification(BaseModel):
+    """Domain-agnostic LLM classification of user request intent, data level, domain, and constraints."""
+    data_level: Literal[
+        "raw_reads",
+        "intermediate_sequence",
+        "variant_data",
+        "alignment_data",
+        "tabular_metadata",
+        "hybrid_multimodal",
+        "unspecified",
+    ] = Field(
+        default="unspecified",
+        description="The abstraction level of the user's input data: 'raw_reads' (unprocessed sequencer reads/FASTQ), 'intermediate_sequence' (contigs, scaffolds, FASTA, assemblies), 'variant_data' (VCF, mutation tables), 'alignment_data' (BAM/SAM/CRAM), 'tabular_metadata' (TSV/CSV sample sheets), 'hybrid_multimodal' (both short and long reads), or 'unspecified'."
+    )
+    domain_category: Literal[
+        "virology",
+        "bacteriology",
+        "metagenomics",
+        "parasitology_mycology",
+        "epidemiological_surveillance",
+        "general_bioinformatics",
+        "unspecified",
+    ] = Field(
+        default="unspecified",
+        description="The biological domain category inferred from query or sample context: 'virology', 'bacteriology', 'metagenomics', 'parasitology_mycology', 'epidemiological_surveillance', 'general_bioinformatics', or 'unspecified'."
+    )
+    workflow_scope: Literal["targeted", "full_pipeline", "qc_only", "diagnostic_probe"] = Field(
+        default="targeted",
+        description="'targeted' for focused/single-goal execution; 'full_pipeline' for an end-to-end multi-stage pipeline from raw files to final report; 'qc_only' for quality assessment only; 'diagnostic_probe' for conceptual questions without building a pipeline."
+    )
+    skip_preprocessing: bool = Field(
+        default=False,
+        description="True if the user explicitly requested to skip quality trimming/preprocessing or stated the data is already clean/pre-processed."
+    )
+    technology: Literal["illumina", "nanopore", "pacbio", "sanger", "hybrid", "unspecified"] = Field(
+        default="unspecified",
+        description="Sequencing technology if mentioned or inferred (e.g. 'illumina', 'nanopore', 'pacbio', 'sanger', 'hybrid')."
+    )
+    explicit_tool_requests: list[str] = Field(
+        default_factory=list,
+        description="List of specific software or tool names explicitly requested by the user."
+    )
+    excluded_items: list[str] = Field(
+        default_factory=list,
+        description="List of any specific tools, processes, or operations the user explicitly asked NOT to use, exclude, or avoid."
+    )
+    analysis_goals: list[str] = Field(
+        default_factory=list,
+        description="Generic analysis operations requested (e.g. QC, Preprocessing, Trimming, Assembly, Mapping, Variant Calling, Annotation, AMR Screening, Typing, Lineage, Clustering, Metagenomics)."
+    )
+
+
+

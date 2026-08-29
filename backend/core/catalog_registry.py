@@ -132,18 +132,11 @@ class CatalogRegistry:
                     self._import_paths[comp_name] = f"{prefix}{comp_name}"
 
     def _load_function_exports(self, plugin: Any) -> None:
-        """Scan the code store to find all exported functions and map them to their parent component."""
+        """Scan code_store.jsonl to find all exported functions and map them to their parent component."""
         import re
-        store_paths = [
-            plugin.plugin_dir / "code_store_hollow.jsonl",
-            plugin.plugin_dir / "code_store.jsonl",
-        ]
-        
-        target_path = next((p for p in store_paths if p.exists()), None)
-        if not target_path:
+        target_path = plugin.plugin_dir / "code_store.jsonl"
+        if not target_path.exists():
             return
-
-        static_helpers = set(getattr(plugin, "helper_imports", {}).keys())
 
         try:
             with open(target_path, encoding='utf-8') as f:
@@ -160,8 +153,7 @@ class CatalogRegistry:
                     matches = re.finditer(r'^\s*def\s+([a-zA-Z0-9_]+)\s*\(', content, flags=re.MULTILINE)
                     for m in matches:
                         func_name = m.group(1)
-                        if func_name not in static_helpers:
-                            self._function_exports[func_name] = comp_id
+                        self._function_exports[func_name] = comp_id
         except Exception as e:
             logger.warning(f"--- [REGISTRY] Warning: Could not load function exports: {e}")
 
@@ -197,6 +189,13 @@ class CatalogRegistry:
         if comp_id:
             return self.get_import_path(comp_id)
         return None
+
+    def get_default_input_function(self) -> str:
+        """Dynamically return the default input helper function from the active plugin configuration."""
+        for fn in self._helper_imports:
+            if "input" in fn.lower() or "read" in fn.lower():
+                return fn
+        return "getSingleInput"
 
 
 

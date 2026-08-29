@@ -43,28 +43,26 @@ def get_llm() -> BaseChatModel:
 
     kwargs: dict = {"model": model}
 
+    max_completion = int(os.environ.get("MAX_TOKENS", settings.MAX_COMPLETION_TOKENS))
+
     if provider == "openai":
         kwargs["api_key"] = _resolve_api_key("TEMP_API_KEY", "OPENAI_API_KEY")
         base_url = os.environ.get("OPENAI_BASE_URL") or None
         if base_url:
             kwargs["base_url"] = base_url
-            kwargs["model_kwargs"] = {"parallel_tool_calls": False}
-            kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
-            kwargs["max_tokens"] = 4096
-            kwargs["timeout"] = 300
-            kwargs["max_retries"] = 1
-        else:
-            kwargs["model_kwargs"] = {"parallel_tool_calls": False}
-            kwargs["max_tokens"] = 4096
-            kwargs["timeout"] = 300
-            kwargs["max_retries"] = 1
+        kwargs["model_kwargs"] = {"parallel_tool_calls": False}
+        kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+        kwargs["max_tokens"] = max_completion
+        kwargs["timeout"] = 300
+        kwargs["max_retries"] = 2
     elif provider == "anthropic":
         kwargs["api_key"] = _resolve_api_key("TEMP_API_KEY", "ANTHROPIC_API_KEY")
+        kwargs["max_tokens"] = max_completion
     elif provider == "local":
         kwargs["base_url"] = os.environ.get("LOCAL_LLM_URL", "http://localhost:8000/v1").strip()
         kwargs["model_kwargs"] = {"parallel_tool_calls": False}
         kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
-        kwargs["max_tokens"] = 4096
+        kwargs["max_tokens"] = max_completion
     elif provider == "google":
         kwargs["api_key"] = _resolve_api_key("TEMP_API_KEY", "GOOGLE_API_KEY")
 

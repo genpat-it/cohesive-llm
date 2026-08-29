@@ -1,7 +1,7 @@
-import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=11';
-import { initChatUi } from './chat.js?v=8';
-import { initResultsUi } from './results.js?v=4';
-import { initSidebar } from './sidebar.js?v=2';
+import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=19';
+import { initChatUi } from './chat.js?v=19';
+import { initResultsUi } from './results.js?v=19';
+import { initSidebar } from './sidebar.js?v=19';
 
 // Auth guard: redirect to /login.html if no valid session.
 // The <html> element has the `auth-pending` class set very early in <head>,
@@ -73,9 +73,63 @@ const handleSendMessage = async (text) => {
         }
 
         if (response.status === 'CHATTING') {
+            const showApprove = Boolean(response.has_plan && response.selected_components && response.selected_components.length > 0);
             chatUi.appendAiMessage(response.reply, {
                 elapsedMs,
-                showApproveButton: true,
+                showApproveButton: showApprove,
+                onApprove: async (btn) => {
+                    chatUi.showTypingIndicator();
+                    chatUi.setStatus('active', 'Building Pipeline...');
+                    try {
+                        const proceedRes = await sendChatMessage(currentSessionId, '', { action: 'approve' });
+                        const proceedElapsedMs = chatUi.removeTypingIndicator();
+
+                        if (proceedRes.status === 'failed') {
+                            if (btn) {
+                                btn.classList.add('failed');
+                                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Build Failed';
+                            }
+                            chatUi.appendErrorMessage(proceedRes.error || 'Pipeline generation failed');
+                            chatUi.setStatus('error', 'Generation Error');
+                            return;
+                        }
+
+                        if (proceedRes.status === 'APPROVED') {
+                            if (btn) {
+                                btn.classList.remove('failed');
+                                btn.classList.add('done');
+                                btn.innerHTML = '<i class="fas fa-check-circle"></i> Pipeline Built';
+                            }
+                            chatUi.appendAiMessage(proceedRes.reply || 'Pipeline generated and validated successfully!', {
+                                elapsedMs: proceedElapsedMs,
+                                openResultButton: {
+                                    text: 'Open Pipeline Result',
+                                    onClick: () => { resultsContainer.classList.add('open'); },
+                                },
+                            });
+                            if (proceedRes.nextflow_code) resultsUi.renderNextflow(proceedRes.nextflow_code);
+                            if (proceedRes.mermaid_code) resultsUi.renderMermaid(proceedRes.mermaid_code);
+                            resultsContainer.classList.add('open');
+                            chatUi.setStatus('active', 'Pipeline Generated');
+                        } else {
+                            if (btn) {
+                                btn.classList.add('done');
+                                btn.innerHTML = '<i class="fas fa-check"></i> Plan Processed';
+                            }
+                            chatUi.appendAiMessage(proceedRes.reply, { elapsedMs: proceedElapsedMs });
+                            chatUi.setStatus('active', 'Ready');
+                        }
+                        sidebar.refresh();
+                    } catch (err) {
+                        if (btn) {
+                            btn.classList.add('failed');
+                            btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Build Failed';
+                        }
+                        chatUi.removeTypingIndicator();
+                        chatUi.appendErrorMessage('Failed to build pipeline: ' + err.message);
+                        chatUi.setStatus('error', 'Build failed');
+                    }
+                },
             });
             chatUi.setStatus('active', 'Ready');
         } else if (response.status === 'APPROVED') {
@@ -86,8 +140,9 @@ const handleSendMessage = async (text) => {
                     onClick: () => { resultsContainer.classList.add('open'); },
                 },
             });
-            resultsUi.renderNextflow(response.nextflow_code);
-            resultsUi.renderMermaid(response.mermaid_code);
+            if (response.nextflow_code) resultsUi.renderNextflow(response.nextflow_code);
+            if (response.mermaid_code) resultsUi.renderMermaid(response.mermaid_code);
+            resultsContainer.classList.add('open');
             chatUi.setStatus('active', 'Pipeline Generated');
         }
 
@@ -172,35 +227,58 @@ function renderBar(pct) {
 async function refreshStats() {
     const el = document.getElementById('systemStats');
     if (!el) return;
-    const info = await fetchSystemInfo();
-    if (!info) { el.innerHTML = ''; return; }
+    try {
+        const info = await fetchSystemInfo();
+        if (!info || typeof info !== 'object') {
+            el.innerHTML = '';
+            return;
+        }
 
-    let html = '';
-    html += `<span class="stat-chip model-chip"><i class="fas fa-microchip"></i>${info.llm_model}</span>`;
+        let html = '';
 
-    if (info.gpu) {
-        const g = info.gpu;
-        const vramPct = Math.round(g.vram_used_mb / g.vram_total_mb * 100);
-        html += `<span class="stat-chip"><i class="fas fa-bolt"></i>${g.name}</span>`;
-        html += `<span class="stat-chip">VRAM ${g.vram_used_mb}/${g.vram_total_mb} MB ${renderBar(vramPct)}</span>`;
-        html += `<span class="stat-chip"><i class="fas fa-thermometer-half"></i>${g.temperature_c}&deg;C</span>`;
+        // 1. Model Chip (auto-hide if missing)
+        if (info.llm_model && typeof info.llm_model === 'string') {
+            const maxLen = (info.llm_server?.max_model_len && !isNaN(info.llm_server.max_model_len))
+                ? ` (${Math.round(info.llm_server.max_model_len / 1024)}k)`
+                : '';
+            html += `<span class="stat-chip model-chip" title="Active Model: ${info.llm_model}${maxLen}"><i class="fas fa-microchip"></i>${info.llm_model}${maxLen}</span>`;
+        }
+
+        // 2. Physical GPU (auto-hide if null/error/missing)
+        if (info.gpu && typeof info.gpu === 'object' && info.gpu.name && !isNaN(info.gpu.vram_used_mb) && !isNaN(info.gpu.vram_total_mb) && info.gpu.vram_total_mb > 0) {
+            const g = info.gpu;
+            const vramPct = Math.min(100, Math.max(0, Math.round(g.vram_used_mb / g.vram_total_mb * 100)));
+            html += `<span class="stat-chip" title="GPU: ${g.name}"><i class="fas fa-bolt"></i>${g.name}</span>`;
+            html += `<span class="stat-chip" title="VRAM: ${g.vram_used_mb} / ${g.vram_total_mb} MB (${vramPct}%)"><i class="fas fa-microchip"></i>VRAM ${(g.vram_used_mb/1024).toFixed(1)}/${(g.vram_total_mb/1024).toFixed(1)} GB ${renderBar(vramPct)}</span>`;
+            if (g.temperature_c !== undefined && g.temperature_c !== null && !isNaN(g.temperature_c)) {
+                html += `<span class="stat-chip"><i class="fas fa-thermometer-half"></i>${g.temperature_c}&deg;C</span>`;
+            }
+        }
+
+        // 3. System RAM (auto-hide if null/error/missing)
+        if (info.ram && typeof info.ram === 'object' && !isNaN(info.ram.used_mb) && !isNaN(info.ram.total_mb) && info.ram.total_mb > 0) {
+            const r = info.ram;
+            const pct = typeof r.percent === 'number' && !isNaN(r.percent) ? r.percent : Math.round(r.used_mb / r.total_mb * 100);
+            const usedGb = (r.used_mb / 1024).toFixed(1);
+            const totalGb = (r.total_mb / 1024).toFixed(1);
+            html += `<span class="stat-chip" title="System RAM: ${r.used_mb} MB / ${r.total_mb} MB (${pct}%)"><i class="fas fa-memory"></i>RAM ${usedGb}/${totalGb} GB ${renderBar(pct)}</span>`;
+        }
+
+        // 4. Framework Git Commit (auto-hide if missing)
+        if (info.framework && typeof info.framework === 'object' && info.framework.commit) {
+            const f = info.framework;
+            const commitUrl = f.repo_url ? `${f.repo_url}/commit/${f.commit}` : '#';
+            html += `<a href="${commitUrl}" target="_blank" class="stat-chip" style="text-decoration:none; cursor:pointer;" title="ngsmanager framework commit"><i class="fab fa-github"></i>ngsmanager@${f.commit}</a>`;
+        }
+
+        el.innerHTML = html;
+    } catch (err) {
+        // Auto-hide silently on error
+        el.innerHTML = '';
     }
-
-    if (info.ram) {
-        const r = info.ram;
-        html += `<span class="stat-chip">RAM ${Math.round(r.used_mb/1024)}/${Math.round(r.total_mb/1024)} GB ${renderBar(r.percent)}</span>`;
-    }
-
-    if (info.framework) {
-        const f = info.framework;
-        const commitUrl = f.repo_url ? `${f.repo_url}/commit/${f.commit}` : '#';
-        html += `<a href="${commitUrl}" target="_blank" class="stat-chip" style="text-decoration:none; cursor:pointer;" title="ngsmanager framework commit"><i class="fab fa-github"></i>ngsmanager@${f.commit}</a>`;
-    }
-
-    el.innerHTML = html;
 }
 
 refreshStats();
-setInterval(refreshStats, 30000);
+setInterval(refreshStats, 10000);
 
 console.log('IZS AI chat generator loaded for user:', currentUser.username);

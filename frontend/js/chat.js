@@ -72,7 +72,18 @@ export function initChatUi(onSendMessage) {
         });
     }
 
+    function disableExistingApproveButtons() {
+        const existingBtns = chatHistory.querySelectorAll('.inline-approve-btn:not(.done):not(.superseded)');
+        existingBtns.forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('superseded');
+            btn.title = 'This proposal was superseded by a subsequent message.';
+            btn.innerHTML = '<i class="fas fa-history"></i> Plan Superseded';
+        });
+    }
+
     function appendUserMessage(text) {
+        disableExistingApproveButtons();
         const bubble = document.createElement('div');
         bubble.className = 'chat-bubble user';
         bubble.textContent = text;
@@ -85,7 +96,14 @@ export function initChatUi(onSendMessage) {
         bubble.className = 'chat-bubble ai';
 
         if (typeof marked !== 'undefined') {
-            bubble.innerHTML = marked.parse(text);
+            if (typeof marked.setOptions === 'function') {
+                marked.setOptions({ gfm: true, breaks: true });
+            }
+            let html = marked.parse(text);
+            // Wrap any <table> in a responsive .table-container if not already wrapped
+            html = html.replace(/<table(\s*[^>]*)>/gi, '<div class="table-container"><table$1>');
+            html = html.replace(/<\/table>/gi, '</table></div>');
+            bubble.innerHTML = html;
         } else {
             bubble.textContent = text;
             bubble.style.whiteSpace = 'pre-wrap';
@@ -113,19 +131,19 @@ export function initChatUi(onSendMessage) {
             chatHistory.appendChild(caption);
         }
 
-        // Optional inline "Approve / Yes" badge attached to this bubble.
-        // We render it only on bot replies that come back with status CHATTING
-        // (i.e. plan still being negotiated). The caller decides.
-        if (options.showApproveButton) {
+        // Optional inline "Approve & Build" button attached to this bubble.
+        // We render it on bot replies that return status CHATTING with a proposed plan.
+        if (options.showApproveButton && typeof options.onApprove === 'function') {
+            disableExistingApproveButtons();
             const row = document.createElement('div');
             row.className = 'inline-approve-row';
             const btn = document.createElement('button');
             btn.className = 'inline-approve-btn';
-            btn.innerHTML = '<i class="fas fa-check"></i> Yes / Approve plan';
-            btn.addEventListener('click', () => {
+            btn.innerHTML = '<i class="fas fa-bolt"></i> Approve & Build Pipeline';
+            btn.addEventListener('click', async () => {
                 btn.disabled = true;
-                userInput.value = 'approved';
-                submitMessage();
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Building Pipeline...';
+                await options.onApprove(btn);
             });
             row.appendChild(btn);
             chatHistory.appendChild(row);

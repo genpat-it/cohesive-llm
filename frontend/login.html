@@ -117,7 +117,7 @@
 
     <script>
         const BASE = window.IZS_BASE_PATH || '';
-        const API_BASE = BASE + '/api';
+        const API_BASE = (window.location.port === '9000' || window.location.port === '3000' || window.location.port === '5500') ? 'http://localhost:8080' : (BASE || '');
         const APP_HOME = BASE + '/';
 
         document.getElementById('togglePwd').addEventListener('click', () => {

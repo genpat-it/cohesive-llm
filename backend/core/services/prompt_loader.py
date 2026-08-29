@@ -161,9 +161,23 @@ def load_extractor_prompt() -> str:
     return _load_file(CORE_PROMPTS_DIR / "extractor.md")
 
 
+@lru_cache(maxsize=1)
+def load_drawer_enricher_prompt() -> str:
+    """Load the drawer enricher prompt from file."""
+    plugin_prompts = _get_plugin_prompts_dir()
+    base = _load_file(CORE_PROMPTS_DIR / "drawer_enricher_base.md", escape=False)
+    domain_context = _load_file(plugin_prompts / "domain_context.md", escape=False)
+    if "%%domain_context%%" in base:
+        base = base.replace("%%domain_context%%", domain_context)
+    elif domain_context:
+        base = base + "\n\n" + domain_context
+    return _escape_braces(base)
+
+
 def reload_prompts() -> None:
     """Clear the cache to force reload of all prompts."""
     load_consultant_prompt.cache_clear()
+    load_drawer_enricher_prompt.cache_clear()
     load_architect_prompt.cache_clear()
     load_diagram_prompt.cache_clear()
     load_extractor_prompt.cache_clear()

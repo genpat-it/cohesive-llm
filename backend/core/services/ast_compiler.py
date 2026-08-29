@@ -97,10 +97,10 @@ def generate_imports_for_code(all_code: str, defined_sws: set) -> dict:
         helper_imports = {}
 
     for func in used_callables:
-        if func in helper_imports:
-            path = helper_imports[func]
-        elif registry.get_function_import_path(func):
+        if registry.get_function_import_path(func):
             path = registry.get_function_import_path(func)
+        elif func in helper_imports:
+            path = helper_imports[func]
         else:
             path = registry.get_import_path(func)
 
@@ -109,7 +109,8 @@ def generate_imports_for_code(all_code: str, defined_sws: set) -> dict:
 
         if path not in import_map:
             import_map[path] = []
-        import_map[path].append(func)
+        if func not in import_map[path]:
+            import_map[path].append(func)
 
     return import_map
 
@@ -313,7 +314,7 @@ def validate_undefined_variables(body_code: str, defined_vars: set) -> list[str]
         reg = get_registry()
         local_vars.update(reg.valid_components)
         for c_id in reg.valid_components:
-            # Add short names: step_4AN_genes__prokka -> prokka, step_4AN_genes
+            # Add short names: step_00XX_role__tool_name -> tool_name, step_00XX_role
             if '__' in c_id:
                 local_vars.add(c_id.split('__')[-1])
             if c_id.startswith(('step_', 'multi_', 'module_')):

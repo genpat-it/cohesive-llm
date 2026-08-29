@@ -3,7 +3,6 @@ import re
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.messages import ToolMessage as LCToolMessage
 from langgraph.store.base import BaseStore
 
 from core.config import settings
@@ -15,170 +14,20 @@ from core.utils.logger import logger
 
 ARCHITECT_SYSTEM_PROMPT = load_architect_prompt()
 
-ARCHITECT_RESEARCH_SYSTEM_PROMPT = """You are a Nextflow DSL2 code architect preparing to generate a pipeline AST.
-You must use your tools to research how to implement the Consultant's plan before generating code.
 
-You have access to the TECHNICAL CONTEXT provided in the conversation which contains the component source code.
-**CRITICAL**: The TECHNICAL CONTEXT ONLY contains component source code. It DOES NOT contain helper functions or design patterns. You MUST use your tools to find those.
-
-TOOLS:
-1. `check_component_channels(component_name)` - Look up a specific component's EXACT take/emit signature.
-2. `verify_dataflow_plan(entrypoint_instantiations, sub_workflows)` - Test your dataflow mapping.
-3. `validate_body_code(code_snippet, workflow_name)` - Validate a body_code snippet for DSL2 syntax errors.
-4. `search_helper_functions(query)` - Find built-in helper functions.
-5. `search_design_patterns(query)` - Find reusable data-shaping patterns (e.g. host depletion branching, cross+multiMap).
-6. `auto_complete_pipeline_dag(src, tgt)` - Use the Knowledge Graph to find valid paths between components.
-
-MANDATORY RESEARCH WORKFLOW:
-Step 1: Use `check_component_channels` on the components listed in the plan to get their EXACT take/emit signatures.
-Step 2: Use `search_helper_functions` to find the exact syntax for fetching the input data described in the plan.
-Step 3: Use `search_design_patterns` to understand how to route data if the plan contains complex logic.
-Step 4: Once you have all the necessary syntax and logic, output a detailed summary of your research findings."""
-
-ARCHITECT_REPAIR_SYSTEM_PROMPT = """You are a Nextflow DSL2 code architect. You previously attempted to generate a pipeline AST but validation failed. You now have tools to investigate and fix the issue.
-
-You have access to the TECHNICAL CONTEXT provided in the conversation which contains the component source code.
-**CRITICAL**: The TECHNICAL CONTEXT ONLY contains component source code. It DOES NOT contain helper functions or design patterns. You MUST use your tools to find those.
-
-TOOLS:
-1. `check_component_channels(component_name)` - Look up a specific component's EXACT take/emit signature.
-2. `verify_dataflow_plan(entrypoint_instantiations, sub_workflows)` - Test your dataflow mapping to see if you forgot to instantiate any variables.
-3. `validate_body_code(code_snippet, workflow_name)` - Validate a body_code snippet for DSL2 syntax errors.
-4. `search_helper_functions(query)` - Find built-in helper functions.
-5. `search_design_patterns(query)` - Find reusable data-shaping patterns (e.g. host depletion branching, cross+multiMap).
-6. `auto_complete_pipeline_dag(src, tgt)` - Use the Knowledge Graph to find valid paths between components.
-
-INCREMENTAL REASONING WORKFLOW (Mandatory):
-Step 1: Use `check_component_channels` to fetch the EXACT take/emit signature of the components involved in the error.
-Step 2: Use `verify_dataflow_plan` to propose and test your DataFlow plan. Do NOT proceed until the tool returns "SUCCESS".
-Step 3: Use `validate_body_code` to test any tricky groovy snippets you intend to write.
-Step 4: Once all tests pass, output your final reasoning.
-
-CRITICAL DSL2 RULES (common mistakes):
-- body_code must NOT contain 'workflow name {}', 'take:', 'main:', or 'emit:' keywords — the rendering template handles these automatically
-- Sub-workflows must NOT define active data channels (e.g. fetching inputs/references) — these go in the entrypoint only, data is passed via take_channels
-- Void tools must NOT be assigned to variables — call them directly
-- The entrypoint workflow calls sub-workflows: data = my_input(); subworkflow_name(data)
-- The sub-workflow receives data via take_channels, processes it, and emits results via emit_channels
-- DO NOT emit channels from a sub-workflow unless they are EXPLICITLY required by the entrypoint. Be minimal.
-- .branch { name: predicate } creates named output channels accessible as result.name — you MUST assign the branch result to use the names
-- .multiMap { name: expr } creates named output channels similarly
-- Prefer using standard catalog components over custom `inline_processes`"""
-
-
-def architect_reason_node(state: GraphState) -> Any:
-    logger.info("node_start", node="architect_reason")
-    if state.get("error"):
-        return {"error": state['error']}
-
-    llm = get_llm()
-    validation_error = state.get("validation_error", "")
-    plan = state.get('design_plan', 'No plan provided.')
-    tech_context = state.get('technical_context', 'No context provided.')
-
-    from core.tool_registry import get_architect_tools
-    llm_with_tools = llm.bind_tools(get_architect_tools())
-
-    # [Head / Fixed Prefix]: Invariant system message ensures 100% prefix cache hits in vLLM
-    system_msg = SystemMessage(
-        content=ARCHITECT_REPAIR_SYSTEM_PROMPT if validation_error else ARCHITECT_RESEARCH_SYSTEM_PROMPT
-    )
-
-    # [Middle / Static Reference]: Technical context and design plan anchored at front of conversation
-    anchor_content = (
-        f"### TECHNICAL CONTEXT (Available Tools & Code):\n{tech_context}\n\n"
-        f"### APPROVED PLAN:\n{plan}\n\n"
-    )
-    if validation_error:
-        anchor_content += (
-            f"### VALIDATION ERROR TO FIX:\n{validation_error}\n\n"
-            "TASK: Investigate the validation error above using your tools. Explain what needs to be fixed before retrying."
-        )
-    else:
-        anchor_content += (
-            "TASK: Please research the necessary helper functions and design patterns for the provided plan. "
-            "Call tools to investigate, or output your findings if you are done."
-        )
-
-    state_messages = state.get("messages", [])
-    relevant_messages = []
-    
-    if validation_error:
-        # Extract the conversation history specifically for the current repair loop
-        for msg in reversed(state_messages):
-            relevant_messages.insert(0, msg)
-            if isinstance(msg, HumanMessage) and "**VALIDATION FAILED**" in msg.content:
-                break
-    else:
-        # Research mode: collect all messages from the end of the consultant turn onward.
-        limit = settings.CONTEXT_WINDOW_REASON * 3
-        count = 0
-        in_tool_block = False
-
-        for msg in reversed(state_messages):
-            relevant_messages.insert(0, msg)
-            count += 1
-
-            if isinstance(msg, LCToolMessage):
-                in_tool_block = True
-            elif isinstance(msg, AIMessage) and getattr(msg, 'tool_calls', None):
-                in_tool_block = False
-
-            if isinstance(msg, HumanMessage) and "**VALIDATION FAILED**" not in msg.content:
-                break  # found the real user-turn boundary
-                
-            if not in_tool_block and count >= limit:
-                break
-
-        # Strip any trailing AIMessages that are NOT followed by tool results.
-        while relevant_messages and isinstance(relevant_messages[-1], AIMessage) and not getattr(relevant_messages[-1], 'tool_calls', None):
-            relevant_messages.pop()
-
-    # Anchor the technical context and plan as the first HumanMessage
-    if not relevant_messages or not isinstance(relevant_messages[0], HumanMessage):
-        relevant_messages.insert(0, HumanMessage(content=anchor_content))
-    else:
-        # Prepend anchor context to the first HumanMessage if not already there
-        if "### TECHNICAL CONTEXT" not in str(relevant_messages[0].content):
-            relevant_messages[0] = HumanMessage(content=f"{anchor_content}\n\n{relevant_messages[0].content}")
-
-    messages = [system_msg, *relevant_messages]
-
-    # Enforce mandatory tool calling on the first pass of the loop
-    if len(relevant_messages) == 1 and isinstance(relevant_messages[0], HumanMessage):
-        from core.tool_registry import get_architect_tools
-        llm_with_tools = llm.bind_tools(get_architect_tools(), tool_choice="any")
-        logger.info("architect_reason_mandatory_tool_enforced")
-    try:
-        result = llm_with_tools.invoke(messages)
-        # Tag this message as internal so the API doesn't send it to the user chat
-        result.additional_kwargs["internal_agent"] = "architect"
-        logger.info("architect_reason_tool_calls", count=len(result.tool_calls) if result.tool_calls else 0)
-        return {"messages": [result]}
-    except Exception as e:
-        logger.error("architect_reason_error", error=str(e))
-        return {"error": f"Failed to reason: {e}"}
 
 
 def architect_generate_node(state: GraphState) -> Any:
+    """Generate a NextflowPipelineAST from the LLM.
+    The KG wireframe is injected as context in technical_context by precheck — the LLM
+    always runs and is the sole AST producer. No kg_ast bypass, no repair loop.
+    """
     logger.info("node_start", node="architect_generate")
     if state.get("error"):
         return {"error": state['error']}
 
     llm = get_llm()
-    architect_agent = llm.with_structured_output(NextflowPipelineAST, method="function_calling", include_raw=True)
-
-    architect_findings = ""
-    messages = state.get("messages", [])
-
-    for msg in reversed(messages[-settings.CONTEXT_WINDOW_REASON * 4:]):
-        if not isinstance(msg, AIMessage) or not msg.content or getattr(msg, 'tool_calls', None):
-            continue
-
-        content_lower = msg.content.lower()
-        if any(kw in content_lower for kw in ("channel", "emit", "take", "connection", "validation", "helper", "design", "pattern", "syntax", "research")):
-            architect_findings = msg.content
-            break
+    architect_agent = llm.with_structured_output(NextflowPipelineAST, method="json_schema", include_raw=True)
 
     plan_text = state.get('design_plan', 'No plan provided.')
     tech_context = state.get('technical_context', 'No context provided.')
@@ -188,6 +37,22 @@ def architect_generate_node(state: GraphState) -> Any:
     selected_clause = ""
     if selected_ids:
         selected_clause = f"\n\n### MANDATORY APPROVED COMPONENTS:\nYou MUST instantiate EXACTLY these {len(selected_ids)} approved components in the pipeline AST (do NOT substitute with other tools):\n" + "\n".join(f"- `{cid}`" for cid in selected_ids)
+
+    visual_topology = state.get("visual_topology")
+    topology_clause = ""
+    if visual_topology and isinstance(visual_topology, dict):
+        wires = visual_topology.get("wires", [])
+        if wires:
+            topology_clause = (
+                "\n\n### MANDATORY VISUAL CANVAS TOPOLOGY & CHANNEL WIRING:\n"
+                "Connect processes matching this explicit visual DAG wiring:\n"
+            )
+            for w in wires:
+                src_cid = w.get("source_id")
+                tgt_cid = w.get("target_id")
+                src_ch = w.get("source_channel") or w.get("source_port", "out")
+                tgt_ch = w.get("target_channel") or w.get("target_port", "in")
+                topology_clause += f"- `{src_cid}` (out: `{src_ch}`) -> `{tgt_cid}` (in: `{tgt_ch}`)\n"
 
     directives_clause = (
         "\n\n### CRITICAL BIOLOGICAL DATAFLOW RULES (MUST FOLLOW):\n"
@@ -201,36 +66,67 @@ def architect_generate_node(state: GraphState) -> Any:
         f"### TECHNICAL CONTEXT (Available Tools & Code):\n{tech_context}\n\n"
         f"### APPROVED PLAN:\n{plan_text}"
         f"{selected_clause}"
+        f"{topology_clause}"
         f"{directives_clause}"
     )
-    # [Tail / Dynamic Payload]: Variable research findings
-    if architect_findings:
-        human_msg += f"\n\n### RESEARCH & ANALYSIS FINDINGS:\n{architect_findings}"
 
     gen_messages = [
         SystemMessage(content=ARCHITECT_SYSTEM_PROMPT),
         HumanMessage(content=human_msg)
     ]
 
+    raw_ast = {}
+    raw_msg = None
+
     try:
         response_dict = architect_agent.invoke(gen_messages)
         parsed = response_dict.get("parsed") if isinstance(response_dict, dict) else response_dict
         raw_msg = response_dict.get("raw") if isinstance(response_dict, dict) else None
 
+        def _ensure_valid_ast_emits(ast_obj: NextflowPipelineAST) -> NextflowPipelineAST:
+            if ast_obj and ast_obj.sub_workflows:
+                for sw in ast_obj.sub_workflows:
+                    if not sw.emit_channels:
+                        lines = [l.strip() for l in sw.body_code.splitlines() if l.strip() and not l.strip().startswith("//")]
+                        last_ident = None
+                        for l in reversed(lines):
+                            if "=" in l:
+                                lhs = l.split("=")[0].strip()
+                                if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', lhs):
+                                    last_ident = lhs
+                                    break
+                            elif "(" in l:
+                                proc_match = re.match(r'^([a-zA-Z0-9_]+)\s*\(', l)
+                                if proc_match:
+                                    last_ident = f"{proc_match.group(1)}.out"
+                                    break
+                        sw.emit_channels = [f"final_result = {last_ident or 'rawreads'}"]
+            return ast_obj
+
         if parsed is not None:
-            logger.info("architect_generate_success")
-            return {
-                "ast_json": parsed.model_dump(),
-                "validation_error": None
-            }
+            if parsed.sub_workflows or (parsed.entrypoint and parsed.entrypoint.body_code.strip() not in ('', '// Generated entrypoint')):
+                parsed = _ensure_valid_ast_emits(parsed)
+                logger.info("architect_generate_success")
+                return {
+                    "ast_json": parsed.model_dump(),
+                    "validation_error": None
+                }
 
         # Fallback to raw message parsing
-        raw_ast = {}
         if raw_msg:
-            if getattr(raw_msg, "tool_calls", None):
-                raw_ast = raw_msg.tool_calls[0].get("args", {})
-            elif hasattr(raw_msg, "content") and raw_msg.content:
-                content = str(raw_msg.content)
+            if getattr(raw_msg, "tool_calls", None) and raw_msg.tool_calls:
+                tc = raw_msg.tool_calls[0]
+                args = tc.get("args") if isinstance(tc, dict) else getattr(tc, "args", {})
+                if isinstance(args, str):
+                    try:
+                        raw_ast = json.loads(args)
+                    except Exception:
+                        raw_ast = {}
+                elif isinstance(args, dict):
+                    raw_ast = args
+
+            if not raw_ast and hasattr(raw_msg, "content") and raw_msg.content:
+                content = str(raw_msg.content).strip()
                 match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
                 if match:
                     content = match.group(1)
@@ -240,22 +136,40 @@ def architect_generate_node(state: GraphState) -> Any:
                     pass
 
         if raw_ast:
-            validated = NextflowPipelineAST.model_validate(raw_ast)
-            logger.info("architect_generate_success_via_fallback")
-            return {
-                "ast_json": validated.model_dump(),
-                "validation_error": None
-            }
+            if isinstance(raw_ast, str):
+                raw_ast = json.loads(raw_ast)
+            if isinstance(raw_ast, dict) and (raw_ast.get("sub_workflows") or raw_ast.get("entrypoint")):
+                try:
+                    validated = NextflowPipelineAST.model_validate(raw_ast)
+                    if validated.sub_workflows or (validated.entrypoint and validated.entrypoint.body_code.strip() not in ('', '// Generated entrypoint')):
+                        validated = _ensure_valid_ast_emits(validated)
+                        logger.info("architect_generate_success_via_fallback")
+                        return {
+                            "ast_json": validated.model_dump(),
+                            "validation_error": None
+                        }
+                except Exception:
+                    pass
 
         parsing_err = response_dict.get("parsing_error") if isinstance(response_dict, dict) else None
         raise ValueError(f"Model returned invalid AST output: {parsing_err or 'No structured output received'}")
     except Exception as e:
         logger.error("architect_validation_failed", error=str(e))
-        raw_ast = {}
-        llm_output = getattr(e, "llm_output", None)
 
-        # Robust fallback extraction for malformed JSON
-        if llm_output and isinstance(llm_output, str):
+        # Try to salvage any raw AST from tool calls or LLM output
+        llm_output = getattr(e, "llm_output", None)
+        if not raw_ast and raw_msg and getattr(raw_msg, "tool_calls", None) and raw_msg.tool_calls:
+            tc = raw_msg.tool_calls[0]
+            args = tc.get("args") if isinstance(tc, dict) else getattr(tc, "args", {})
+            if isinstance(args, str):
+                try:
+                    raw_ast = json.loads(args)
+                except Exception:
+                    pass
+            elif isinstance(args, dict):
+                raw_ast = args
+
+        if not raw_ast and llm_output and isinstance(llm_output, str):
             try:
                 content = llm_output
                 match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
@@ -265,70 +179,74 @@ def architect_generate_node(state: GraphState) -> Any:
             except Exception:
                 pass
 
-        # Clean up Pydantic validation error to save context tokens
+        # Clean up error string
         error_str = str(e)
         error_str = re.sub(r'\[type=.*?, input_value=.*?input_type=dict\]', '', error_str, flags=re.DOTALL)
         error_str = re.sub(r'For further information visit https://errors\.pydantic\.dev/.*?$', '', error_str, flags=re.MULTILINE)
 
-        ast_str = json.dumps(raw_ast, sort_keys=True)
-        try:
-            import os
-            dump_dir = os.path.join(settings.BASE_DIR, "scratch")
-            os.makedirs(dump_dir, exist_ok=True)
-            with open(os.path.join(dump_dir, "last_ast_dump.json"), "w") as f:
-                f.write(ast_str)
-        except Exception:
-            pass
-        import hashlib
-        ast_hash = hashlib.md5(ast_str.encode()).hexdigest()
-
-        past_hashes = state.get("past_ast_hashes", [])
-        if ast_hash in past_hashes:
-            logger.error("AST generation loop detected. Small model is incapable of fixing this. Aborting repair loop early.")
-            return {
-                "ast_json": raw_ast,
-                "error": f"AST Repair Loop Detected: Repeated identical failed AST structure. Model is unable to repair {error_str.strip()}"
-            }
-        
+        # No repair loop — set validation_error for renderer to emit warning message
         return {
-            "ast_json": raw_ast,
-            "validation_error": error_str.strip(),
-            "retries": state.get("retries", 0) + 1,
-            "past_ast_hashes": past_hashes + [ast_hash]
+            "ast_json": raw_ast or {},
+            "validation_error": error_str.strip()
         }
 
 
-def _get_channels_for_component(mid: str, store: BaseStore) -> dict[str, list[str]]:
+def _get_channels_for_component(mid: str, store: BaseStore | None = None) -> dict[str, list[str]]:
     """Helper to extract takes/emits dynamically, resolving the None-fallback bugs."""
     from core.services.consultant_tools import _parse_nextflow_channels
 
-    code_item = store.get(("code",), mid)
-    code = code_item.value.get("content", "") if code_item else ""
-    parsed = _parse_nextflow_channels(code)
+    code = ""
+    if store is not None:
+        try:
+            code_item = store.get(("code",), mid)
+            code = code_item.value.get("content", "") if code_item else ""
+        except Exception:
+            pass
 
-    if not parsed["takes"]:
-        meta = store.get(("components",), mid) or store.get(("templates",), mid)
-        if meta:
-            parsed["takes"] = meta.value.get("input_channels", meta.value.get("input_types", [])) or []
+    parsed = _parse_nextflow_channels(code) if code else {"takes": [], "emits": []}
 
-    if not parsed["emits"]:
-        meta = store.get(("components",), mid) or store.get(("templates",), mid)
-        if meta:
-            parsed["emits"] = meta.value.get("output_channels", meta.value.get("out", [])) or []
+    if not parsed.get("takes") and store is not None:
+        try:
+            meta = store.get(("components",), mid) or store.get(("templates",), mid)
+            if meta and meta.value:
+                parsed["takes"] = meta.value.get("input_channels", meta.value.get("input_types", [])) or []
+        except Exception:
+            pass
 
-    return parsed
+    if not parsed.get("emits") and store is not None:
+        try:
+            meta = store.get(("components",), mid) or store.get(("templates",), mid)
+            if meta and meta.value:
+                parsed["emits"] = meta.value.get("output_channels", meta.value.get("out", [])) or []
+        except Exception:
+            pass
+
+    if not parsed.get("takes") or not parsed.get("emits"):
+        try:
+            from core.catalog_registry import get_registry
+            reg = get_registry()
+            sig = reg.get_component_signature(mid)
+            if sig:
+                if not parsed.get("takes"):
+                    parsed["takes"] = sig.get("take_channels", sig.get("input_channels", [])) or []
+                if not parsed.get("emits"):
+                    parsed["emits"] = sig.get("emit_channels", sig.get("output_channels", [])) or []
+        except Exception:
+            pass
+
+    takes = [c for c in parsed.get("takes", []) if c and c.lower() not in ("none", "void", "")]
+    emits = [c for c in parsed.get("emits", []) if c and c.lower() not in ("none", "void", "")]
+    return {"takes": takes, "emits": emits}
 
 
-def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
+def architect_precheck_node(state: GraphState, store: BaseStore | None = None) -> Any:
     logger.info("node_start", node="architect_precheck")
     if state.get("error"):
         return {"error": state["error"]}
 
     component_ids = state.get("selected_component_ids", [])
-    strategy = state.get("strategy_selector", "CUSTOM_BUILD")
-
-    if strategy == "EXACT_MATCH" or len(component_ids) < 2:
-        logger.info("architect_precheck_skipped")
+    if not component_ids:
+        logger.info("architect_precheck_skipped_no_components")
         return {}
 
     from core.services.ast_compiler import _is_void_tool
@@ -336,7 +254,7 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
     warnings = []
 
     from core.services.knowledge_graph import kg
-    if not kg.is_built:
+    if not kg.is_built and store is not None:
         kg.build_graph(store)
 
     # ── Channel mismatch check ───────────────────────────────────────────────
@@ -365,9 +283,10 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
         warnings.append(f"VOID TOOLS (no output): {void_tools}. Call directly, no assignment, no emit.")
 
     # ── Missing code check ───────────────────────────────────────────────────
-    missing_code = [mid for mid in component_ids if not store.get(("code",), mid)]
-    if missing_code:
-        warnings.append(f"NO SOURCE CODE: {missing_code}. Rely on catalog metadata for channel names.")
+    if store is not None:
+        missing_code = [mid for mid in component_ids if not store.get(("code",), mid)]
+        if missing_code:
+            warnings.append(f"NO SOURCE CODE: {missing_code}. Rely on catalog metadata for channel names.")
 
     # ── Assembly without preprocessing check ────────────────────────────────
     user_query = state.get("user_query", "").lower()
@@ -494,11 +413,11 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
     except Exception as e:
         logger.warning(f"Error synthesizing dataflow directives: {e}")
 
-    # ── Topological Wireframe Synthesis (Zero-Repair Blueprint) ─────────────
+    # ── Topological Wireframe Synthesis ─────────────────────────────────────
     wireframe_lines = []
+    topological_seq = component_ids
     if component_ids:
         try:
-            topological_seq = component_ids
             if kg.is_built:
                 import networkx as nx
                 sub_g = kg.G.subgraph(set(component_ids))
@@ -510,17 +429,22 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
             cross_directives = kg.detect_cross_multimap_routing(topological_seq, store=store) if kg.is_built else []
             cross_inserted = set()
 
-            # Prepend standard entrypoint input getter
-            wireframe_lines.append("    // 1. Initial Input Channel")
-            wireframe_lines.append("    rawreads = getSingleInput()")
-            assigned_vars['rawreads'] = 'rawreads'
+            # Fan-in merge detection
+            mix_info = kg.detect_fan_in_mix(topological_seq, store=store) if kg.is_built else []
+            mix_inserted = set()
+
+            from core.catalog_registry import get_registry
+            from core.plugin_loader import get_active_plugin
+            active_plug = get_active_plugin()
+            plugin_helpers = set(active_plug.helper_imports.keys()) if active_plug else set()
+            reg = get_registry()
 
             for proc_id in topological_seq:
                 parsed = _get_channels_for_component(proc_id, store)
                 takes = parsed.get("takes", [])
                 emits = parsed.get("emits", [])
 
-                # Check if this process is a consumer of a cross-join directive that hasn't been emitted yet
+                # Insert cross-join code block if this process is a consumer
                 for cd in cross_directives:
                     if cd["consumer"] == proc_id and cd["joined_var"] not in cross_inserted:
                         wireframe_lines.append("")
@@ -529,13 +453,21 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
                         wireframe_lines.append("")
                         cross_inserted.add(cd["joined_var"])
 
+                # Insert fan-in merge code block if this process is a consumer
+                for mi in mix_info:
+                    if mi["consumer"] == proc_id and mi["consumer"] not in mix_inserted:
+                        wireframe_lines.append(f"    {mi['idiom']}")
+                        mix_inserted.add(mi["consumer"])
+
                 # Determine variable name for process output
                 var_name = None
                 if emits and emits[0] not in ("none", "void", ""):
                     primary_emit = emits[0]
-                    var_name = primary_emit
-                    assigned_vars[primary_emit] = primary_emit
-                    assigned_vars[proc_id] = primary_emit
+                    clean_emit = primary_emit.split(".")[-1] if "." in primary_emit else primary_emit
+                    var_name = re.sub(r'[^a-zA-Z0-9_]', '_', clean_emit)
+                    assigned_vars[primary_emit] = var_name
+                    assigned_vars[var_name] = var_name
+                    assigned_vars[proc_id] = var_name
 
                 # Determine arguments for this process based on channel types & upstream dataflow
                 args = []
@@ -566,77 +498,48 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
                         matched_cross = False
                         for cd in cross_directives:
                             if cd["joined_var"] in cross_inserted:
-                                if proc_id in cd.get("consumers", []) or take_ch in (cd.get("channel1"), cd.get("stream_name"), cd.get("channel2"), "species", "genus_species"):
-                                    if take_ch in (cd.get("channel1"), cd.get("stream_name"), "assembly", "assembled", "data"):
-                                        arg_expr = f"{cd['joined_var']}.{cd.get('channel1', cd.get('stream_name'))}"
-                                        matched_cross = True
-                                        break
-                                    elif take_ch in ("species", "genus_species", "assigned_species", cd.get("channel2")):
-                                        arg_expr = f"{cd['joined_var']}.species"
-                                        matched_cross = True
-                                        break
+                                if proc_id in cd.get("consumers", []):
+                                    branch = take_ch if take_ch in cd.get("branches", []) else cd.get("channel1", cd.get("stream_name", take_ch))
+                                    arg_expr = f"{cd['joined_var']}.{branch}"
+                                    matched_cross = True
+                                    break
+
+                        # Check if channel comes from a fan-in merge
+                        if not matched_cross:
+                            for mi in mix_info:
+                                if mi["consumer"] == proc_id and mi["channel"] == take_ch:
+                                    arg_expr = mi.get("merged_var", take_ch)
+                                    matched_cross = True
+                                    break
 
                         if not matched_cross:
-                            # For multi-sample consumers, prioritize typed intermediate channels (alleles, matrix, vcf, counts)
-                            if is_multi and take_ch in ("input", "data", "alleles"):
-                                found_typed = False
-                                for preferred_ch in ("alleles", "matrix", "vcf", "counts", "table", "tree"):
-                                    if preferred_ch in assigned_vars:
-                                        arg_expr = assigned_vars[preferred_ch]
-                                        found_typed = True
-                                        break
-                                if not found_typed:
-                                    for prev_proc in reversed(topological_seq):
-                                        if prev_proc == proc_id: continue
-                                        prev_parsed = _get_channels_for_component(prev_proc, store)
-                                        if prev_parsed.get("emits"):
-                                            pe = prev_parsed["emits"][0]
-                                            if pe not in ("none", "void", ""):
-                                                arg_expr = assigned_vars.get(pe, f"{prev_proc}.out.{pe}")
-                                                break
+                            # 1. Match direct helper function from active plugin
+                            if take_ch in plugin_helpers or reg.get_function_import_path(take_ch):
+                                arg_expr = f"{take_ch}()"
+                            # 2. Match upstream process emit
                             else:
-                                # Semantic channel alias mapping:
-                                if take_ch in ("rawreads", "reads") and "trimmed" in assigned_vars:
-                                    arg_expr = assigned_vars["trimmed"]
-                                elif take_ch in ("rawreads", "reads") and "clean_reads" in assigned_vars:
-                                    arg_expr = assigned_vars["clean_reads"]
-                                elif "filter" in proc_id and take_ch in ("data", "input", "report"):
-                                    found_scr = False
-                                    for prev_proc in reversed(topological_seq):
-                                        if prev_proc == proc_id: continue
-                                        prev_parsed = _get_channels_for_component(prev_proc, store)
-                                        if any(out_name in prev_parsed.get("emits", []) for out_name in ("report", "results", "table", "summary", "hits", "data")):
-                                            arg_expr = assigned_vars.get(prev_proc, f"{prev_proc}.out")
-                                            found_scr = True
-                                            break
-                                    if not found_scr:
-                                        arg_expr = "assembly"
-                                else:
-                                    # Look for upstream producer of this exact take channel
-                                    for prev_proc in reversed(topological_seq):
-                                        if prev_proc == proc_id: continue
-                                        prev_parsed = _get_channels_for_component(prev_proc, store)
-                                        if take_ch in prev_parsed.get("emits", []):
-                                            if prev_proc in assigned_vars:
-                                                arg_expr = assigned_vars[prev_proc]
-                                            else:
-                                                arg_expr = f"{prev_proc}.out.{take_ch}"
-                                            break
-                                        elif take_ch in ("data", "input") and prev_parsed.get("emits"):
-                                            pe = prev_parsed["emits"][0]
-                                            if pe not in ("none", "void", ""):
-                                                arg_expr = assigned_vars.get(pe, f"{prev_proc}.out.{pe}")
-                                                break
+                                matched_upstream = False
+                                for prev_proc in reversed(topological_seq):
+                                    if prev_proc == proc_id: continue
+                                    prev_parsed = _get_channels_for_component(prev_proc, store)
+                                    prev_emits = prev_parsed.get("emits", [])
+                                    if take_ch in prev_emits:
+                                        arg_expr = assigned_vars.get(take_ch, f"{prev_proc}.out.{take_ch}")
+                                        matched_upstream = True
+                                        break
+                                    elif take_ch in ("data", "input") and prev_emits and prev_emits[0] not in ("none", "void", ""):
+                                        arg_expr = assigned_vars.get(prev_emits[0], f"{prev_proc}.out.{prev_emits[0]}")
+                                        matched_upstream = True
+                                        break
+                                
+                                # 3. Fallback: if unmet parameter / config
+                                if not matched_upstream and take_ch not in assigned_vars:
+                                    if take_ch not in ("rawreads", "reads", "input", "data"):
+                                        arg_expr = f"param('{take_ch}')"
 
                         # If multi-sample consumer, wrap data channel in .collect()
-                        if is_multi and not arg_expr.endswith(".collect()") and not any(kw in take_ch for kw in ("schema", "param", "meta")):
+                        if is_multi and not arg_expr.endswith(".collect()") and not arg_expr.startswith("param(") and not arg_expr.endswith("()"):
                             arg_expr = f"{arg_expr}.collect()"
-
-                        # If take channel is a parameter/schema helper
-                        if take_ch in ("schema", "scheme"):
-                            arg_expr = "getSchema()"
-                        elif take_ch in ("coverage", "identity", "threshold", "min_len", "threads", "raw_metadata", "geodata", "nomenclature", "genus_species"):
-                            arg_expr = f"param('{take_ch}')"
 
                         args.append(arg_expr)
 
@@ -644,20 +547,139 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
                 if var_name:
                     assigned_vars[proc_id] = var_name
                     assigned_vars[var_name] = var_name
-                    wireframe_lines.append(f"    {var_name} = {proc_id}({args_str}).{emits[0] if emits else var_name}")
+                    clean_emit_access = emits[0].split(".")[-1] if (emits and "." in emits[0]) else (emits[0] if emits else var_name)
+                    clean_emit_access = re.sub(r'[^a-zA-Z0-9_]', '_', clean_emit_access)
+                    wireframe_lines.append(f"    {var_name} = {proc_id}({args_str}).{clean_emit_access}")
                 else:
                     wireframe_lines.append(f"    {proc_id}({args_str})")
         except Exception as e:
             logger.warning(f"Error synthesizing topological wireframe: {e}")
+
+    # ── Variable Liveness Analysis ────────────────────────────────────────────
+    # Remove assignments whose LHS is never consumed downstream or in emit
+    if wireframe_lines:
+        try:
+            # Build set of all referenced variables across all lines
+            all_text = "\n".join(wireframe_lines)
+            live_lines = []
+            for wl in wireframe_lines:
+                stripped = wl.strip()
+                if not stripped or stripped.startswith("//"):
+                    live_lines.append(wl)
+                    continue
+                # Check if this is an assignment: var = ...
+                assign_m = re.match(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)', stripped)
+                if assign_m:
+                    lhs_var = assign_m.group(1)
+                    # Check if lhs_var is referenced in any OTHER line
+                    other_text = "\n".join(l for l in wireframe_lines if l != wl)
+                    if re.search(rf'\b{re.escape(lhs_var)}\b', other_text):
+                        live_lines.append(wl)
+                    else:
+                        # Check if it's the LAST assignment (terminal output) — keep it for emit
+                        is_last_assign = True
+                        for later_wl in wireframe_lines[wireframe_lines.index(wl) + 1:]:
+                            later_stripped = later_wl.strip()
+                            if later_stripped and not later_stripped.startswith("//") and "=" in later_stripped:
+                                later_m = re.match(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=', later_stripped)
+                                if later_m:
+                                    is_last_assign = False
+                                    break
+                        if is_last_assign:
+                            live_lines.append(wl)
+                        else:
+                            logger.info(f"wireframe_liveness: pruned dead var '{lhs_var}'")
+                else:
+                    live_lines.append(wl)
+            wireframe_lines = live_lines
+        except Exception as e:
+            logger.warning(f"Error in liveness analysis: {e}")
+
+    # ── Meaningful Sub-Workflow Naming ─────────────────────────────────────────
+    sw_name = "PIPELINE"
+    used_template_id = state.get('used_template_id', '')
+    if used_template_id:
+        # Use template name (e.g., "module_typing_bacteria" -> "TYPING_BACTERIA")
+        clean = used_template_id.replace("module_", "").replace("template_", "")
+        sw_name = re.sub(r'[^a-zA-Z0-9_]', '_', clean).upper()
+    else:
+        # Derive from step categories present in components
+        categories = set()
+        for cid in topological_seq:
+            # Extract category codes like PP, AS, TY, SC from step_1PP_xxx, step_2AS_xxx
+            cat_match = re.match(r'(?:step_\d+|multi_)([A-Z]{2,3})_', cid)
+            if cat_match:
+                categories.add(cat_match.group(1))
+        
+        category_names = {
+            "PP": "PREPROCESSING", "QC": "QC", "AS": "ASSEMBLY",
+            "TY": "TYPING", "SC": "SCREENING", "AN": "ANNOTATION",
+            "CL": "CLUSTERING", "MP": "MAPPING"
+        }
+        if categories:
+            named_cats = [category_names.get(c, c) for c in sorted(categories)]
+            if len(named_cats) <= 3:
+                sw_name = "_AND_".join(named_cats)
+            else:
+                sw_name = "WGS_ANALYSIS"
 
     if template_parts or warnings or channel_map_lines or helper_injections or pattern_injections or dataflow_directives or wireframe_lines:
         precheck_block = ""
         if template_parts:
             precheck_block += "\n".join(template_parts) + "\n\n"
         if wireframe_lines:
-            precheck_block += "## TOPOLOGICAL EXECUTION WIREFRAME (Zero-Repair Blueprint)\n"
-            precheck_block += "The Knowledge Graph deduced the exact workflow execution sequence and dataflow connections:\n```groovy\nworkflow {\n"
-            precheck_block += "\n".join(wireframe_lines) + "\n}\n```\n\n"
+            take_names = ["rawreads"]
+            for take_ch in unmet_takes:
+                if take_ch not in take_names and take_ch not in ("none", ""):
+                    take_names.append(take_ch)
+
+            # Dedup: remove 'reads' if 'rawreads' already present (synonyms)
+            if "rawreads" in take_names and "reads" in take_names:
+                take_names.remove("reads")
+
+            takes_str = "\n        ".join(take_names)
+            last_assigned = None
+            for p in reversed(topological_seq):
+                if p in assigned_vars:
+                    last_assigned = assigned_vars[p]
+                    break
+            if not last_assigned and topological_seq:
+                last_assigned = f"{topological_seq[-1]}.out"
+
+            # Multi-emit: emit all terminal sink outputs, not just the last
+            terminal_emits = []
+            downstream_map = {}
+            for i, p in enumerate(topological_seq):
+                downstream_map[p] = set()
+                for j in range(i + 1, len(topological_seq)):
+                    later = topological_seq[j]
+                    later_text = "\n".join(wireframe_lines)
+                    if p in assigned_vars and re.search(rf'\b{re.escape(assigned_vars[p])}\b', later_text):
+                        downstream_map[p].add(later)
+
+            for p in topological_seq:
+                if p in assigned_vars and not downstream_map.get(p):
+                    # This is a terminal node — emit it
+                    terminal_emits.append(f"{assigned_vars[p]} = {assigned_vars[p]}")
+
+            if not terminal_emits:
+                clean_last = last_assigned.split(".")[-1] if (last_assigned and "." in last_assigned and not last_assigned.endswith(".out")) else (last_assigned or "rawreads")
+                clean_last = re.sub(r'[^a-zA-Z0-9_.]', '_', clean_last)
+                terminal_emits = [f"final_result = {clean_last}"]
+
+            emit_str = "\n        ".join(terminal_emits)
+
+            precheck_block += "## TOPOLOGICAL EXECUTION WIREFRAME (Draft for LLM Review)\n"
+            precheck_block += "The Knowledge Graph deduced the following modular Nextflow DSL2 sub-workflow. "
+            precheck_block += "**YOU MUST REVIEW AND REFINE THIS DRAFT**: trim unnecessary steps, fix variable names, add complex operators (.cross, .multiMap, .branch, .mix), and ensure modularity.\n```groovy\n"
+            precheck_block += f"workflow {sw_name} {{\n    take:\n        {takes_str}\n    main:\n"
+            precheck_block += "\n".join(wireframe_lines) + "\n"
+            precheck_block += f"    emit:\n        {emit_str}\n"
+            precheck_block += "}\n\nworkflow {\n"
+            precheck_block += "    rawreads = getSingleInput()\n"
+            for t in take_names[1:]:
+                precheck_block += f"    {t} = param('{t}')\n"
+            precheck_block += f"    {sw_name}({', '.join(take_names)})\n}}\n```\n\n"
         precheck_block += "## CHANNEL MAP (verified from code store)\n"
         precheck_block += "\n".join(channel_map_lines)
         if dataflow_directives:
@@ -676,10 +698,9 @@ def architect_precheck_node(state: GraphState, store: BaseStore) -> Any:
             precheck_block += "\n\n## WARNINGS\n" + "\n".join(warnings)
 
         logger.info("architect_precheck_warnings", count=len(warnings), directives=len(dataflow_directives), wireframe=len(wireframe_lines))
+        # Wireframe is injected as text context only — no kg_ast bypass
         return {"technical_context": state.get("technical_context", "") + "\n\n" + precheck_block}
 
     logger.info("architect_precheck_clear")
     return {}
-
-
 

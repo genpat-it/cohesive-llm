@@ -54,6 +54,16 @@ def login(
             db.add(user)
             db.commit()
             db.refresh(user)
+        token = create_access_token(user.id, user.username)
+        response.set_cookie(
+            key=COOKIE_NAME,
+            value=token,
+            httponly=True,
+            samesite=COOKIE_SAMESITE,
+            secure=COOKIE_SECURE,
+            max_age=JWT_EXPIRE_HOURS * 3600,
+            path=COOKIE_PATH,
+        )
         return user
 
     user = db.query(User).filter(User.username == payload.username).first()

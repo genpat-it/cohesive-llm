@@ -451,6 +451,60 @@ body {
 .chat-bubble.ai ul, .chat-bubble.ai ol { padding-left: 24px; margin-bottom: 12px; }
 .chat-bubble.ai li { margin-bottom: 6px; }
 
+/* Markdown Tables in Chat */
+.chat-bubble.ai .table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 14px 0;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.chat-bubble.ai table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 0;
+}
+
+.chat-bubble.ai thead {
+    background: #f1f5f9;
+}
+
+.chat-bubble.ai th {
+    padding: 10px 14px;
+    font-weight: 600;
+    text-align: left;
+    color: var(--text-main);
+    border-bottom: 2px solid var(--border);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.chat-bubble.ai td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.chat-bubble.ai tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.chat-bubble.ai tbody tr:hover {
+    background: #f8fafc;
+}
+
+.chat-bubble.ai td code,
+.chat-bubble.ai th code {
+    font-size: 12px;
+    padding: 1px 5px;
+}
+
 .chat-bubble.error {
     color: var(--error);
     background: #fef2f2;
@@ -892,9 +946,34 @@ body {
     box-shadow: 0 5px 14px rgba(16,185,129,0.35);
 }
 .inline-approve-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+}
+.inline-approve-btn.done {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    box-shadow: none;
+    cursor: default;
+    opacity: 1;
+    font-weight: 600;
+}
+.inline-approve-btn.superseded {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border: 1px solid var(--border);
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+.inline-approve-btn.failed {
+    background: #fef2f2;
+    color: var(--error);
+    border: 1px solid #fecaca;
+    box-shadow: none;
+    cursor: default;
+    opacity: 0.9;
 }
 
 /* ─── Timer / response duration captions ────────────────────────────────── */

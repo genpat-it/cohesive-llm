@@ -158,21 +158,21 @@ export function initResultsUi() {
     function renderMermaid(code) {
         if (!code) return;
         mermaidEmpty.style.display = 'none';
-        
-        const beautified = customFormat(code);
+
+        const cleaned = cleanMermaidCode(code);
+        const beautified = customFormat(cleaned);
         rawMermaidData = beautified;
         mermaidCodeBlock.textContent = beautified;
         Prism.highlightElement(mermaidCodeBlock);
-        
+
         if (isMermaidCodeView) {
             mermaidCodeContainer.style.display = 'block';
         } else {
             mermaidContainer.style.display = 'flex';
         }
-        
-        mermaidDiagram.innerHTML = `<div class="mermaid">${code}</div>`;
-        
-        try {
+
+        function tryRender(diagramCode) {
+            mermaidDiagram.innerHTML = `<div class="mermaid">${diagramCode}</div>`;
             mermaid.init(undefined, mermaidDiagram.querySelector('.mermaid'));
             setTimeout(() => {
                 const svg = mermaidDiagram.querySelector('svg');
@@ -181,8 +181,39 @@ export function initResultsUi() {
                     addZoomControls(mermaidContainer);
                 }
             }, 100);
+        }
+
+        try {
+            tryRender(cleaned);
         } catch (err) {
-            mermaidDiagram.innerHTML = `<div style="color:red; padding:20px;">Render failed: ${err.message}</div>`;
+            console.warn('Initial Mermaid parse failed, attempting auto-repair...', err);
+            try {
+                const repaired = autoRepairMermaid(cleaned);
+                tryRender(repaired);
+                // Subtle badge indicating diagram was auto-recovered
+                const note = document.createElement('div');
+                note.style.cssText = 'position:absolute; bottom:12px; left:12px; font-size:11px; color:var(--text-muted); background:rgba(0,0,0,0.06); padding:3px 8px; border-radius:4px; pointer-events:none; z-index:5;';
+                note.innerHTML = '<i class="fas fa-magic" style="margin-right:4px;"></i>Diagram Auto-Recovered';
+                mermaidContainer.appendChild(note);
+            } catch (err2) {
+                console.warn('Auto-repair failed, building topological fallback...', err2);
+                try {
+                    const fallback = buildTopologicalFallback(cleaned);
+                    tryRender(fallback);
+                } catch (err3) {
+                    console.error('All Mermaid render attempts failed:', err3);
+                    mermaidDiagram.innerHTML = `
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-muted); text-align:center; padding:24px;">
+                            <i class="fas fa-project-diagram" style="font-size:32px; margin-bottom:12px; opacity:0.4;"></i>
+                            <div style="font-size:13px; font-weight:500; margin-bottom:4px;">Diagram Render Notice</div>
+                            <div style="font-size:12px; opacity:0.7; max-width:320px; margin-bottom:12px;">The diagram structure could not be rendered graphically. You can inspect or copy the Mermaid syntax in Code View.</div>
+                            <button class="control-btn active" style="font-size:12px; padding:6px 12px;" onclick="document.getElementById('toggleMermaidBtn').click();">
+                                <i class="fas fa-code" style="margin-right:6px;"></i>Switch to Code View
+                            </button>
+                        </div>
+                    `;
+                }
+            }
         }
     }
 }
@@ -306,4 +337,88 @@ function customFormat(code, skipIndent = false) {
         }
     }
     return formatted.join('\n');
+}
+
+function cleanMermaidCode(raw) {
+    if (!raw) return '';
+    let code = raw.replace(/\\n/g, '\n').trim();
+    // Strip markdown code fences if wrapped
+    if (code.startsWith('```')) {
+        code = code.replace(/^```[a-z]*\n?/i, '').replace(/```\s*$/, '').trim();
+    }
+    return code;
+}
+
+function autoRepairMermaid(raw) {
+    let lines = cleanMermaidCode(raw).split('\n');
+    let out = [];
+    let inHeader = false;
+
+    for (let line of lines) {
+        let trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Ensure header exists
+        if (trimmed.startsWith('flowchart') || trimmed.startsWith('graph')) {
+            inHeader = true;
+            out.push(trimmed);
+            continue;
+        }
+
+        // Clean unquoted edge labels: -->|some text| => -->|"some text"|
+        trimmed = trimmed.replace(/-->\|([^"|]+)\|/g, (match, label) => {
+            const safe = label.trim().replace(/"/g, "'");
+            return `-->|"${safe}"|`;
+        });
+
+        // Strip double arrows / dangling arrows
+        if (trimmed.endsWith('-->')) {
+            continue;
+        }
+
+        out.push(trimmed);
+    }
+
+    if (!out.some(l => l.startsWith('flowchart') || l.startsWith('graph'))) {
+        out.unshift('flowchart TD');
+    }
+
+    return out.join('\n');
+}
+
+function buildTopologicalFallback(raw) {
+    const lines = cleanMermaidCode(raw).split('\n');
+    const nodes = new Set();
+    const edges = [];
+
+    for (let line of lines) {
+        const arrowMatch = line.match(/([a-zA-Z0-9_]+)\s*-->.*?([a-zA-Z0-9_]+)/);
+        if (arrowMatch) {
+            const src = arrowMatch[1];
+            const tgt = arrowMatch[2];
+            if (src !== tgt) {
+                nodes.add(src);
+                nodes.add(tgt);
+                edges.push(`${src} --> ${tgt}`);
+            }
+        }
+    }
+
+    const fallbackLines = [
+        'flowchart TD',
+        '    classDef process fill:#4A90E2,stroke:#357ABD,stroke-width:2px,color:#fff,rx:5px,ry:5px;'
+    ];
+
+    for (const n of nodes) {
+        fallbackLines.push(`    ${n}["${n}"]:::process`);
+    }
+    for (const e of edges) {
+        fallbackLines.push(`    ${e}`);
+    }
+
+    if (edges.length === 0) {
+        fallbackLines.push('    start([Start]) --> finish([Finish])');
+    }
+
+    return fallbackLines.join('\n');
 }

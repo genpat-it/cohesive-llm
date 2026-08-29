@@ -10,12 +10,11 @@ from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 
 from core.config import settings
-from core.nodes.architect import architect_generate_node, architect_precheck_node, architect_reason_node
+from core.nodes.architect import architect_generate_node, architect_precheck_node
 from core.nodes.consultant import consultant_extract_node, consultant_node
 from core.services.graph_state import GraphState
 from core.services.renderer import renderer_node
-from core.services.repair import repair_node, should_repair
-from core.tool_registry import get_architect_tools, get_consultant_tools
+from core.tool_registry import get_consultant_tools
 from core.utils.logger import logger
 
 # Safety cap on tool-calling iterations to prevent runaway loops
@@ -298,27 +297,42 @@ def graph_rag_node(state: GraphState, store: BaseStore) -> Any:
     # reducer without overwriting, we append it. The LLM will see it.
     return {"messages": [new_msg]}
 
-def build_consultant_subgraph(store: Any = None) -> Any:
-    """Consultant subgraph with ReAct tool-calling loop:
+from core.nodes.drawer_enricher import drawer_enrich_node
 
-    consultant → [tool_calls?] → tools → consultant (loop)
-                    ↓ (no tool_calls)
-               sanitize → consultant_extract → compact_memory → END
+
+def build_consultant_subgraph(store: Any = None) -> Any:
+    """Consultant subgraph with ReAct tool-calling loop and Drawer Enricher entry:
+
+    Entry:
+      ├─ [visual_topology present] → drawer_enrich → compact_memory → END
+      └─ [standard chat]           → consultant → [tool_calls?] → tools → consultant (loop)
+                                                    ↓ (no tool_calls)
+                                               sanitize → consultant_extract → compact_memory → END
     """
     sub = StateGraph(GraphState)
 
     # Nodes
-    # NOTE: graph_rag_node is intentionally removed from the subgraph.
-    # The knowledge graph is now built offline at load time (loader.py → kg.build_nx_graph).
-    # The LLM accesses graph data via search_component_graph / find_dataflow_path tools.
+    sub.add_node("drawer_enrich", drawer_enrich_node)
     sub.add_node("consultant", consultant_node)
     sub.add_node("tools", ToolNode(get_consultant_tools(), handle_tool_errors=True))
     sub.add_node("sanitize", sanitize_orphaned_tool_calls)
     sub.add_node("consultant_extract", consultant_extract_node)
     sub.add_node("compact_memory", compact_memory_node)
 
-    # Entry — consultant is now the direct entry point
-    sub.set_entry_point("consultant")
+    # Conditional entry: visual drawer designs go through drawer_enrich
+    def route_entry(state: GraphState) -> str:
+        if state.get("visual_topology"):
+            logger.info("--- [NODE] GRAPH routing to drawer_enrich_node for visual canvas")
+            return "drawer_enrich"
+        return "consultant"
+
+    sub.set_conditional_entry_point(route_entry, {
+        "drawer_enrich": "drawer_enrich",
+        "consultant": "consultant",
+    })
+
+    # Drawer enricher proceeds directly to memory compaction and exit
+    sub.add_edge("drawer_enrich", "compact_memory")
 
     # Routing: if consultant produced tool_calls → tools, else → sanitize → extract
     def route_consultant(state: GraphState) -> str:
@@ -379,96 +393,19 @@ def build_consultant_subgraph(store: Any = None) -> Any:
     return sub.compile(store=store)
 
 def build_execution_subgraph(store: Any = None) -> Any:
+    """Execution subgraph: precheck → generate → renderer.
+    No repair loop — if the LLM fails, renderer emits a warning message.
+    """
     sub = StateGraph(GraphState)
     sub.add_node("architect_precheck", architect_precheck_node)
-    
-    # State-Aware Reasoning Node (Handles both Research and Repair)
-    sub.add_node("architect_reason", architect_reason_node)
-    sub.add_node("sanitize_architect", sanitize_orphaned_tool_calls)
-    
     sub.add_node("architect_generate", architect_generate_node)
-    sub.add_node("repair", repair_node)
     sub.add_node("renderer", renderer_node)
 
-    # Inner loop for tool calling
-    max_architect_tool_iterations = settings.MAX_ARCHITECT_TOOL_ITERATIONS
-    max_architect_tool_iterations_custom = settings.MAX_ARCHITECT_TOOL_ITERATIONS_CUSTOM_BUILD
-
     sub.set_entry_point("architect_precheck")
-    sub.add_edge("architect_precheck", "architect_generate")  # Fast-path directly to code generation!
-
-    # Architect generate → check if valid
-    sub.add_conditional_edges(
-        "architect_generate",
-        should_repair,
-        {
-            "success": "renderer",
-            "repair": "repair",
-            "fail": "renderer"
-        }
-    )
-
-    # Repair → architect_reason (on retry, investigate with tools first)
-    sub.add_edge("repair", "architect_reason")
-
-    # Architect reason routing: tool calls → tools loop, else → generate
-    # Uses state-tracked arch_tool_iterations counter (reset to 0 by repair_node each repair cycle)
-    def route_architect_reason(state: GraphState) -> str:
-        from langchain_core.messages import AIMessage
-        messages = state.get("messages", [])
-        if not messages:
-            return "architect_generate"
-        last_msg = messages[-1]
-        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-            # Check for silent tool loop (repeating exact same calls)
-            prev_ai = None
-            for m in reversed(messages[:-1]):
-                if isinstance(m, AIMessage) and getattr(m, 'tool_calls', None):
-                    prev_ai = m
-                    break
-            
-            if prev_ai and prev_ai.tool_calls == last_msg.tool_calls:
-                logger.info("--- [NODE] GRAPH architect tool loop detected. Silently forcing generation.")
-                return "sanitize_architect"
-
-            arch_tool_count = state.get("arch_tool_iterations", 0)
-            strategy = state.get("strategy_selector", "CUSTOM_BUILD")
-            effective_limit = (
-                max_architect_tool_iterations_custom
-                if strategy == "CUSTOM_BUILD"
-                else max_architect_tool_iterations
-            )
-            if arch_tool_count >= effective_limit:
-                logger.info(f"--- [NODE] GRAPH architect tool limit reached ({arch_tool_count}/{effective_limit}, strategy={strategy}). proceeding to generate")
-                return "sanitize_architect"
-            return "architect_tools"
-        return "architect_generate"
-
-    # Standard ToolNode — registered normally so LangGraph runtime injects the store
-    # into ToolRuntime for all store-reading tools. DO NOT call .invoke() directly.
-    sub.add_node("architect_tools", ToolNode(get_architect_tools(), handle_tool_errors=True))
-
-    # Tiny node that bumps arch_tool_iterations after each tool round.
-    # Kept separate so it doesn't touch ToolNode's store injection path.
-    def _incr_arch_iters(state: GraphState) -> Any:
-        return {"arch_tool_iterations": state.get("arch_tool_iterations", 0) + 1}
-    sub.add_node("incr_arch_iters", _incr_arch_iters)
-
-    sub.add_conditional_edges("architect_reason", route_architect_reason, {
-        "architect_tools": "architect_tools",
-        "sanitize_architect": "sanitize_architect",
-        "architect_generate": "architect_generate"
-    })
-
-    # After architect tools, increment counter then loop back to reason
-    sub.add_edge("architect_tools", "incr_arch_iters")
-    sub.add_edge("incr_arch_iters", "architect_reason")
-    sub.add_edge("sanitize_architect", "architect_generate")
-    
-    # Renderer deterministically renders Mermaid DAG and compiles Groovy -> Direct to END
+    sub.add_edge("architect_precheck", "architect_generate")
+    sub.add_edge("architect_generate", "renderer")
     sub.add_edge("renderer", END)
 
-    # Pass store so LangGraph can inject it into store-dependent nodes (architect_precheck_node, architect_reason_node)
     return sub.compile(store=store)
 
 def build_graph() -> Any:

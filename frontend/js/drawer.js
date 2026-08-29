@@ -1,8 +1,9 @@
-import { checkSession, showToast } from './api.js?v=11';
-import { confirmDialog } from './modal.js?v=2';
+import { checkSession, showToast } from './api.js?v=16';
+import { confirmDialog } from './modal.js?v=16';
 
-const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH) || '';
-const API_BASE = BASE_PATH + '/api';
+const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH && !window.IZS_BASE_PATH.includes('{{')) ? window.IZS_BASE_PATH : '';
+const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || 
+    (typeof window !== 'undefined' && (window.location.port === '9000' || window.location.port === '3000' || window.location.port === '5500') ? 'http://localhost:8080' : (BASE_PATH || ''));
 
 // Auth guard
 const currentUser = await checkSession();
@@ -22,7 +23,7 @@ let currentDrawingId = null;
 // --- API helpers ---
 async function apiFetch(path, opts = {}) {
     const res = await fetch(`${API_BASE}${path}`, { credentials: 'same-origin', ...opts });
-    if (res.status === 401) { window.location.href = BASE_PATH + '/login'; throw new Error('Unauthorized'); }
+    if (res.status === 401) { window.location.href = BASE_PATH + '/login.html'; throw new Error('Unauthorized'); }
     return res;
 }
 

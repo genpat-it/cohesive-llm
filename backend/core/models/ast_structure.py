@@ -60,6 +60,7 @@ class GlobalDef(BaseModel):
             raise ValueError(f"GLOBAL SCOPE ERROR: Active func '{v}' in globals. Move to entrypoint body_code.")
         return v
 
+
 class InlineProcess(BaseModel):
     name: str = Field(description="The name of the custom process.")
     container: str | None = None
@@ -97,6 +98,7 @@ class InlineProcess(BaseModel):
         if v.isupper():
             raise ValueError(f"Process '{v}' is UPPERCASE. It should likely be a Global Constant, not a Process.")
         return v
+
 
 class WorkflowBlock(BaseModel):
     name: str = Field(description="The name of the workflow.")
@@ -150,19 +152,33 @@ class WorkflowBlock(BaseModel):
     @field_validator('emit_channels')
     @classmethod
     def validate_emit_identifiers(cls, v: Any) -> Any:
-        """Ensures emit LHS is a valid Groovy identifier."""
+        """Ensures emit LHS is a valid Groovy identifier and auto-heals unassigned component output channels."""
+        normalized_emits = []
         for emit_str in v:
             if '=' in emit_str:
-                lhs = emit_str.split('=')[0].strip()
+                lhs, rhs = emit_str.split('=', 1)
+                lhs = lhs.strip()
+                rhs = rhs.strip()
                 if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', lhs):
-                    raise ValueError(f"EMIT NAME ERROR: '{lhs}' is invalid identifier.")
+                    sanitized_lhs = re.sub(r'[^a-zA-Z0-9_]', '_', lhs).strip('_') or "out_channel"
+                    normalized_emits.append(f"{sanitized_lhs} = {rhs}")
+                else:
+                    normalized_emits.append(f"{lhs} = {rhs}")
             else:
                 cleaned = emit_str.strip()
-                if cleaned and not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', cleaned):
+                if cleaned:
                     if '.' in cleaned:
-                        raise ValueError(f"EMIT ERROR: '{cleaned}' is invalid. If emitting a component output, you MUST assign it a name: e.g. 'my_channel = {cleaned}'")
-                    raise ValueError(f"EMIT ERROR: '{cleaned}' is invalid identifier.")
-        return v
+                        # Auto-heal: proc.out.consensus -> consensus = proc.out.consensus
+                        name = cleaned.split('.')[-1]
+                        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name):
+                            name = "out_channel"
+                        normalized_emits.append(f"{name} = {cleaned}")
+                    elif re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', cleaned):
+                        normalized_emits.append(cleaned)
+                    else:
+                        sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', cleaned).strip('_') or "out_channel"
+                        normalized_emits.append(sanitized)
+        return normalized_emits
 
     @model_validator(mode='after')
     def enforce_take_channel_usage(self) -> Any:
@@ -180,7 +196,6 @@ class WorkflowBlock(BaseModel):
             if re.search(pattern, self.body_code):
                 raise ValueError(f"RECURSION ERROR: Workflow '{self.name}' is trying to call itself. This is forbidden.")
         return self
-
 
     @model_validator(mode='after')
     def enforce_variable_existence(self) -> Any:
@@ -247,6 +262,16 @@ class WorkflowBlock(BaseModel):
         return self
 
     @model_validator(mode='after')
+    def auto_emit_terminal_assignments(self) -> Any:
+        """If emit_channels is empty, auto-detect non-void process assignments in body_code and emit them."""
+        if not self.emit_channels and self.body_code:
+            assignments = re.findall(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=', self.body_code, re.MULTILINE)
+            valid_emits = [a for a in assignments if not _is_void_tool(a)]
+            if valid_emits:
+                self.emit_channels = [valid_emits[-1]]
+        return self
+
+    @model_validator(mode='after')
     def forbid_set_on_processes(self) -> Any:
         if not self.body_code:
             return self
@@ -272,7 +297,6 @@ class WorkflowBlock(BaseModel):
         return self
 
 
-
 class Entrypoint(BaseModel):
     body_code: str = Field(
         description="The code inside the main unnamed workflow. Do not write 'workflow {{ }}'."
@@ -287,11 +311,11 @@ class Entrypoint(BaseModel):
         return cleaned_body
 
 
-
 class DataFlowSubWorkflow(BaseModel):
     name: str = Field(description="Name of the sub-workflow")
     takes: list[str] = Field(description="Exact 'take' parameters needed")
     emits: list[str] = Field(description="Exact 'emit' parameters produced")
+
 
 class DataFlowPlan(BaseModel):
     nodes: list[str] = Field(
@@ -303,6 +327,7 @@ class DataFlowPlan(BaseModel):
     sub_workflows: list[DataFlowSubWorkflow] = Field(
         description="List the sub-workflows you plan to create, and their take/emit channels."
     )
+
 
 class NextflowPipelineAST(BaseModel):
     reasoning: str | None = Field(None, description="Explain your thought process, what you are fixing, and how you addressed any validation errors. Do NOT place conversational text in the code fields.")
@@ -322,8 +347,8 @@ class NextflowPipelineAST(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def auto_relocate_active_globals(cls, data: dict) -> dict:
-        """Deterministically normalizes and repairs input AST structure."""
+    def auto_modularize_and_repair_ast(cls, data: dict) -> dict:
+        """Deterministically normalizes AST, relocates active globals, and modularizes flat entrypoints into named sub-workflows."""
         if not isinstance(data, dict): return data
 
         # 1. Normalize entrypoint
@@ -335,14 +360,13 @@ class NextflowPipelineAST(BaseModel):
         # 2. Normalize data_flow_plan
         if 'data_flow_plan' not in data or data['data_flow_plan'] is None:
             data['data_flow_plan'] = {
-                'inputs': ['rawreads'],
-                'primary_workflow': 'workflow',
-                'components_used': []
+                'nodes': [],
+                'entrypoint_instantiations': [],
+                'sub_workflows': []
             }
 
-        globals_list = data.get('globals', [])
-        if not globals_list: return data
-
+        # 3. Relocate active channel instantiations from globals into entrypoint
+        globals_list = data.get('globals', []) or []
         try:
             from core.plugin_loader import get_active_plugin
             plugin = get_active_plugin()
@@ -371,6 +395,115 @@ class NextflowPipelineAST(BaseModel):
                 prefix = '\n'.join(relocated_lines)
                 ep['body_code'] = f"{prefix}\n{existing_body}" if existing_body else prefix
                 data['entrypoint'] = ep
+
+        # 4. Modular Sub-Workflow Auto-Encapsulation
+        # Fire when: (a) sub_workflows is empty, OR (b) sub_workflows exists but first entry has empty body_code
+        sub_wf_list = data.get('sub_workflows', []) or []
+        ep_dict = data.get('entrypoint', {})
+        ep_body = ep_dict.get('body_code', '') if isinstance(ep_dict, dict) else str(ep_dict)
+
+        needs_modularization = False
+        if not sub_wf_list and ep_body:
+            needs_modularization = True
+        elif sub_wf_list and ep_body:
+            # Check if first sub-workflow has empty body_code — move entrypoint logic into it
+            first_sw = sub_wf_list[0] if isinstance(sub_wf_list[0], dict) else {}
+            if not first_sw.get('body_code', '').strip():
+                needs_modularization = True
+
+        if needs_modularization and ep_body:
+            lines = [l.rstrip() for l in ep_body.splitlines() if l.strip()]
+            input_instantiations = []
+            process_lines = []
+            defined_input_vars = []
+
+            for line in lines:
+                stripped = line.strip()
+                if stripped.startswith('//') or stripped.startswith('/*'):
+                    continue
+
+                # Check if this line is an input channel/parameter instantiation
+                is_input_line = False
+                if any(kw in stripped for kw in active_keywords) or 'Channel.from' in stripped or 'params.' in stripped:
+                    # e.g., rawreads = getSingleInput() or def ref = param('ref')
+                    assign_match = re.match(r'^(?:def\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*=', stripped)
+                    if assign_match:
+                        defined_input_vars.append(assign_match.group(1))
+                        input_instantiations.append(line)
+                        is_input_line = True
+
+                if not is_input_line:
+                    process_lines.append(line)
+
+            # If we found process calls in entrypoint and have input vars or steps:
+            if process_lines and any('(' in l for l in process_lines):
+                combined_proc_code = '\n'.join(process_lines)
+
+                # Auto-instantiate common unassigned input channel parameters used in calls
+                assigned_in_proc = set(re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*=', combined_proc_code))
+                for used_var in ("rawreads", "reads", "data", "input"):
+                    if re.search(rf'\b{re.escape(used_var)}\b', combined_proc_code):
+                        if used_var not in assigned_in_proc and used_var not in defined_input_vars:
+                            from core.catalog_registry import registry
+                            default_in_fn = registry.get_default_input_function()
+                            defined_input_vars.append(used_var)
+                            input_instantiations.append(f"    {used_var} = {default_in_fn}()")
+
+                # Discover take channels from defined input variables used in process_lines
+                take_channels = []
+                for in_var in defined_input_vars:
+                    if re.search(rf'\b{re.escape(in_var)}\b', combined_proc_code):
+                        take_channels.append(in_var)
+
+                # Discover emit channels from process assignments
+                emit_channels = []
+                assigned_vars = re.findall(r'^([a-zA-Z_][a-zA-Z0-9_]*)\s*=', combined_proc_code, re.MULTILINE)
+                for av in assigned_vars:
+                    if not _is_void_tool(av):
+                        emit_channels.append(av)
+
+                # Derive meaningful name from process call categories
+                sub_wf_name = "PIPELINE"
+                if sub_wf_list and isinstance(sub_wf_list[0], dict) and sub_wf_list[0].get('name', '').strip():
+                    sub_wf_name = sub_wf_list[0]['name']
+                else:
+                    proc_calls = re.findall(r'\b([a-zA-Z0-9_]+)\s*\(', combined_proc_code)
+                    categories = set()
+                    cat_map = {
+                        "PP": "PREPROCESSING", "QC": "QC", "AS": "ASSEMBLY",
+                        "TY": "TYPING", "SC": "SCREENING", "AN": "ANNOTATION",
+                        "CL": "CLUSTERING", "MP": "MAPPING"
+                    }
+                    for pc in proc_calls:
+                        cat_m = re.match(r'(?:step_\d+|multi_)([A-Z]{2,3})_', pc)
+                        if cat_m:
+                            categories.add(cat_m.group(1))
+                    if categories:
+                        named_cats = [cat_map.get(c, c) for c in sorted(categories)]
+                        sub_wf_name = "_AND_".join(named_cats[:3]) if len(named_cats) <= 3 else "WGS_ANALYSIS"
+
+                if sub_wf_list and isinstance(sub_wf_list[0], dict):
+                    # Fill empty body into existing sub-workflow
+                    sub_wf_list[0]['body_code'] = combined_proc_code.strip()
+                    if not sub_wf_list[0].get('take_channels'):
+                        sub_wf_list[0]['take_channels'] = take_channels
+                    if not sub_wf_list[0].get('emit_channels'):
+                        sub_wf_list[0]['emit_channels'] = emit_channels[:3]
+                    data['sub_workflows'] = sub_wf_list
+                else:
+                    new_sub_wf = {
+                        "name": sub_wf_name,
+                        "take_channels": take_channels,
+                        "emit_channels": emit_channels[:3],  # emit primary outputs
+                        "body_code": combined_proc_code.strip()
+                    }
+                    data['sub_workflows'] = [new_sub_wf]
+
+                # Update entrypoint body to call the subworkflow
+                call_args = ", ".join(take_channels)
+                ep_call = f"{sub_wf_name}({call_args})" if take_channels else f"{sub_wf_name}()"
+                new_ep_body = "\n".join(input_instantiations) + ("\n\n" if input_instantiations else "") + ep_call
+                data['entrypoint'] = {"body_code": new_ep_body.strip()}
 
         return data
 
@@ -443,122 +576,27 @@ class NextflowPipelineAST(BaseModel):
 
     @model_validator(mode='after')
     def enforce_workflow_usage(self) -> Any:
-        """Auto-prune subworkflows that are defined but never called."""
+        """Ensures sub-workflows are linked to entrypoint rather than silently discarded."""
         if not self.sub_workflows:
             return self
 
-        all_code = self.entrypoint.body_code
+        used_sws = []
         for sw in self.sub_workflows:
-            all_code += "\n" + sw.body_code
+            pattern = rf"\b{re.escape(sw.name)}\b\s*\("
+            other_code = self.entrypoint.body_code + "\n" + "\n".join(
+                other.body_code for other in self.sub_workflows if other.name != sw.name
+            )
+            if re.search(pattern, other_code):
+                used_sws.append(sw)
 
-        self.sub_workflows = [
-            sw for sw in self.sub_workflows
-            if re.search(rf"\b{re.escape(sw.name)}\b\s*\(", all_code)
-        ]
-        return self
+        # If none were explicitly called in entrypoint, keep all sub-workflows and auto-wire primary invocation
+        if not used_sws:
+            primary_sw = self.sub_workflows[0]
+            call_args = ", ".join(primary_sw.take_channels)
+            invocation = f"{primary_sw.name}({call_args})" if call_args else f"{primary_sw.name}()"
+            if primary_sw.name not in self.entrypoint.body_code:
+                self.entrypoint.body_code = (self.entrypoint.body_code.rstrip() + f"\n\n{invocation}").strip()
+            used_sws = self.sub_workflows
 
-    @model_validator(mode='after')
-    def validate_no_undefined_variables(self) -> Any:
-        from core.services.ast_compiler import validate_undefined_variables
-
-        global_vars = {g.name for g in self.globals}
-
-        # Add all catalog output channels dynamically to global defined variables
-        try:
-            from pathlib import Path
-            import json
-            from core.loader import data_loader
-            db = dict(getattr(data_loader, "catalog_db", {}) or {})
-            if not db:
-                from core.plugin_loader import get_active_plugin
-                plugin = get_active_plugin()
-                if plugin and getattr(plugin, "catalog_components_path", None) and Path(plugin.catalog_components_path).exists():
-                    try:
-                        raw_data = json.loads(Path(plugin.catalog_components_path).read_text(encoding="utf-8"))
-                        raw_comps = raw_data.get("components", raw_data) if isinstance(raw_data, dict) else raw_data
-                        if isinstance(raw_comps, list):
-                            db.update({c.get("id") or c.get("tool"): c for c in raw_comps if isinstance(c, dict)})
-                        elif isinstance(raw_comps, dict):
-                            db.update(raw_comps)
-                    except Exception:
-                        pass
-            for comp_data in db.values():
-                out_chs = []
-                if isinstance(comp_data, dict):
-                    out_chs = comp_data.get("output_channels") or comp_data.get("out") or []
-                else:
-                    out_chs = getattr(comp_data, "output_channels", None) or getattr(comp_data, "out", None) or []
-                for emit_ch in (out_chs or []):
-                    if emit_ch and emit_ch not in ("none", "void", ""):
-                        global_vars.add(emit_ch)
-        except Exception:
-            pass
-
-        # Auto-wire unassigned proc_out = proc(...) bindings in SubWorkflows
-        for sw in self.sub_workflows:
-            for unassigned in set(re.findall(r'\b([a-zA-Z0-9_]+)_out\b', sw.body_code)):
-                if f"{unassigned}_out =" not in sw.body_code and f"{unassigned}_out=" not in sw.body_code:
-                    pattern = rf'\b([a-zA-Z0-9_]*{re.escape(unassigned)}[a-zA-Z0-9_]*)\s*\('
-                    for m in re.finditer(pattern, sw.body_code):
-                        prefix = sw.body_code[:m.start()].rstrip()
-                        if not prefix.endswith('='):
-                            sw.body_code = sw.body_code[:m.start()] + f"{unassigned}_out = " + sw.body_code[m.start():]
-                            break
-
-            for em in sw.emit_channels:
-                if '=' in em:
-                    lhs, rhs = em.split('=', 1)
-                    rhs_clean = rhs.strip()
-                    if '.' in rhs_clean:
-                        obj_name, prop = rhs_clean.split('.', 1)
-                        if f"{obj_name} =" not in sw.body_code and f"{obj_name}=" not in sw.body_code:
-                            stem = obj_name[:-4] if obj_name.endswith('_out') else obj_name
-                            pattern = rf'\b([a-zA-Z0-9_]*{re.escape(stem)}[a-zA-Z0-9_]*)\s*\('
-                            for m in re.finditer(pattern, sw.body_code):
-                                prefix = sw.body_code[:m.start()].rstrip()
-                                if not prefix.endswith('='):
-                                    sw.body_code = sw.body_code[:m.start()] + f"{obj_name} = " + sw.body_code[m.start():]
-                                    break
-
-        # Add all subworkflows and their emitted channel names to defined entrypoint variables
-        for sw in self.sub_workflows:
-            global_vars.add(sw.name)
-            for em in sw.emit_channels:
-                em_name = em.split('=')[0].strip() if '=' in em else em.strip()
-                if em_name:
-                    global_vars.add(em_name)
-                    global_vars.add(f"{sw.name}.out.{em_name}")
-
-        # Auto-inject input getters in entrypoint if standard input channels are used but unassigned
-        if "rawreads" in self.entrypoint.body_code and "rawreads =" not in self.entrypoint.body_code and "rawreads=" not in self.entrypoint.body_code:
-            self.entrypoint.body_code = "rawreads = getSingleInput()\n" + self.entrypoint.body_code
-        elif "reads" in self.entrypoint.body_code and "reads =" not in self.entrypoint.body_code and "reads=" not in self.entrypoint.body_code:
-            self.entrypoint.body_code = "reads = getSingleInput()\n" + self.entrypoint.body_code
-
-        # Auto-wire unassigned variables across all code blocks dynamically from catalog
-        for block_owner in [self.entrypoint] + list(self.sub_workflows):
-            if "alleles" in block_owner.body_code and "alleles =" not in block_owner.body_code and "alleles=" not in block_owner.body_code:
-                for comp_id, comp_info in db.items():
-                    out_chs = comp_info.get("output_channels") if isinstance(comp_info, dict) else getattr(comp_info, "output_channels", [])
-                    if "alleles" in (out_chs or []):
-                        pattern = rf'(\b{re.escape(comp_id)}\s*\([^)]*\)(?:\.alleles)?)'
-                        m = re.search(pattern, block_owner.body_code)
-                        if m:
-                            prefix = block_owner.body_code[:m.start()].rstrip()
-                            if not prefix.endswith('='):
-                                block_owner.body_code = block_owner.body_code[:m.start()] + "alleles = " + block_owner.body_code[m.start():]
-                                break
-
-        # Check Entrypoint
-        undefined_ep = validate_undefined_variables(self.entrypoint.body_code, global_vars)
-        if undefined_ep:
-            raise ValueError(f"UNDEFINED VAR in entrypoint: Variables {', '.join(undefined_ep)} used but not defined. Did you forget to assign them using a helper function or params?")
-
-        # Check SubWorkflows
-        for sw in self.sub_workflows:
-            defined = set(sw.take_channels) | global_vars
-            undefined_sw = validate_undefined_variables(sw.body_code, defined)
-            if undefined_sw:
-                raise ValueError(f"UNDEFINED VAR in '{sw.name}': Variables {', '.join(undefined_sw)} used but not defined in take_channels or locally.")
-
+        self.sub_workflows = used_sws
         return self

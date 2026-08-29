@@ -1,13 +1,11 @@
-// Base path is set by the inline script in <head> based on window.location.
-// Empty string at site root, "/llm" when served under a sub-path proxy, etc.
-const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH) || '';
+const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH && !window.IZS_BASE_PATH.includes('{{')) ? window.IZS_BASE_PATH : '';
 
-// API base path. Defaults to "<base>/api". Override at runtime by setting
-// window.IZS_API_BASE before the module loads.
-const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || (BASE_PATH + '/api');
+// API base path. Defaults to "<base>/api", or "http://localhost:8080" when running frontend standalone on a dev port.
+const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || 
+    (typeof window !== 'undefined' && (window.location.port === '9000' || window.location.port === '3000' || window.location.port === '5500') ? 'http://localhost:8080' : (BASE_PATH || ''));
 
 function redirectToLogin() {
-    window.location.href = BASE_PATH + '/login';
+    window.location.href = BASE_PATH + '/login.html';
 }
 
 async function apiFetch(path, options = {}) {
@@ -125,11 +123,14 @@ export function showToast(message, icon = 'fa-check') {
     toast._timer = setTimeout(() => toast.classList.remove('visible'), 2000);
 }
 
-export async function sendChatMessage(sessionId, message) {
+export async function sendChatMessage(sessionId, message, options = {}) {
     try {
         const payload = {
             session_id: sessionId,
-            message: message
+            message: message || '',
+            action: options.action || null,
+            execution_mode: options.execution_mode || 'interactive',
+            generate_diagrams: options.generate_diagrams !== false,
         };
 
         const response = await apiFetch('/chat', {

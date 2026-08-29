@@ -25,6 +25,9 @@ class DataLoader:
         logger.info("loading_resources_start")
         self._load_lookups(store)
         self._load_vector_store()
+        if store:
+            from core.services.knowledge_graph import kg
+            kg.build_nx_graph(store)
         logger.info("loading_resources_complete")
 
     def _resolve_paths(self) -> Any:

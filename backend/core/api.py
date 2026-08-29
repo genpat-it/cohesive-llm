@@ -162,7 +162,10 @@ async def chat_with_agent(request: ChatRequest, graph: Any=Depends(get_graph)) -
             if result.get("error"):
                 ai_reply = f"I encountered an error while building the pipeline: {result.get('error')}"
             elif result.get("validation_error"):
-                ai_reply = f"I could not fix the pipeline validation errors after multiple attempts. The last error was:\n\n{result.get('validation_error')}"
+                if result.get("nextflow_code") or result.get("ast_json"):
+                    ai_reply = f"I have generated the Nextflow pipeline based on your approved plan.\n\n⚠️ **Validation Notice**: {result.get('validation_error')}\n\nPlease review the generated workflow code below."
+                else:
+                    ai_reply = f"I could not complete the pipeline AST validation. Details:\n\n{result.get('validation_error')}"
             else:
                 ai_reply = "I have successfully generated and validated the Nextflow pipeline based on your approved plan."
         else:

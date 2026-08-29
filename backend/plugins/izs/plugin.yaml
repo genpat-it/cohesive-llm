@@ -64,7 +64,6 @@ helper_imports:
   "getReferenceCodes": "../functions/parameters.nf"
   "getReferenceUnkeyed": "../functions/parameters.nf"
   "getReferenceOptional": "../functions/parameters.nf"
-  "getReferenceForLineage": "../functions/parameters.nf"
   "_getParam": "../functions/parameters.nf"
   "getDS": "../functions/parameters.nf"
   "isFullOutput": "../functions/parameters.nf"

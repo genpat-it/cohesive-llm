@@ -50,6 +50,12 @@ _QUERY_STOPWORDS: frozenset[str] = frozenset({
     "using", "work", "works", "working",
 })
 
+_WORKFLOW_ENGINE_TERMS: frozenset[str] = frozenset({
+    "step", "multi", "module", "pipeline", "workflow", "process", "tool",
+    "sample", "samples", "result", "results", "file", "files", "data",
+    "check", "quality", "analysis", "generation"
+})
+
 _RELATIONAL_INTENT_TERMS: frozenset[str] = frozenset({
     "call", "calls", "called", "caller", "callers",
     "invoke", "invokes", "invoked",
@@ -596,10 +602,14 @@ class KnowledgeGraph:
 
     def build_nx_graph(self, store: Any) -> None:
         """Build the nx.DiGraph from all catalog sources in store."""
-        if store:
-            self.store = store
-        if self.is_built:
+        if not store:
             return
+        if self.is_built and len(self.G.nodes) > 0 and store is self.store:
+            return
+
+        self.store = store
+        self.G.clear()
+        self.is_built = False
 
         try:
             from core.plugin_loader import get_active_plugin
@@ -615,6 +625,23 @@ class KnowledgeGraph:
 
         # 1. Nodes from components
         components = store.search(("components",), limit=5000)
+        vocab: set[str] = set()
+        taxonomy_prefixes: set[str] = set()
+        for comp in components:
+            c_id = comp.key
+            if "__" in c_id:
+                stage_part = c_id.split("__")[0].lower()
+                for token in re.split(r"[_\-]+", stage_part):
+                    if len(token) >= 2:
+                        taxonomy_prefixes.add(token)
+            for part in re.split(r"[_\-]+", c_id.lower()):
+                if len(part) >= 3:
+                    vocab.add(part)
+            for kw in (comp.value.get("keywords") or []):
+                for word in str(kw).lower().split():
+                    if len(word) >= 3:
+                        vocab.add(word)
+
         for comp in components:
             comp_id = comp.key
             data = comp.value
@@ -626,6 +653,7 @@ class KnowledgeGraph:
                 comp_id,
                 label=comp_id,
                 description=data.get("description", "")[:250],
+                keywords=data.get("keywords") or [],
                 inputs=inputs,
                 outputs=outputs,
                 tool=tool_name,
@@ -634,24 +662,28 @@ class KnowledgeGraph:
             )
 
             # Build inverted indices for topological projection
-            if tool_name:
-                self._tool_to_vertex[tool_name.lower()] = comp_id
-                if "__" in tool_name:
-                    self._tool_to_vertex[tool_name.split("__")[-1].lower()] = comp_id
-                elif "_" in tool_name:
-                    self._tool_to_vertex[tool_name.split("_")[-1].lower()] = comp_id
+            def _add_valid_tool(k: str, target: str) -> None:
+                k_clean = k.lower().strip()
+                if len(k_clean) >= 3 and k_clean not in _WORKFLOW_ENGINE_TERMS and k_clean not in taxonomy_prefixes and k_clean not in _QUERY_STOPWORDS and not any(k_clean.startswith(p) for p in ["step_", "multi_", "module_", "pipeline_"]):
+                    self._tool_to_vertex[k_clean] = target
 
-            if "__" in comp_id:
-                suffix = comp_id.split("__")[-1].lower()
-                self._alias_index[suffix] = comp_id
-                for sub in suffix.split("_"):
-                    if len(sub) > 2 and sub not in self._alias_index:
-                        self._alias_index[sub] = comp_id
+            def _add_valid_alias(k: str, target: str) -> None:
+                k_clean = k.lower().strip()
+                if len(k_clean) >= 3 and k_clean not in _WORKFLOW_ENGINE_TERMS and k_clean not in taxonomy_prefixes and k_clean not in _QUERY_STOPWORDS and not any(k_clean.startswith(p) for p in ["step_", "multi_", "module_", "pipeline_"]):
+                    self._alias_index[k_clean] = target
+
+            canonical_tool = comp_id.split("__")[-1].lower() if "__" in comp_id else (tool_name.lower() if tool_name else comp_id.lower())
+            _add_valid_tool(canonical_tool, comp_id)
+            _add_valid_alias(canonical_tool, comp_id)
+            if "_" in canonical_tool:
+                for sub in canonical_tool.split("_"):
+                    _add_valid_tool(sub, comp_id)
+                    _add_valid_alias(sub, comp_id)
 
             for kw in (data.get("keywords") or []):
                 kw_clean = str(kw).lower().strip()
-                if kw_clean and kw_clean not in self._alias_index:
-                    self._alias_index[kw_clean] = comp_id
+                if kw_clean:
+                    _add_valid_alias(kw_clean, comp_id)
 
             for ch in inputs:
                 norm_ch = self.normalize_channel(ch)
@@ -873,19 +905,8 @@ class KnowledgeGraph:
             # 3. Extract CLI flags and parameters: e.g. --db vfdb, --min_identity 90, --coverage 80
             flag_matches = re.findall(r'--?([a-zA-Z0-9_-]+)\s+([a-zA-Z0-9_-]+)', code)
             for flag, val in flag_matches:
-                if len(flag) > 2:
+                if len(flag) > 2 and len(val) > 2 and flag.lower() not in _QUERY_STOPWORDS and val.lower() not in _QUERY_STOPWORDS:
                     self._alias_index[f"{flag.lower()}_{val.lower()}"] = target_node
-                    if len(val) > 2:
-                        self._alias_index[val.lower()] = target_node
-
-            # 4. Extract tokens from comments and documentation
-            comment_matches = re.findall(r'//\s*(.*)', code)
-            for comment in comment_matches:
-                words = re.findall(r'\b[a-zA-Z]{4,}\b', comment.lower())
-                for w in words:
-                    if w not in ("workflow", "process", "include", "return", "input", "output"):
-                        if w not in self._alias_index:
-                            self._alias_index[w] = target_node
 
             # 5. Extract take/emit channel signatures
             take_match = re.search(r'take:\s*([a-zA-Z0-9_,\s]+)(?=\s*main:|\s*emit:|\})', code)
@@ -1366,6 +1387,116 @@ class KnowledgeGraph:
     # Topological Vertex Projection & Closed-World Validation API
     # ─────────────────────────────────────────────────────────────────────────
 
+    def extract_negative_exclusions(self, query_str: str, explicit_exclusions: Optional[Set[str]] = None) -> set[str]:
+        """Extract all tool names or aliases explicitly negated/excluded."""
+        if explicit_exclusions:
+            return {str(x).lower().strip() for x in explicit_exclusions if str(x).strip()}
+        return set()
+
+    def project_all_vertices(self, query_str: str, excluded_items: Optional[Set[str]] = None) -> List[str]:
+        """Scan query_str and extract all matching canonical vertices from V(G) in topological appearance order, respecting excluded_items."""
+        if not query_str:
+            return []
+        q_lower = query_str.lower()
+        q_norm = re.sub(r"[\s\-_]+", "", q_lower)
+        negated = self.extract_negative_exclusions(query_str, explicit_exclusions=excluded_items)
+
+        # 1. Exact word boundary matches & substring matches
+        matched_exact: Dict[str, str] = {}
+        matched_sub: Dict[str, str] = {}
+
+        for node in self.G.nodes():
+            tool_name = node.split("__")[-1] if "__" in node else node
+            tool_clean = tool_name.lower()
+            if tool_clean in negated or any(n in tool_clean for n in negated):
+                continue
+            if bool(re.search(rf"\b{re.escape(tool_clean)}\b", q_lower)):
+                matched_exact[node] = tool_clean
+            elif len(tool_clean) >= 5 and tool_clean in q_norm:
+                matched_sub[node] = tool_clean
+
+        for alias, target in getattr(self, "_alias_index", {}).items():
+            alias_clean = alias.lower()
+            if alias_clean in negated or any(n in alias_clean for n in negated):
+                continue
+            if target in self.G:
+                if bool(re.search(rf"\b{re.escape(alias_clean)}\b", q_lower)):
+                    matched_exact[target] = alias_clean
+                elif len(alias_clean) >= 5 and alias_clean in q_norm:
+                    matched_sub[target] = alias_clean
+
+        for tool, target in getattr(self, "_tool_to_vertex", {}).items():
+            tool_clean = tool.lower()
+            if tool_clean in negated:
+                continue
+            if len(tool_clean) >= 4:
+                neg_pattern = rf"(?:do\s+not\s+use|don'?t\s+use|no|without|exclude|avoid|not)\s+(?:using\s+)?{re.escape(tool_clean)}\b"
+                if not re.search(neg_pattern, q_lower) and target in self.G:
+                    if bool(re.search(rf"\b{re.escape(tool_clean)}\b", q_lower)):
+                        matched_exact[target] = tool_clean
+                    elif len(tool_clean) >= 5 and tool_clean in q_norm:
+                        matched_sub[target] = tool_clean
+
+        found: List[str] = list(matched_exact.keys())
+        # Filter substring matches to eliminate collisions contained within an exact word match
+        for node, sub_tool in matched_sub.items():
+            if node not in found:
+                if not any(sub_tool in exact_tool for exact_tool in matched_exact.values()):
+                    found.append(node)
+
+        # Dynamic multi-word keyword content match
+        q_tokens = set(re.findall(r"[a-z0-9]+", q_lower))
+        for node, data in self.G.nodes(data=True):
+            if node in found:
+                continue
+            tool_name = node.split("__")[-1] if "__" in node else node
+            if tool_name.lower() in negated:
+                continue
+            for kw in (data.get("keywords") or []):
+                kw_clean = str(kw).lower().strip()
+                kw_words = [w for w in re.findall(r"[a-z0-9]+", kw_clean) if w not in _QUERY_STOPWORDS and len(w) >= 3]
+                if len(kw_words) >= 2:
+                    matches = sum(1 for w in kw_words if w in q_tokens or w.rstrip("s") in q_tokens)
+                    if matches >= len(kw_words) or (len(kw_words) >= 3 and matches >= len(kw_words) - 1):
+                        found.append(node)
+                        break
+
+        # Dynamic sibling variant disambiguation across all candidate vertices
+        # Group by root tool identifier (e.g. tool / tool_variant)
+        def _get_root(name: str) -> str:
+            clean = name.split("__")[-1] if "__" in name else name
+            clean = clean.split("_")[0]
+            return re.sub(r"\d+$", "", clean)
+
+        variant_groups: Dict[str, List[str]] = defaultdict(list)
+        for v in found:
+            variant_groups[_get_root(v)].append(v)
+
+        pruned_found: List[str] = []
+        for root, group in variant_groups.items():
+            if len(group) == 1:
+                pruned_found.append(group[0])
+            else:
+                def _score_cand(cand_id: str) -> int:
+                    score = 0
+                    tool_sub = cand_id.split("__")[-1].lower() if "__" in cand_id else cand_id.lower()
+                    if tool_sub in q_lower:
+                        score += 50
+                    node_data = self.G.nodes.get(cand_id, {})
+                    for kw in (node_data.get("keywords") or []):
+                        if str(kw).lower() in q_lower:
+                            score += 50
+                    for tok in cand_id.lower().split("_"):
+                        if len(tok) >= 3 and (tok in q_lower or tok.rstrip("s") in q_lower):
+                            score += len(tok)
+                    return score
+
+                best_variant = max(group, key=_score_cand)
+                pruned_found.append(best_variant)
+        found = [v for v in found if v in pruned_found]
+
+        return found
+
     def project_vertex(self, query_str: str) -> Optional[str]:
         """Project an arbitrary query, shorthand name, or alias onto a canonical vertex v in V(G).
         Returns None if the query is strictly out-of-bounds (closed-world enforcement).
@@ -1411,6 +1542,18 @@ class KnowledgeGraph:
                 candidates.append(node)
             elif f"__{q_lower}__" in node_lower or f"_{q_lower}_" in node_lower:
                 candidates.append(node)
+
+        # 5B. Multi-token word scan against tool/alias index for phrases
+        if not candidates and ' ' in q_lower:
+            words = [w for w in re.split(r'[^a-z0-9]', q_lower) if len(w) >= 3]
+            for w in reversed(words):
+                if w in self._tool_to_vertex:
+                    return self._tool_to_vertex[w]
+                if w in self._alias_index:
+                    return self._alias_index[w]
+                for node in self.G.nodes():
+                    if node.lower().endswith(f"__{w}"):
+                        return node
 
         if len(candidates) == 1:
             return candidates[0]
@@ -1520,12 +1663,35 @@ class KnowledgeGraph:
 
         return valid_components, helper_funcs
 
-    def bridge_pipeline_path(self, component_ids: List[str]) -> List[str]:
+    def bridge_pipeline_path(
+        self,
+        component_ids: List[str],
+        input_datatype: str = "unspecified",
+        allow_auto_trimming: bool = False,
+    ) -> List[str]:
         """Verify reachability between sequential pipeline components.
         If a gap exists (e.g. raw_reads -> lineage_typing), runs BFS shortest path
         on G to automatically insert missing bridge components.
+        Also prepends upstream quality trimming ONLY IF explicitly requested / raw sequencer data is indicated.
         """
-        if len(component_ids) <= 1 or not self.is_built:
+        if not component_ids or not self.is_built:
+            return list(component_ids)
+
+        # Check if preprocessing/trimming is strictly requested or needed for raw reads
+        raw_indicators = ("raw", "raw_reads", "fastq", "reads", "illumina", "nanopore")
+        is_raw_data = any(ind in str(input_datatype).lower() for ind in raw_indicators)
+
+        if allow_auto_trimming and is_raw_data:
+            first_comp = component_ids[0]
+            has_preprocessing = any(c.startswith("step_1PP_") for c in component_ids)
+            if not has_preprocessing and (first_comp.startswith("step_2") or first_comp.startswith("step_3")):
+                trimming_nodes = [n for n in self.G.nodes() if n.startswith("step_1PP_trimming")]
+                if trimming_nodes:
+                    best_trimmer = max(trimming_nodes, key=lambda n: self.G.degree(n))
+                    if best_trimmer not in component_ids:
+                        component_ids = [best_trimmer] + list(component_ids)
+
+        if len(component_ids) <= 1:
             return list(component_ids)
 
         bridged: List[str] = [component_ids[0]]
@@ -1540,9 +1706,19 @@ class KnowledgeGraph:
                     bridged.append(tgt)
                 continue
 
-            # Try to find forward shortest path in G
+            # Check if channel emission and consumption already overlap (direct channel compatibility)
+            src_emits = self.component_emits.get(src, set())
+            tgt_takes = self.component_takes.get(tgt, set())
+            if src_emits and tgt_takes and bool(src_emits & tgt_takes):
+                if tgt not in bridged:
+                    bridged.append(tgt)
+                continue
+
+            # Try to find forward shortest path in G across atomic process nodes only if gap cannot be bridged directly
             try:
-                path = nx.shortest_path(self.G, src, tgt)
+                valid_nodes = [n for n in self.G.nodes() if n.startswith("step_") or n.startswith("multi_")]
+                subG = self.G.subgraph(valid_nodes)
+                path = nx.shortest_path(subG, src, tgt)
                 for intermediate in path[1:]:
                     if intermediate not in bridged:
                         bridged.append(intermediate)
