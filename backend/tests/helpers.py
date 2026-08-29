@@ -225,19 +225,21 @@ def build_modification_chat_messages(raw_chat_messages: list[str]) -> list[str]:
 
 def get_exact_context(template_ids: list[str], component_ids: list[str], store) -> str:
     """Bypasses vector search to inject exact catalog items for deterministic testing.
-
-    Pulls items directly from the InMemoryStore using the same
-    _inject_template / _inject_component functions used by the
-    production RAG pipeline, but skips all scoring and ranking.
+    Pulls items directly from the InMemoryStore.
     """
-    from core.services.tools import _inject_component, _inject_template
-
-    found_ids: set[str] = set()
     context_blocks: list[str] = []
     for tid in template_ids:
-        _inject_template(tid, found_ids, context_blocks, store, embed_code=False)
+        tmpl_item = store.get(("templates",), tid)
+        if tmpl_item and tmpl_item.value:
+            desc = tmpl_item.value.get("description", "")
+            context_blocks.append(f"### TEMPLATE: {tid}\n{desc}")
     for cid in component_ids:
-        _inject_component(cid, found_ids, context_blocks, store, embed_code=False)
+        comp_item = store.get(("components",), cid)
+        if comp_item and comp_item.value:
+            c = comp_item.value
+            inputs = c.get("input_channels") or c.get("input_types") or []
+            outputs = c.get("output_channels") or c.get("out") or []
+            context_blocks.append(f"### COMPONENT: {cid}\nINPUTS: {', '.join(inputs)}\nOUTPUTS: {', '.join(outputs)}")
     return "\n".join(context_blocks) + "\n\n"
 
 

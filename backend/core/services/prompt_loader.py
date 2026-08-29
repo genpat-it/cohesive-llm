@@ -150,12 +150,6 @@ def load_architect_prompt() -> str:
 
 
 @lru_cache(maxsize=1)
-def load_diagram_prompt() -> str:
-    """Load the diagram prompt from file."""
-    return _load_file(CORE_PROMPTS_DIR / "diagram.md")
-
-
-@lru_cache(maxsize=1)
 def load_extractor_prompt() -> str:
     """Load the consultant extraction prompt from file."""
     return _load_file(CORE_PROMPTS_DIR / "extractor.md")
@@ -179,7 +173,6 @@ def reload_prompts() -> None:
     load_consultant_prompt.cache_clear()
     load_drawer_enricher_prompt.cache_clear()
     load_architect_prompt.cache_clear()
-    load_diagram_prompt.cache_clear()
     load_extractor_prompt.cache_clear()
 
 

@@ -20,25 +20,22 @@ class GraphState(TypedDict, total=False):
     design_plan: str | None
     tool_memory: list[dict] | None  # Structured: [{tool, args, result}, ...]
 
-    # --- Hydrator Routing State ---
+    # --- Context & Execution Directives ---
     strategy_selector: str | None      # e.g., EXACT_MATCH, ADAPTED_MATCH, CUSTOM_BUILD
     used_template_id: str | None       # The specific template ID if applicable
-    selected_component_ids: list[str]        # List of individual tool IDs from RAG
-    technical_context: str | None      # The final assembled Groovy code string
+    selected_component_ids: list[str]  # List of individual tool IDs from catalog
+    technical_context: str | None      # The final assembled technical context
 
     # --- Architect & Renderer State ---
     ast_json: dict[str, Any] | None
     nextflow_code: str | None
-    mermaid_agent: str | None
     mermaid_deterministic: str | None
 
     # --- Memory & Errors ---
     error: str | None
     validation_error: str | None
 
-    # The add_messages reducer handles our short-term memory trimming
+    # Reducer handles short-term conversational context
     messages: Annotated[list[BaseMessage], add_messages]
-    diagram_messages: Annotated[list[BaseMessage], add_messages]
-    diagram_data: dict[str, Any] | None
     visual_topology: dict[str, Any] | None
 

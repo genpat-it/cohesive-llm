@@ -252,23 +252,17 @@ def check_component_channels(component_name: str, runtime: ToolRuntime) -> str:
 from core.services.consultant_tools import (
     search_helper_functions,
     search_design_patterns,
-    auto_complete_pipeline_dag,
     search_components,
-    find_dataflow_path,
-    get_component_neighbors,
-    explain_component,
+    query_knowledge_graph,
 )
 
 ARCHITECT_TOOLS = [
     search_components,
-    auto_complete_pipeline_dag,
+    query_knowledge_graph,
     validate_body_code,
     verify_dataflow_plan,
     check_component_channels,
     search_helper_functions,
     search_design_patterns,
-    find_dataflow_path,
-    get_component_neighbors,
-    explain_component,
 ]
 

@@ -107,9 +107,3 @@ def get_architect_tools() -> list:
         merged_names[name] = t
 
     return list(merged_names.values())
-
-
-def get_diagrammer_tools() -> list:
-    from core.services.diagrammer_tools import submit_diagram_structure
-    from core.services.consultant_tools import lookup_catalog_item, find_component_usage
-    return [submit_diagram_structure, lookup_catalog_item, find_component_usage]
