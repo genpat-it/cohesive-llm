@@ -10,6 +10,9 @@
 
 A self-hostable, production-grade AI platform that transforms natural language biological inquiries or visual drag-and-drop workflow canvas diagrams into valid, fully executable, and deterministic Nextflow DSL2 pipelines targeting production bioinformatic frameworks (e.g. [cohesive-ngsmanager](https://github.com/genpat-it/cohesive-ngsmanager)).
 
+> [!TIP]
+> **Hosting your own LLM server?** Follow the [vLLM Deployment & Optimization Guide](vllm_setup/README.md) to set up and serve `Qwen/Qwen3.8-27B-FP8` on your GPU server (NVIDIA L40S, 48GB) with pre-tuned FP8 kernel configurations, FlashInfer, and 65k context length for **~30–50 tokens/sec** generation throughput.
+
 ---
 
 ## 1. System Overview & Key Capabilities
@@ -140,7 +143,7 @@ cohesive-llm/
 
 ### Prerequisites
 - Python 3.11 or 3.12
-- Local vLLM instance or OpenAI-compatible LLM endpoint (e.g. `Qwen/Qwen3.8-27B-FP8`)
+- Local vLLM instance or OpenAI-compatible LLM endpoint (e.g. `Qwen/Qwen3.8-27B-FP8`). See [vLLM Setup Guide](vllm_setup/README.md) for complete L40S deployment instructions and kernel configurations.
 - Node.js (optional, for frontend asset tooling)
 
 ### Step 1: Clone the Repository
