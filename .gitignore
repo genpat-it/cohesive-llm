@@ -64,13 +64,6 @@ graphify-out/
 # Benchmarking & Research artifacts (tracked in separate repos)
 cohesive-llm-benchmark-eval-full/
 izs-llm-main-original/
-.reference_project/
-sn-article-template/
-implementation_details_paper_publishing/
-bmc_bioinformatics_strategy.md
-evaluation_report.txt
-full_ids.txt
-updated_diagram.md
 debug_run.py
 fix_ann.py
 temp_*
