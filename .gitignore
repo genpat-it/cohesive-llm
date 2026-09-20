@@ -71,3 +71,6 @@ run_*.sh
 
 # Submodules / framework clones
 **/cohesive-ngsmanager/
+
+# backup locali delle modifiche gmi16
+*.pre-gmi16

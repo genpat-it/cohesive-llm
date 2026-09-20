@@ -28,6 +28,8 @@ from core.utils.logger import logger
 from app.db import Base, engine, get_db, SessionLocal
 from app.models.db_models import Drawing, User
 from app.routes.auth import router as auth_router
+from app.routes.publish import router as publish_router
+from app.routes.register import router as register_router
 from app.routes.conversations import (
     append_message,
     get_or_create_conversation,
@@ -189,6 +191,10 @@ app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(auth_router, prefix="/api")
 app.include_router(conversations_router, prefix="/api")
+app.include_router(publish_router)
+app.include_router(publish_router, prefix="/api")
+app.include_router(register_router)
+app.include_router(register_router, prefix="/api")
 
 
 # --- 5. ENDPOINTS ---
@@ -367,6 +373,7 @@ async def validate_pipeline(
             "NXF_WORK": "/tmp/nxf_work",
             "NXF_TEMP": "/tmp",
             "NXF_LOG_FILE": "/tmp/nxf.log",
+            "NXF_DISABLE_CHECK_LATEST": "true",
         }
         os.makedirs("/tmp/nxf_home", exist_ok=True)
         os.makedirs("/tmp/nxf_work", exist_ok=True)
@@ -387,14 +394,14 @@ async def validate_pipeline(
         errors = []
         for line in all_output.split("\n"):
             line = line.strip()
-            if any(kw in line for kw in ["ERROR", "Error", "No such file", "Unable to", "not found", "Cannot find"]):
+            if any(kw in line for kw in ["ERROR", "Error", "No such file", "Unable to", "not found", "Cannot find", "missing required param", "missing params"]):
                 errors.append(line)
 
         if not errors:
             errors = [result.stderr.strip()[-500:]] if result.stderr.strip() else [f"Exit code {result.returncode}"]
 
         is_params_only = all(
-            "missing required params" in e.lower() or "missing params" in e.lower()
+            "missing required param" in e.lower() or "missing params" in e.lower()
             for e in errors
         )
         if is_params_only:
