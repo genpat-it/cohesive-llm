@@ -30,12 +30,22 @@
       },
       {
         "name": "getInput",
-        "description": "Groovy helper function 'getInput'.",
+        "description": "Groovy helper function getInput. Defined in functions/parameters.nf and imported by 24 modules. Returns a Channel of results for the (cmp, riscd) pairs given at launch, or for the params.input list. This is the general-purpose input loader. Note: multi/multi_clustering__grapetree.nf defines a local variant with the same name that reads allelic profiles and requires the clustering parameters; never import getInput from the clustering module in a single-sample pipeline.",
         "usage": "def getInput()",
-        "path": "multi/multi_clustering__grapetree",
-        "keywords": [],
+        "path": "functions/parameters",
+        "keywords": [
+          "input",
+          "channel",
+          "entrypoint",
+          "riscd",
+          "cmp",
+          "results",
+          "loader"
+        ],
         "use_cases": [],
-        "aliases": [],
+        "aliases": [
+          "getInput"
+        ],
         "num_args": 0,
         "arguments": []
       },
@@ -157,10 +167,15 @@
       },
       {
         "name": "getSchema",
-        "description": "Groovy helper function 'getSchema'.",
+        "description": "Groovy helper internal to step_4TY_cgMLST__chewbbaca. Resolves the cgMLST schema for a genus_species, and takes TWO required arguments: getSchema(gsp, schema). Do not call it from a module: the step resolves the schema itself. A module should pass the optional schema straight through with optionalOrDefault('schema', '') from functions/parameters.nf, exactly as the step's own entrypoint does.",
         "usage": "def getSchema(gsp, schema)",
         "path": "steps/step_4TY_cgMLST__chewbbaca",
-        "keywords": [],
+        "keywords": [
+          "schema",
+          "cgmlst",
+          "chewbbaca",
+          "internal"
+        ],
         "use_cases": [],
         "aliases": [],
         "num_args": 2,
@@ -224,7 +239,8 @@
         ],
         "aliases": [
           "getSingleInput"
-        ]
+        ],
+        "path": "functions/parameters"
       },
       {
         "name": "getEmpty",

@@ -346,16 +346,33 @@ def architect_precheck_node(state: GraphState, store: BaseStore | None = None) -
                             score = 10 if take_lower == h_lower.replace("get", "") else 5
                         elif take_lower in h_desc.lower():
                             score = 2
+                        else:
+                            # il nome del canale non somiglia mai al nome della funzione
+                            # ('rawreads' vs 'getSingleInput'): senza guardare le parole
+                            # chiave nessun helper viene mai proposto, e il modello
+                            # deve indovinare da solo quale usare e da dove importarlo.
+                            kws = [k.lower() for k in (h.get("keywords") or [])]
+                            matched = [k for k in kws if k and k in take_lower]
+                            if matched:
+                                score = 3 + len(matched)
                             
                         if score > 0:
-                            scored.append((score, h_name, h_desc))
+                            scored.append((score, h_name, h_desc, h.get("path", ""), h.get("usage", "")))
                     
                     if scored:
                         # Sort by score descending, get top 2
                         scored.sort(key=lambda x: x[0], reverse=True)
                         top_helpers = scored[:2]
-                        for score, h_name, h_desc in top_helpers:
-                            helper_injections.append(f"- For input `{take}` -> Use `{h_name}()`: {h_desc}")
+                        for score, h_name, h_desc, h_path, h_usage in top_helpers:
+                            # senza il percorso il modello deve indovinare l'import, e
+                            # per getInput indovina il modulo di clustering sbagliato.
+                            # senza la firma lo chiama con zero argomenti anche quando
+                            # ne vuole due, e il validatore non se ne accorge.
+                            origin = f" from `{h_path}.nf`" if h_path else ""
+                            call = h_usage.replace("def ", "") if h_usage else f"{h_name}()"
+                            helper_injections.append(
+                                f"- For input `{take}` -> Use `{call}`{origin} "
+                                f"(call it with exactly these arguments): {h_desc}")
         except Exception as e:
             logger.warning(f"Error extracting helper functions: {e}")
 

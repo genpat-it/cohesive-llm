@@ -4,7 +4,7 @@
       "id": "multi_alignment__snippycore",
       "tool": "multi_alignment__snippycore",
       "domain": "General",
-      "description": "multi_alignment__snippycore \u2014 'multi_alignment__snippycore'.",
+      "description": "multi_alignment__snippycore — 'multi_alignment__snippycore'.",
       "keywords": [
         "multi_alignment__snippycore"
       ],
@@ -26,7 +26,7 @@
       "id": "multi_clustering__augur",
       "tool": "multi_clustering__augur",
       "domain": "General",
-      "description": "multi_clustering__augur \u2014 'multi_clustering__augur'.",
+      "description": "multi_clustering__augur — 'multi_clustering__augur'.",
       "keywords": [
         "multi_clustering__augur"
       ],
@@ -49,7 +49,7 @@
       "id": "multi_clustering__cfsan",
       "tool": "multi_clustering__cfsan",
       "domain": "General",
-      "description": "multi_clustering__cfsan \u2014 'multi_clustering__cfsan'.",
+      "description": "multi_clustering__cfsan — 'multi_clustering__cfsan'.",
       "keywords": [
         "multi_clustering__cfsan"
       ],
@@ -72,7 +72,7 @@
       "id": "multi_clustering__grapetree",
       "tool": "multi_clustering__grapetree",
       "domain": "General",
-      "description": "multi_clustering__grapetree \u2014 'multi_clustering__grapetree'.",
+      "description": "multi_clustering__grapetree — 'multi_clustering__grapetree'.",
       "keywords": [
         "multi_clustering__grapetree"
       ],
@@ -97,7 +97,7 @@
       "id": "multi_clustering__ksnp3",
       "tool": "multi_clustering__ksnp3",
       "domain": "General",
-      "description": "multi_clustering__ksnp3 \u2014 'multi_clustering__ksnp3'.",
+      "description": "multi_clustering__ksnp3 — 'multi_clustering__ksnp3'.",
       "keywords": [
         "multi_clustering__ksnp3"
       ],
@@ -121,7 +121,7 @@
       "id": "multi_clustering__reportree_alignment",
       "tool": "multi_clustering__reportree_alignment",
       "domain": "General",
-      "description": "multi_clustering__reportree_alignment \u2014 'multi_clustering__reportree_alignment'.",
+      "description": "multi_clustering__reportree_alignment — 'multi_clustering__reportree_alignment'.",
       "keywords": [
         "multi_clustering__reportree_alignment"
       ],
@@ -145,7 +145,7 @@
       "id": "multi_clustering__reportree_alleles",
       "tool": "multi_clustering__reportree_alleles",
       "domain": "General",
-      "description": "multi_clustering__reportree_alleles \u2014 'multi_clustering__reportree_alleles'.",
+      "description": "multi_clustering__reportree_alleles — 'multi_clustering__reportree_alleles'.",
       "keywords": [
         "multi_clustering__reportree_alleles",
         "reportree alleles",
@@ -176,7 +176,7 @@
       "id": "multi_clustering__reportree_vcf",
       "tool": "multi_clustering__reportree_vcf",
       "domain": "General",
-      "description": "multi_clustering__reportree_vcf \u2014 'multi_clustering__reportree_vcf'.",
+      "description": "multi_clustering__reportree_vcf — 'multi_clustering__reportree_vcf'.",
       "keywords": [
         "multi_clustering__reportree_vcf"
       ],
@@ -200,7 +200,7 @@
       "id": "multi_clustering__vcf2mst",
       "tool": "multi_clustering__vcf2mst",
       "domain": "General",
-      "description": "multi_clustering__vcf2mst \u2014 'multi_clustering__vcf2mst'.",
+      "description": "multi_clustering__vcf2mst — 'multi_clustering__vcf2mst'.",
       "keywords": [
         "multi_clustering__vcf2mst"
       ],
@@ -220,7 +220,7 @@
       "id": "multi_pangenome__panaroo",
       "tool": "multi_pangenome__panaroo",
       "domain": "General",
-      "description": "multi_pangenome__panaroo \u2014 'multi_pangenome__panaroo'.",
+      "description": "multi_pangenome__panaroo — 'multi_pangenome__panaroo'.",
       "keywords": [
         "multi_pangenome__panaroo"
       ],
@@ -240,7 +240,7 @@
       "id": "step_0SQ_rawreads__fastq",
       "tool": "step_0SQ_rawreads__fastq",
       "domain": "General",
-      "description": "step_0SQ_rawreads__fastq \u2014 'step_0SQ_rawreads__fastq'.",
+      "description": "step_0SQ_rawreads__fastq — 'step_0SQ_rawreads__fastq'.",
       "keywords": [
         "step_0SQ_rawreads__fastq",
         "raw sequencing quality check",
@@ -266,7 +266,7 @@
       "id": "step_1PP_downsampling__bbnorm",
       "tool": "step_1PP_downsampling__bbnorm",
       "domain": "General",
-      "description": "step_1PP_downsampling__bbnorm \u2014 'step_1PP_downsampling__bbnorm'.",
+      "description": "step_1PP_downsampling__bbnorm — 'step_1PP_downsampling__bbnorm'.",
       "keywords": [
         "step_1PP_downsampling__bbnorm"
       ],
@@ -290,7 +290,7 @@
       "id": "step_1PP_filtering__bowtie",
       "tool": "step_1PP_filtering__bowtie",
       "domain": "General",
-      "description": "step_1PP_filtering__bowtie \u2014 'step_1PP_filtering__bowtie'.",
+      "description": "step_1PP_filtering__bowtie — 'step_1PP_filtering__bowtie'.",
       "keywords": [
         "step_1PP_filtering__bowtie"
       ],
@@ -314,7 +314,7 @@
       "id": "step_1PP_filtering__krakentools",
       "tool": "step_1PP_filtering__krakentools",
       "domain": "General",
-      "description": "step_1PP_filtering__krakentools \u2014 'step_1PP_filtering__krakentools'.",
+      "description": "step_1PP_filtering__krakentools — 'step_1PP_filtering__krakentools'.",
       "keywords": [
         "step_1PP_filtering__krakentools"
       ],
@@ -338,7 +338,7 @@
       "id": "step_1PP_filtering__minimap2",
       "tool": "step_1PP_filtering__minimap2",
       "domain": "General",
-      "description": "step_1PP_filtering__minimap2 \u2014 'step_1PP_filtering__minimap2'.",
+      "description": "step_1PP_filtering__minimap2 — 'step_1PP_filtering__minimap2'.",
       "keywords": [
         "step_1PP_filtering__minimap2"
       ],
@@ -363,7 +363,7 @@
       "id": "step_1PP_generated__fasta2fastq",
       "tool": "step_1PP_generated__fasta2fastq",
       "domain": "General",
-      "description": "step_1PP_generated__fasta2fastq \u2014 'step_1PP_generated__fasta2fastq'.",
+      "description": "step_1PP_generated__fasta2fastq — 'step_1PP_generated__fasta2fastq'.",
       "keywords": [
         "step_1PP_generated__fasta2fastq"
       ],
@@ -384,7 +384,7 @@
       "id": "step_1PP_hostdepl__bowtie",
       "tool": "step_1PP_hostdepl__bowtie",
       "domain": "General",
-      "description": "step_1PP_hostdepl__bowtie \u2014 'step_1PP_hostdepl__bowtie'.",
+      "description": "step_1PP_hostdepl__bowtie — 'step_1PP_hostdepl__bowtie'.",
       "keywords": [
         "step_1PP_hostdepl__bowtie"
       ],
@@ -408,7 +408,7 @@
       "id": "step_1PP_hostdepl__minimap2",
       "tool": "step_1PP_hostdepl__minimap2",
       "domain": "General",
-      "description": "step_1PP_hostdepl__minimap2 \u2014 'step_1PP_hostdepl__minimap2'.",
+      "description": "step_1PP_hostdepl__minimap2 — 'step_1PP_hostdepl__minimap2'.",
       "keywords": [
         "step_1PP_hostdepl__minimap2"
       ],
@@ -433,7 +433,7 @@
       "id": "step_1PP_trimming__chopper",
       "tool": "step_1PP_trimming__chopper",
       "domain": "General",
-      "description": "step_1PP_trimming__chopper \u2014 'step_1PP_trimming__chopper'.",
+      "description": "step_1PP_trimming__chopper — 'step_1PP_trimming__chopper'.",
       "keywords": [
         "step_1PP_trimming__chopper"
       ],
@@ -456,7 +456,7 @@
       "id": "step_1PP_trimming__fastp",
       "tool": "step_1PP_trimming__fastp",
       "domain": "General",
-      "description": "step_1PP_trimming__fastp \u2014 'step_1PP_trimming__fastp'.",
+      "description": "step_1PP_trimming__fastp — 'step_1PP_trimming__fastp'.",
       "keywords": [
         "step_1PP_trimming__fastp",
         "fastp",
@@ -482,7 +482,7 @@
       "id": "step_1PP_trimming__trimmomatic",
       "tool": "step_1PP_trimming__trimmomatic",
       "domain": "General",
-      "description": "step_1PP_trimming__trimmomatic \u2014 'step_1PP_trimming__trimmomatic'.",
+      "description": "step_1PP_trimming__trimmomatic — 'step_1PP_trimming__trimmomatic'.",
       "keywords": [
         "step_1PP_trimming__trimmomatic"
       ],
@@ -504,7 +504,7 @@
       "id": "step_2AS_denovo__flye",
       "tool": "step_2AS_denovo__flye",
       "domain": "General",
-      "description": "step_2AS_denovo__flye \u2014 'step_2AS_denovo__flye'.",
+      "description": "step_2AS_denovo__flye — 'step_2AS_denovo__flye'.",
       "keywords": [
         "step_2AS_denovo__flye"
       ],
@@ -528,7 +528,7 @@
       "id": "step_2AS_denovo__plasmidspades",
       "tool": "step_2AS_denovo__plasmidspades",
       "domain": "General",
-      "description": "step_2AS_denovo__plasmidspades \u2014 'step_2AS_denovo__plasmidspades'.",
+      "description": "step_2AS_denovo__plasmidspades — 'step_2AS_denovo__plasmidspades'.",
       "keywords": [
         "step_2AS_denovo__plasmidspades"
       ],
@@ -552,7 +552,7 @@
       "id": "step_2AS_denovo__shovill",
       "tool": "step_2AS_denovo__shovill",
       "domain": "General",
-      "description": "step_2AS_denovo__shovill \u2014 'step_2AS_denovo__shovill'.",
+      "description": "step_2AS_denovo__shovill — 'step_2AS_denovo__shovill'.",
       "keywords": [
         "step_2AS_denovo__shovill",
         "shovill",
@@ -583,7 +583,7 @@
       "id": "step_2AS_denovo__spades",
       "tool": "step_2AS_denovo__spades",
       "domain": "General",
-      "description": "step_2AS_denovo__spades \u2014 'step_2AS_denovo__spades'.",
+      "description": "step_2AS_denovo__spades — 'step_2AS_denovo__spades'.",
       "keywords": [
         "step_2AS_denovo__spades"
       ],
@@ -607,7 +607,7 @@
       "id": "step_2AS_denovo__unicycler",
       "tool": "step_2AS_denovo__unicycler",
       "domain": "General",
-      "description": "step_2AS_denovo__unicycler \u2014 'step_2AS_denovo__unicycler'.",
+      "description": "step_2AS_denovo__unicycler — 'step_2AS_denovo__unicycler'.",
       "keywords": [
         "step_2AS_denovo__unicycler"
       ],
@@ -630,7 +630,7 @@
       "id": "step_2AS_filtering__seqio",
       "tool": "step_2AS_filtering__seqio",
       "domain": "General",
-      "description": "step_2AS_filtering__seqio \u2014 'step_2AS_filtering__seqio'.",
+      "description": "step_2AS_filtering__seqio — 'step_2AS_filtering__seqio'.",
       "keywords": [
         "step_2AS_filtering__seqio"
       ],
@@ -652,7 +652,7 @@
       "id": "step_2AS_hybrid__unicycler",
       "tool": "step_2AS_hybrid__unicycler",
       "domain": "General",
-      "description": "step_2AS_hybrid__unicycler \u2014 'step_2AS_hybrid__unicycler'.",
+      "description": "step_2AS_hybrid__unicycler — 'step_2AS_hybrid__unicycler'.",
       "keywords": [
         "step_2AS_hybrid__unicycler"
       ],
@@ -677,7 +677,7 @@
       "id": "step_2AS_mapping__bowtie",
       "tool": "step_2AS_mapping__bowtie",
       "domain": "General",
-      "description": "step_2AS_mapping__bowtie \u2014 'step_2AS_mapping__bowtie'.",
+      "description": "step_2AS_mapping__bowtie — 'step_2AS_mapping__bowtie'.",
       "keywords": [
         "step_2AS_mapping__bowtie"
       ],
@@ -701,7 +701,7 @@
       "id": "step_2AS_mapping__ivar",
       "tool": "step_2AS_mapping__ivar",
       "domain": "General",
-      "description": "step_2AS_mapping__ivar \u2014 'step_2AS_mapping__ivar'.",
+      "description": "step_2AS_mapping__ivar — 'step_2AS_mapping__ivar'.",
       "keywords": [
         "step_2AS_mapping__ivar"
       ],
@@ -726,7 +726,7 @@
       "id": "step_2AS_mapping__medaka",
       "tool": "step_2AS_mapping__medaka",
       "domain": "General",
-      "description": "step_2AS_mapping__medaka \u2014 'step_2AS_mapping__medaka'.",
+      "description": "step_2AS_mapping__medaka — 'step_2AS_mapping__medaka'.",
       "keywords": [
         "step_2AS_mapping__medaka"
       ],
@@ -751,7 +751,7 @@
       "id": "step_2AS_mapping__minimap2",
       "tool": "step_2AS_mapping__minimap2",
       "domain": "General",
-      "description": "step_2AS_mapping__minimap2 \u2014 'step_2AS_mapping__minimap2'.",
+      "description": "step_2AS_mapping__minimap2 — 'step_2AS_mapping__minimap2'.",
       "keywords": [
         "step_2AS_mapping__minimap2"
       ],
@@ -776,7 +776,7 @@
       "id": "step_2AS_mapping__snippy",
       "tool": "step_2AS_mapping__snippy",
       "domain": "General",
-      "description": "step_2AS_mapping__snippy \u2014 'step_2AS_mapping__snippy'.",
+      "description": "step_2AS_mapping__snippy — 'step_2AS_mapping__snippy'.",
       "keywords": [
         "step_2AS_mapping__snippy"
       ],
@@ -798,7 +798,7 @@
       "id": "step_2MG_denovo__metaspades",
       "tool": "step_2MG_denovo__metaspades",
       "domain": "General",
-      "description": "step_2MG_denovo__metaspades \u2014 'step_2MG_denovo__metaspades'.",
+      "description": "step_2MG_denovo__metaspades — 'step_2MG_denovo__metaspades'.",
       "keywords": [
         "step_2MG_denovo__metaspades"
       ],
@@ -822,7 +822,7 @@
       "id": "step_3TX_class__centrifuge",
       "tool": "step_3TX_class__centrifuge",
       "domain": "General",
-      "description": "step_3TX_class__centrifuge \u2014 'step_3TX_class__centrifuge'.",
+      "description": "step_3TX_class__centrifuge — 'step_3TX_class__centrifuge'.",
       "keywords": [
         "step_3TX_class__centrifuge"
       ],
@@ -844,7 +844,7 @@
       "id": "step_3TX_class__confindr",
       "tool": "step_3TX_class__confindr",
       "domain": "General",
-      "description": "step_3TX_class__confindr \u2014 'step_3TX_class__confindr'.",
+      "description": "step_3TX_class__confindr — 'step_3TX_class__confindr'.",
       "keywords": [
         "step_3TX_class__confindr",
         "confindr",
@@ -948,7 +948,7 @@
       "id": "step_3TX_species__mash",
       "tool": "step_3TX_species__mash",
       "domain": "General",
-      "description": "step_3TX_species__mash \u2014 'step_3TX_species__mash'.",
+      "description": "step_3TX_species__mash — 'step_3TX_species__mash'.",
       "keywords": [
         "step_3TX_species__mash"
       ],
@@ -969,7 +969,7 @@
       "id": "step_3TX_species__vdabricate",
       "tool": "step_3TX_species__vdabricate",
       "domain": "General",
-      "description": "step_3TX_species__vdabricate \u2014 'step_3TX_species__vdabricate'.",
+      "description": "step_3TX_species__vdabricate — 'step_3TX_species__vdabricate'.",
       "keywords": [
         "step_3TX_species__vdabricate"
       ],
@@ -991,7 +991,7 @@
       "id": "step_4AN_AMR__abricate",
       "tool": "step_4AN_AMR__abricate",
       "domain": "General",
-      "description": "step_4AN_AMR__abricate \u2014 'step_4AN_AMR__abricate'.",
+      "description": "step_4AN_AMR__abricate — 'step_4AN_AMR__abricate'.",
       "keywords": [
         "step_4AN_AMR__abricate",
         "abricate",
@@ -1017,7 +1017,7 @@
       "id": "step_4AN_AMR__filtering",
       "tool": "step_4AN_AMR__filtering",
       "domain": "General",
-      "description": "step_4AN_AMR__filtering \u2014 'step_4AN_AMR__filtering'.",
+      "description": "step_4AN_AMR__filtering — 'step_4AN_AMR__filtering'.",
       "keywords": [
         "step_4AN_AMR__filtering",
         "amr filtering",
@@ -1044,7 +1044,7 @@
       "id": "step_4AN_AMR__resfinder",
       "tool": "step_4AN_AMR__resfinder",
       "domain": "General",
-      "description": "step_4AN_AMR__resfinder \u2014 'step_4AN_AMR__resfinder'.",
+      "description": "step_4AN_AMR__resfinder — 'step_4AN_AMR__resfinder'.",
       "keywords": [
         "step_4AN_AMR__resfinder",
         "resfinder",
@@ -1072,7 +1072,7 @@
       "id": "step_4AN_AMR__staramr",
       "tool": "step_4AN_AMR__staramr",
       "domain": "General",
-      "description": "step_4AN_AMR__staramr \u2014 'step_4AN_AMR__staramr'.",
+      "description": "step_4AN_AMR__staramr — 'step_4AN_AMR__staramr'.",
       "keywords": [
         "step_4AN_AMR__staramr"
       ],
@@ -1094,7 +1094,7 @@
       "id": "step_4AN_genes__prokka",
       "tool": "step_4AN_genes__prokka",
       "domain": "General",
-      "description": "step_4AN_genes__prokka \u2014 'step_4AN_genes__prokka'.",
+      "description": "step_4AN_genes__prokka — 'step_4AN_genes__prokka'.",
       "keywords": [
         "step_4AN_genes__prokka",
         "prokka",
@@ -1146,7 +1146,7 @@
       "id": "step_4TY_cgMLST__chewbbaca",
       "tool": "step_4TY_cgMLST__chewbbaca",
       "domain": "General",
-      "description": "step_4TY_cgMLST__chewbbaca — 'step_4TY_cgMLST__chewbbaca'.",
+      "description": "step_4TY_cgMLST__chewbbaca — 'step_4TY_cgMLST__chewbbaca'. Terminal step: the sub-workflow declares no emit block, so its results cannot be consumed downstream — call it for its side effects and do not read outputs from it.",
       "keywords": [
         "step_4TY_cgMLST__chewbbaca",
         "chewbbaca",
@@ -1167,9 +1167,7 @@
         "genus_species",
         "schema"
       ],
-      "output_channels": [
-        "alleles"
-      ],
+      "output_channels": [],
       "container": "ghcr.io/genpat-it/chewbbaca-w-chewie-schemas:2.8.5--16b816c96d",
       "file_path": "steps/step_4TY_cgMLST__chewbbaca"
     },
@@ -1203,7 +1201,7 @@
       "id": "step_4TY_lineage__pangolin",
       "tool": "step_4TY_lineage__pangolin",
       "domain": "General",
-      "description": "step_4TY_lineage__pangolin \u2014 'step_4TY_lineage__pangolin'.",
+      "description": "step_4TY_lineage__pangolin — 'step_4TY_lineage__pangolin'.",
       "keywords": [
         "step_4TY_lineage__pangolin"
       ],
@@ -1223,7 +1221,7 @@
       "id": "step_4TY_lineage__westnile",
       "tool": "step_4TY_lineage__westnile",
       "domain": "General",
-      "description": "step_4TY_lineage__westnile \u2014 'step_4TY_lineage__westnile'.",
+      "description": "step_4TY_lineage__westnile — 'step_4TY_lineage__westnile'.",
       "keywords": [
         "step_4TY_lineage__westnile"
       ],
@@ -1248,7 +1246,7 @@
       "id": "step_4TY_plasmid__mobsuite",
       "tool": "step_4TY_plasmid__mobsuite",
       "domain": "General",
-      "description": "step_4TY_plasmid__mobsuite \u2014 'step_4TY_plasmid__mobsuite'.",
+      "description": "step_4TY_plasmid__mobsuite — 'step_4TY_plasmid__mobsuite'.",
       "keywords": [
         "step_4TY_plasmid__mobsuite",
         "mobsuite",
