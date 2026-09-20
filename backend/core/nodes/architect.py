@@ -347,10 +347,10 @@ def architect_precheck_node(state: GraphState, store: BaseStore | None = None) -
                         elif take_lower in h_desc.lower():
                             score = 2
                         else:
-                            # il nome del canale non somiglia mai al nome della funzione
-                            # ('rawreads' vs 'getSingleInput'): senza guardare le parole
-                            # chiave nessun helper viene mai proposto, e il modello
-                            # deve indovinare da solo quale usare e da dove importarlo.
+                            # the channel name never resembles the function name
+                            # ('rawreads' vs 'getSingleInput'): without looking at the keywords
+                            # no helper is ever proposed, and the model is left to guess
+                            # which one to use and where to import it from.
                             kws = [k.lower() for k in (h.get("keywords") or [])]
                             matched = [k for k in kws if k and k in take_lower]
                             if matched:
@@ -364,10 +364,10 @@ def architect_precheck_node(state: GraphState, store: BaseStore | None = None) -
                         scored.sort(key=lambda x: x[0], reverse=True)
                         top_helpers = scored[:2]
                         for score, h_name, h_desc, h_path, h_usage in top_helpers:
-                            # senza il percorso il modello deve indovinare l'import, e
-                            # per getInput indovina il modulo di clustering sbagliato.
-                            # senza la firma lo chiama con zero argomenti anche quando
-                            # ne vuole due, e il validatore non se ne accorge.
+                            # without the path the model has to guess the import, and
+                            # for getInput it guesses the wrong clustering module.
+                            # without the signature it calls the helper with no arguments
+                            # even when it takes two, and the validator does not notice.
                             origin = f" from `{h_path}.nf`" if h_path else ""
                             call = h_usage.replace("def ", "") if h_usage else f"{h_name}()"
                             helper_injections.append(

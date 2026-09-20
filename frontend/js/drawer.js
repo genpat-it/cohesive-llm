@@ -8,7 +8,7 @@ const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) ||
 // Auth guard
 const currentUser = await checkSession();
 if (!currentUser) throw new Error('Not authenticated');
-// stessa intestazione della chat: chi e' collegato si vede anche qui
+// same header as the chat: who is signed in is visible here too
 const userLabelEl = document.getElementById('userLabel');
 if (userLabelEl) userLabelEl.textContent = currentUser.username || '—';
 document.documentElement.classList.remove('auth-pending');
@@ -37,10 +37,10 @@ async function loadCatalog() {
     return await res.json();
 }
 
-// Il catalogo non porta un dominio (`domain` e' null per tutti), ma la
-// tassonomia del framework e' gia' scritta negli identificativi: step_1PP_,
-// step_4TY_, multi_... La ricaviamo da li' invece di lasciare cinquanta
-// componenti in un unico elenco piatto.
+// The catalogue carries no domain (`domain` is null for every component), but
+// the framework's taxonomy is already written into the ids: step_1PP_,
+// step_4TY_, multi_... We derive it from there rather than leaving fifty
+// components in one flat list.
 const GROUPS = [
     ['0SQ', 'Sequences'],
     ['1PP', 'Pre-processing'],
@@ -330,7 +330,7 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
         }
     }
 
-    // la provenienza serve al revisore: quali componenti e con quale topologia
+    // the reviewer needs the provenance: which components, wired which way
     window.__graphComponents = nodes.map(n => n.component_id);
     window.__graphTopology = edges
         .map(e => `${nodes.find(n => n.node_id === e.source)?.component_id} -> ${nodes.find(n => n.node_id === e.target)?.component_id}`)
@@ -745,7 +745,7 @@ if (loadId) {
 }
 
 
-// --- Propose: apre una pull request sul framework, esattamente come dalla chat ---
+// --- Propose: opens a pull request on the framework, as the chat does ---
 document.getElementById('proposeDrawerBtn').addEventListener('click', async () => {
     const code = document.getElementById('resultCode').textContent;
     if (!code) return;
@@ -753,7 +753,7 @@ document.getElementById('proposeDrawerBtn').addEventListener('click', async () =
     const btn = document.getElementById('proposeDrawerBtn');
     btn.disabled = true;
 
-    // il revisore deve sapere se valida: si esegue prima
+    // the reviewer needs to know whether it validates: run it first
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
     let validation = null;
     try {
@@ -794,8 +794,8 @@ document.getElementById('proposeDrawerBtn').addEventListener('click', async () =
                 nextflow_code: code,
                 name: name,
                 description: title,
-                // dal drawer la topologia l'ha decisa l'utente, non il modello:
-                // e' quella la "richiesta" che il revisore deve poter leggere
+                // from the canvas the topology was decided by the operator, not
+                // the model: that is the "request" a reviewer needs to read
                 user_query: 'Drawn on the canvas: ' + (window.__graphTopology || ''),
                 components: window.__graphComponents || [],
                 validation: validation,
@@ -836,8 +836,8 @@ document.getElementById('proposeDrawerBtn').addEventListener('click', async () =
 });
 
 
-// --- Colonna dei disegni: si chiude per lasciare tutta la larghezza al canvas,
-//     e la scelta resta memorizzata fra una sessione e l'altra. ---
+// --- Drawings column: collapses to give the canvas the full width, and the
+//     choice is remembered between sessions. ---
 const drawingsPanel   = document.getElementById('drawingsPanel');
 const drawingsReopen  = document.getElementById('drawingsReopen');
 const drawingsCollapse = document.getElementById('drawingsCollapse');
@@ -856,13 +856,13 @@ try { savedState = localStorage.getItem('izs_drawings_panel') || 'open'; } catch
 setDrawingsVisible(savedState !== 'closed');
 
 
-// "New drawing" svuota la tela come fa "New chat" con la conversazione
+// "New drawing" clears the canvas the way "New chat" clears the conversation
 document.getElementById('newDrawingBtn').addEventListener('click', () => {
     document.getElementById('clearBtn').click();
 });
 
 
-// uscita, come nella chat
+// log out, as in the chat
 const logoutEl = document.getElementById('logoutBtn');
 if (logoutEl) logoutEl.addEventListener('click', async () => {
     const { logout } = await import('./api.js?v=25');

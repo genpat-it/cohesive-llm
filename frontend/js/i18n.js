@@ -1,7 +1,7 @@
-// Traduzione dell'interfaccia. Non tocca le risposte del modello: quelle
-// arrivano dal prompt di sistema, che resta congelato e in inglese.
-// Nomi propri (Cohesive LLM, Nextflow, Mermaid, i nomi delle pipeline di
-// esempio) non si traducono.
+// Interface translation. It does not touch the model's replies: those come
+// from the system prompt, which stays frozen and in English.
+// Proper nouns (Cohesive LLM, Nextflow, Mermaid, the example pipeline names)
+// are not translated.
 
 const DICT = {
     en: {
@@ -155,10 +155,10 @@ const DICT = {
 };
 
 
-// Niente bandiere: rappresentano paesi, non lingue. Lo spagnolo e' di venti
-// paesi, il francese di molti piu' di uno — e a Tunisi la bandiera francese
-// direbbe qualcosa che non intendiamo dire. Raccomandazione W3C i18n:
-// endonimo (il nome della lingua nella lingua stessa) e icona neutra.
+// No flags: a flag names a country, not a language. Spanish belongs to twenty
+// of them, French to many more — and in Tunis the French flag would say
+// something we do not intend. W3C i18n guidance: endonym (the language name
+// written in that language) and a neutral icon.
 
 export const LANGS = [
     ['en', 'English'],
@@ -173,7 +173,7 @@ export function currentLang() {
     let saved = null;
     try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
     if (saved && DICT[saved]) return saved;
-    // si parte dalla lingua del browser, se e' fra quelle coperte
+    // start from the browser language when it is one we cover
     const nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
     return DICT[nav] ? nav : 'en';
 }
@@ -189,7 +189,7 @@ export function applyTranslations(root = document) {
     root.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         const target = el.querySelector('[data-i18n-slot]') || el;
-        // si sostituisce solo il testo: icone e pastiglie interne restano
+        // replace the text node only: icons and inner badges survive
         const node = [...target.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
         if (node) node.textContent = ' ' + t(key, lang) + ' ';
         else target.textContent = t(key, lang);
@@ -209,8 +209,8 @@ export function setLang(lang) {
     document.dispatchEvent(new CustomEvent('izs:langchange', { detail: { lang } }));
 }
 
-// Selettore da agganciare a un contenitore qualsiasi dell'intestazione.
-// E' costruito a mano perche' un <option> non puo' contenere un'immagine.
+// Mounts into any header container.
+// Hand-built because an <option> cannot be styled or carry markup.
 export function mountLanguagePicker(container) {
     if (!container || container.querySelector('.lang-picker')) return;
 
@@ -273,8 +273,8 @@ export function mountLanguagePicker(container) {
 
     wrap.appendChild(btn);
     wrap.appendChild(menu);
-    // ordine convenzionale: strumenti, lingua, identita', uscita.
-    // L'azione di sessione resta l'ultima a destra.
+    // conventional order: tools, language, identity, session action.
+    // Log out stays last on the right.
     const anchor = container.querySelector('.user-chip, #logoutBtn');
     container.insertBefore(wrap, anchor || null);
     paint();

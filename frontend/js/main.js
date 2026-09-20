@@ -291,9 +291,9 @@ setInterval(refreshStats, 10000);
 console.log('IZS AI chat generator loaded for user:', currentUser.username);
 
 
-// --- Esempi a comparsa -------------------------------------------------
-// Sono un punto di partenza: restano aperti su una conversazione vuota e si
-// richiudono da soli al primo messaggio, quando lo spazio serve alla chat.
+// --- Collapsible examples ----------------------------------------------
+// They are a starting point: open on an empty conversation, folded away on
+// the first message, when the space belongs to the conversation.
 (() => {
     const toggle = document.getElementById('examplesToggle');
     const box = document.getElementById('examplesContainer');
@@ -318,7 +318,7 @@ console.log('IZS AI chat generator loaded for user:', currentUser.username);
     const hasConversation = !!document.querySelector('#chatHistory .message-user, #chatHistory .user-message');
     setOpen(pref !== 'closed' && !hasConversation, false);
 
-    // al primo invio si tolgono di mezzo, senza sovrascrivere la scelta esplicita
+    // step aside on the first send, without overriding an explicit choice
     const send = document.getElementById('sendMessageBtn');
     if (send) send.addEventListener('click', () => setOpen(false, false), { once: true });
 })();

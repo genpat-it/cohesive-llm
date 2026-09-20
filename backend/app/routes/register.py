@@ -27,10 +27,10 @@ CMDB_PASSWORD = os.environ.get("CMDBUILD_PASSWORD", "")
 CMDB_CLASS = os.environ.get("CMDBUILD_WORKFLOW_CLASS", "m_workflow")
 CMDB_MENU_CLASS = os.environ.get("CMDBUILD_MENU_CLASS", "m_menu_analysis")
 CMDB_MENU_PARENT = os.environ.get("CMDBUILD_MENU_PARENT", "")
-# senza un template di risultato il pannello "Result data" resta vuoto e la UI
-# risponde "Analysis run details could not be loaded": e' li' che vivono i link
-# alla cartella degli output. 'default' e' il browser di file usato da quasi
-# tutte le pipeline di produzione.
+# Without a result template the "Result data" panel stays empty and the UI
+# answers "Analysis run details could not be loaded": that is where the links
+# to the output folder live. 'default' is the file browser used by almost
+# every production pipeline.
 CMDB_RESULT_TEMPLATE = os.environ.get("CMDBUILD_RESULT_TEMPLATE", "default")
 PARAM_MAP_FILE = os.environ.get("COMPONENT_PARAMETERS_FILE", "")
 
@@ -138,9 +138,9 @@ def register_workflow(
         "script": req.module,
         "json_params": json.dumps(params) if params else None,
         "multi_sample_input": req.multi_sample_input,
-        # senza questo i risultati restano nella cartella di lavoro e non
-        # rientrano mai nella piattaforma: nessun dataset, nessuna cartella
-        # visibile sotto il campione. Tutte le pipeline di produzione hanno true.
+        # without this the results stay in the working directory and never
+        # come back into the platform: no datasets, no folder under the
+        # sample. Every production pipeline has it set to true.
         "importable": True,
         "custom_processing": False,
         "uuid_folder": False,
@@ -171,7 +171,7 @@ def register_workflow(
                     "_type": CMDB_MENU_CLASS,
                     "Code": req.code,
                     "Description": req.description,
-                    # title e' vincolato a 50 caratteri dal modello dati
+                    # title is capped at 50 characters by the data model
                     "title": req.description[:50],
                     "hierarchy": f"/llm/{req.code}",
                     "parent": int(CMDB_MENU_PARENT),

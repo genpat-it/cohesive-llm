@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="{{env "BASE_PATH"}}">
     <script>
-        // Il segnaposto viene sostituito dal server quando l'app e' servita
-        // sotto un prefisso. Se non lo e', resta letterale: con le virgolette
-        // doppie annidate era JavaScript non valido e lo script si fermava.
+        // The placeholder is substituted by the server when the app is served
+        // under a prefix. When it is not, it stays literal: with nested double
+        // quotes that was invalid JavaScript and the script stopped here.
         (function () {
             var raw = '{{env "BASE_PATH"}}';
             window.IZS_BASE_PATH = raw.indexOf('{{') === 0 ? '' : raw.replace(/\/$/, '');
