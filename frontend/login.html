@@ -7,9 +7,16 @@
     <!-- See index.html for the BASE_PATH explanation. -->
     <base href="{{env "BASE_PATH"}}">
     <script>
-        window.IZS_BASE_PATH = "{{env "BASE_PATH"}}".replace(/\/$/, '');
+        // Il segnaposto viene sostituito dal server quando l'app e' servita
+        // sotto un prefisso. Se non lo e', resta letterale: con le virgolette
+        // doppie annidate era JavaScript non valido e lo script si fermava.
+        (function () {
+            var raw = '{{env "BASE_PATH"}}';
+            window.IZS_BASE_PATH = raw.indexOf('{{') === 0 ? '' : raw.replace(/\/$/, '');
+        })();
     </script>
 
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>Login — Cohesive LLM</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -100,10 +107,10 @@
         <h1>Cohesive LLM</h1>
         <div id="error" class="error"></div>
         <form id="loginForm">
-            <label for="username">Username</label>
+            <label for="username" data-i18n="username">Username</label>
             <input type="text" id="username" name="username" autocomplete="username" required autofocus>
 
-            <label for="password">Password</label>
+            <label for="password" data-i18n="password">Password</label>
             <div style="position:relative;">
                 <input type="password" id="password" name="password" autocomplete="current-password" required style="padding-right:2.5rem;">
                 <button type="button" id="togglePwd" style="position:absolute; right:8px; top:50%; transform:translateY(-70%); width:auto; padding:4px 8px; background:transparent; color:#9ca3af; font-size:1rem; cursor:pointer; border:none;" title="Show password">
@@ -111,7 +118,7 @@
                 </button>
             </div>
 
-            <button type="submit" id="submitBtn">Sign in</button>
+            <button type="submit" id="submitBtn" data-i18n="sign_in">Sign in</button>
         </form>
     </div>
 

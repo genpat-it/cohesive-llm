@@ -342,6 +342,48 @@ body {
     color: var(--primary);
 }
 
+/* Gli esempi servono a partire, non a restare: una riga intera di pillole
+   ruba spazio alla conversazione appena si comincia a lavorare.
+   Stessa grammatica visiva delle pillole stesse. */
+.examples-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-light);
+    border: 1px solid rgba(1, 103, 156, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+.examples-toggle:hover {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(1, 103, 156, 0.2);
+    transform: translateY(-1px);
+}
+.examples-toggle .chev {
+    font-size: 10px;
+    transition: transform 0.2s ease;
+}
+.examples-toggle.collapsed .chev { transform: rotate(-90deg); }
+.examples-toggle .examples-count {
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(1, 103, 156, 0.12);
+    border-radius: 10px;
+    padding: 1px 8px;
+}
+.examples-toggle:hover .examples-count {
+    background: rgba(255, 255, 255, 0.22);
+}
+
 .examples-container {
     display: flex;
     gap: 12px;
@@ -349,6 +391,7 @@ body {
     padding-bottom: 8px;
     scrollbar-width: thin;
 }
+.examples-container.collapsed { display: none; }
 
 .example-btn {
     background: var(--primary-light);
@@ -1177,3 +1220,102 @@ body {
     }
     .logout-btn span { display: none; }
 }
+
+/* Selettore lingua — endonimi, nessuna bandiera (W3C i18n: una bandiera
+   indica un paese, non una lingua). Icona neutra, menu su misura perche'
+   un <option> nativo non si puo' stilare. */
+.lang-picker { position: relative; }
+.lang-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--primary-light);
+    border: 1px solid rgba(1, 103, 156, 0.2);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.lang-current:hover { background: var(--primary); color: #fff; }
+.lang-globe { font-size: 12px; }
+.lang-chev { font-size: 9px; opacity: 0.7; transition: transform 0.2s ease; }
+.lang-picker.open .lang-chev { transform: rotate(180deg); }
+
+.lang-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 168px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    padding: 4px;
+    z-index: 60;
+}
+.lang-picker.open .lang-menu { display: block; }
+
+.lang-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text-main);
+    cursor: pointer;
+    text-align: left;
+}
+.lang-option:hover { background: var(--primary-light); }
+.lang-option .lang-name { flex: 1; }
+.lang-option .lang-iso {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.4px;
+}
+.lang-check { font-size: 11px; color: var(--primary); opacity: 0; }
+.lang-option.active .lang-check { opacity: 1; }
+.lang-option.active .lang-name { font-weight: 600; color: var(--primary); }
+
+
+/* Blocchi di codice nei pannelli dei risultati.
+   Senza queste regole il <pre> usa lo stile predefinito del browser: cresce
+   oltre il pannello e non scorre ne' in verticale ne' in orizzontale. */
+.code-view {
+    /* .panel-content e' position:relative con overflow:hidden: il modo
+       affidabile per riempirlo e' occuparlo per intero e scorrere dentro */
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 20px 24px;
+    overflow: auto;            /* verticale e orizzontale */
+    background: #1e1e1e;
+    color: #e5e5e5;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    tab-size: 4;
+    white-space: pre;          /* niente a capo: le righe lunghe si scorrono */
+    overscroll-behavior: contain;
+}
+.code-view code {
+    display: block;
+    min-width: max-content;    /* forza la barra orizzontale quando serve */
+    font: inherit;
+    background: none;
+    padding: 0;
+}
+.code-view::-webkit-scrollbar { width: 10px; height: 10px; }
+.code-view::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 5px; }
+.code-view::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+.code-view::-webkit-scrollbar-track { background: #2a2a2a; }

@@ -5,8 +5,8 @@ import {
     deleteAllConversations,
     renameConversation,
     showToast,
-} from './api.js?v=11';
-import { confirmDialog, promptDialog } from './modal.js?v=2';
+} from './api.js?v=25';
+import { confirmDialog, promptDialog } from './modal.js?v=25';
 
 export function initSidebar({ onSelect, onNewChat }) {
     const listEl = document.getElementById('conversationsList');
@@ -37,7 +37,7 @@ export function initSidebar({ onSelect, onNewChat }) {
     // Delete-all button (injected after the New Chat button)
     const deleteAllBtn = document.createElement('button');
     deleteAllBtn.className = 'delete-all-btn';
-    deleteAllBtn.innerHTML = '<i class="fas fa-trash"></i> <span>Delete all</span>';
+    deleteAllBtn.innerHTML = '<i class="fas fa-trash"></i> <span data-i18n="delete_all">Delete all</span>';
     deleteAllBtn.title = 'Delete all conversations';
     deleteAllBtn.addEventListener('click', async () => {
         const confirmed = await confirmDialog({

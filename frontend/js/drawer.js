@@ -1,5 +1,5 @@
-import { checkSession, showToast } from './api.js?v=16';
-import { confirmDialog } from './modal.js?v=16';
+import { checkSession, showToast } from './api.js?v=25';
+import { confirmDialog, promptDialog } from './modal.js?v=25';
 
 const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH && !window.IZS_BASE_PATH.includes('{{')) ? window.IZS_BASE_PATH : '';
 const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || 
@@ -8,6 +8,9 @@ const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) ||
 // Auth guard
 const currentUser = await checkSession();
 if (!currentUser) throw new Error('Not authenticated');
+// stessa intestazione della chat: chi e' collegato si vede anche qui
+const userLabelEl = document.getElementById('userLabel');
+if (userLabelEl) userLabelEl.textContent = currentUser.username || '—';
 document.documentElement.classList.remove('auth-pending');
 
 // --- Init Drawflow ---
@@ -34,64 +37,110 @@ async function loadCatalog() {
     return await res.json();
 }
 
+// Il catalogo non porta un dominio (`domain` e' null per tutti), ma la
+// tassonomia del framework e' gia' scritta negli identificativi: step_1PP_,
+// step_4TY_, multi_... La ricaviamo da li' invece di lasciare cinquanta
+// componenti in un unico elenco piatto.
+const GROUPS = [
+    ['0SQ', 'Sequences'],
+    ['1PP', 'Pre-processing'],
+    ['2AS', 'Assembly'],
+    ['2MG', 'Metagenomics'],
+    ['3TX', 'Taxonomy'],
+    ['4AN', 'Annotation & AMR'],
+    ['4TY', 'Typing'],
+];
+
+function groupOf(comp) {
+    const id = comp.id || '';
+    for (const [code, label] of GROUPS) {
+        if (id.startsWith('step_' + code)) return `${code} · ${label}`;
+    }
+    if (id.startsWith('multi_')) return 'Multi-sample';
+    return 'Other';
+}
+
+function paletteItem(comp) {
+    const item = document.createElement('div');
+    item.className = 'palette-item';
+    item.draggable = true;
+    item.dataset.componentId = comp.id;
+    item.dataset.tool = comp.tool || '';
+    item.dataset.description = comp.description || '';
+    item.dataset.inputs = JSON.stringify(comp.inputs || []);
+    item.dataset.outputs = JSON.stringify(comp.outputs || []);
+
+    const inputs = comp.inputs || [];
+    const outputs = comp.outputs || [];
+    const inputHtml = inputs.length > 0
+        ? inputs.slice(0, 3).map(n =>
+            DATA_INPUTS.has(n)
+                ? `<span style="color:#2563eb;">${n}</span>`
+                : `<span style="color:#c2410c;" title="runtime parameter">${n}</span>`
+          ).join(', ')
+        : '<span style="color:#2563eb;">data</span>';
+    const outputNames = outputs.slice(0, 3).map(n => n.includes('.') ? n.split('.').pop() : n).join(', ') || 'out';
+
+    const ghUrl = comp.file_path ? `${FRAMEWORK_REPO}/blob/main/${comp.file_path}` : '';
+    const ghLink = ghUrl
+        ? `<a href="${ghUrl}" target="_blank" title="View source" onclick="event.stopPropagation();" style="color:var(--text-muted); font-size:11px; flex-shrink:0;"><i class="fab fa-github"></i></a>`
+        : '';
+
+    // il nome del tool basta a riconoscerlo: l'id completo sta nel tooltip
+    item.innerHTML = `
+        <i class="fas fa-cube"></i>
+        <div style="min-width:0; flex:1;">
+            <span class="tool-name">${comp.tool || comp.id.split('__').pop()}</span>
+            <div class="chan">${inputHtml} &rarr; <span style="color:#059669;">${outputNames}</span></div>
+        </div>
+        ${ghLink}
+    `;
+    item.title = comp.id + (comp.description ? '\n\n' + comp.description : '');
+
+    item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify(comp));
+    });
+    return item;
+}
+
 function renderPalette(catalog) {
     const list = document.getElementById('paletteList');
     list.innerHTML = '';
 
-    for (const [domain, components] of Object.entries(catalog)) {
-        const domainEl = document.createElement('div');
-        domainEl.className = 'palette-domain';
-        domainEl.dataset.domain = domain;
+    const all = Object.values(catalog).flat();
+    const buckets = new Map();
+    for (const comp of all) {
+        const g = groupOf(comp);
+        if (!buckets.has(g)) buckets.set(g, []);
+        buckets.get(g).push(comp);
+    }
 
-        const label = document.createElement('div');
-        label.className = 'palette-domain-label';
-        label.textContent = domain || 'Other';
-        domainEl.appendChild(label);
+    const order = GROUPS.map(([c, l]) => `${c} · ${l}`).concat(['Multi-sample', 'Other']);
+    const names = [...buckets.keys()].sort((a, b) => {
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
 
-        for (const comp of components) {
-            const item = document.createElement('div');
-            item.className = 'palette-item';
-            item.draggable = true;
-            item.dataset.componentId = comp.id;
-            item.dataset.tool = comp.tool || '';
-            item.dataset.description = comp.description || '';
-            item.dataset.inputs = JSON.stringify(comp.inputs || []);
-            item.dataset.outputs = JSON.stringify(comp.outputs || []);
+    for (const name of names) {
+        const comps = buckets.get(name).sort((a, b) => (a.id || '').localeCompare(b.id || ''));
 
-            const inputs = comp.inputs || [];
-            const outputs = comp.outputs || [];
-            const inputHtml = inputs.length > 0
-                ? inputs.slice(0, 3).map(n =>
-                    DATA_INPUTS.has(n)
-                        ? `<span style="color:#2563eb;">${n}</span>`
-                        : `<span style="color:#c2410c;" title="runtime parameter">${n}</span>`
-                ).join(', ')
-                : '<span style="color:#2563eb;">data</span>';
-            const outputNames = outputs.slice(0, 3).map(n => n.includes('.') ? n.split('.').pop() : n).join(', ') || 'out';
+        const group = document.createElement('details');
+        group.className = 'palette-group palette-domain';
+        group.dataset.domain = name;
 
-            const ghUrl = comp.file_path ? `${FRAMEWORK_REPO}/blob/main/${comp.file_path}` : '';
-            const ghLink = ghUrl ? `<a href="${ghUrl}" target="_blank" title="View source" onclick="event.stopPropagation();" style="color:var(--text-muted); font-size:11px; flex-shrink:0;"><i class="fab fa-github"></i></a>` : '';
+        const head = document.createElement('summary');
+        head.className = 'palette-group-head';
+        head.innerHTML = `<i class="fas fa-chevron-right chev"></i>
+                          <span class="name">${name}</span>
+                          <span class="count">${comps.length}</span>`;
+        group.appendChild(head);
 
-            item.innerHTML = `
-                <i class="fas fa-cube"></i>
-                <div style="min-width:0; flex:1;">
-                    <span class="tool-name">${comp.tool || comp.id.split('__').pop()}</span>
-                    <div style="font-size:10px; color:var(--text-muted); margin-top:1px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comp.id}">${comp.id}</div>
-                    <div style="font-size:9px; margin-top:2px;">
-                        ${inputHtml} &rarr; <span style="color:#059669;">${outputNames}</span>
-                    </div>
-                </div>
-                ${ghLink}
-            `;
+        const body = document.createElement('div');
+        body.className = 'palette-group-body';
+        for (const comp of comps) body.appendChild(paletteItem(comp));
+        group.appendChild(body);
 
-            item.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('application/json', JSON.stringify(comp));
-            });
-
-            domainEl.appendChild(item);
-        }
-
-        list.appendChild(domainEl);
+        list.appendChild(group);
     }
 }
 
@@ -103,8 +152,14 @@ document.getElementById('paletteSearch').addEventListener('input', (e) => {
         item.style.display = text.includes(q) ? '' : 'none';
     });
     document.querySelectorAll('.palette-domain').forEach(dom => {
-        const visible = dom.querySelectorAll('.palette-item[style=""], .palette-item:not([style])');
-        dom.style.display = visible.length > 0 ? '' : 'none';
+        const visible = [...dom.querySelectorAll('.palette-item')]
+            .filter(it => it.style.display !== 'none').length;
+        dom.style.display = visible > 0 ? '' : 'none';
+        // cercando si vuole vedere subito il risultato, non doverlo aprire
+        if (q) dom.open = visible > 0;
+        else dom.open = false;
+        const c = dom.querySelector('.count');
+        if (c) c.textContent = visible;
     });
 });
 
@@ -274,6 +329,12 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
             }
         }
     }
+
+    // la provenienza serve al revisore: quali componenti e con quale topologia
+    window.__graphComponents = nodes.map(n => n.component_id);
+    window.__graphTopology = edges
+        .map(e => `${nodes.find(n => n.node_id === e.source)?.component_id} -> ${nodes.find(n => n.node_id === e.target)?.component_id}`)
+        .join('; ');
 
     const btn = document.getElementById('generateBtn');
     btn.disabled = true;
@@ -682,3 +743,128 @@ const loadId = urlParams.get('drawing');
 if (loadId) {
     loadDrawing(parseInt(loadId));
 }
+
+
+// --- Propose: apre una pull request sul framework, esattamente come dalla chat ---
+document.getElementById('proposeDrawerBtn').addEventListener('click', async () => {
+    const code = document.getElementById('resultCode').textContent;
+    if (!code) return;
+
+    const btn = document.getElementById('proposeDrawerBtn');
+    btn.disabled = true;
+
+    // il revisore deve sapere se valida: si esegue prima
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+    let validation = null;
+    try {
+        const vr = await apiFetch('/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nextflow_code: code }),
+        });
+        validation = await vr.json();
+    } catch (e) {
+        validation = null;
+    }
+
+    const title = (document.getElementById('drawingTitle')?.textContent || 'pipeline').trim();
+    const suggested = title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+    const name = await promptDialog({
+        title: 'Name the module',
+        message: 'The pipeline will be committed as <code>modules/module_&lt;name&gt;.nf</code> on a new branch.',
+        placeholder: 'e.g. listeria_typing',
+        initialValue: suggested || 'pipeline',
+        confirmText: 'Open pull request',
+        icon: 'fa-code-branch',
+        maxLength: 40,
+    });
+    if (!name) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-code-branch"></i> Propose';
+        return;
+    }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening PR...';
+    let result;
+    try {
+        const res = await apiFetch('/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nextflow_code: code,
+                name: name,
+                description: title,
+                // dal drawer la topologia l'ha decisa l'utente, non il modello:
+                // e' quella la "richiesta" che il revisore deve poter leggere
+                user_query: 'Drawn on the canvas: ' + (window.__graphTopology || ''),
+                components: window.__graphComponents || [],
+                validation: validation,
+                model: window.__llmModel || '',
+                plugin: window.__activePlugin || '',
+            }),
+        });
+        result = await res.json();
+        if (!res.ok) result = { error: result.detail || 'request failed' };
+    } catch (e) {
+        result = { error: String(e) };
+    }
+
+    btn.disabled = false;
+    if (result.error) {
+        btn.innerHTML = '<i class="fas fa-times-circle"></i> Failed';
+        btn.classList.add('validate-fail');
+        confirmDialog({
+            title: 'Could not open the pull request',
+            message: `<code style="display:block;padding:6px 10px;background:#fef2f2;border-radius:6px;font-size:12px;color:#991b1b;word-break:break-word;">${String(result.error).replace(/</g, '&lt;')}</code>`,
+            confirmText: 'OK', cancelText: '', danger: true, icon: 'fa-times-circle',
+        });
+    } else {
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Proposed';
+        btn.classList.add('validate-pass');
+        confirmDialog({
+            title: 'Pipeline proposed',
+            message: `A draft pull request was opened on the framework. It has not been merged and nothing runs until a reviewer approves it.<br><br>
+                <a href="${result.pull_request_url}" target="_blank" rel="noopener" style="display:block;padding:8px 12px;background:#f0fdf4;border-radius:6px;color:#166534;word-break:break-all;">${result.pull_request_url}</a>
+                <br><code style="font-size:12px;color:#475569;">branch ${result.branch}<br>commit ${String(result.commit_sha).slice(0, 10)}</code>`,
+            confirmText: 'OK', cancelText: '', icon: 'fa-code-branch',
+        });
+    }
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-code-branch"></i> Propose';
+        btn.classList.remove('validate-pass', 'validate-fail');
+    }, 8000);
+});
+
+
+// --- Colonna dei disegni: si chiude per lasciare tutta la larghezza al canvas,
+//     e la scelta resta memorizzata fra una sessione e l'altra. ---
+const drawingsPanel   = document.getElementById('drawingsPanel');
+const drawingsReopen  = document.getElementById('drawingsReopen');
+const drawingsCollapse = document.getElementById('drawingsCollapse');
+
+function setDrawingsVisible(visible) {
+    drawingsPanel.classList.toggle('collapsed', !visible);
+    drawingsReopen.classList.toggle('visible', !visible);
+    try { localStorage.setItem('izs_drawings_panel', visible ? 'open' : 'closed'); } catch (e) {}
+}
+
+drawingsCollapse.addEventListener('click', () => setDrawingsVisible(false));
+drawingsReopen.addEventListener('click', () => setDrawingsVisible(true));
+
+let savedState = 'open';
+try { savedState = localStorage.getItem('izs_drawings_panel') || 'open'; } catch (e) {}
+setDrawingsVisible(savedState !== 'closed');
+
+
+// "New drawing" svuota la tela come fa "New chat" con la conversazione
+document.getElementById('newDrawingBtn').addEventListener('click', () => {
+    document.getElementById('clearBtn').click();
+});
+
+
+// uscita, come nella chat
+const logoutEl = document.getElementById('logoutBtn');
+if (logoutEl) logoutEl.addEventListener('click', async () => {
+    const { logout } = await import('./api.js?v=25');
+    logout();
+});

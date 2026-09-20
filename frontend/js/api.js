@@ -153,3 +153,18 @@ export async function sendChatMessage(sessionId, message, options = {}) {
         return { status: 'failed', error: error.message };
     }
 }
+
+export async function publishPipeline(payload) {
+    try {
+        const res = await apiFetch('/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        return data;
+    } catch (e) {
+        return { error: e.message };
+    }
+}

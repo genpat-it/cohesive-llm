@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="{{env "BASE_PATH"}}">
     <script>
-        window.IZS_BASE_PATH = "{{env "BASE_PATH"}}".replace(/\/$/, '');
+        // Il segnaposto viene sostituito dal server quando l'app e' servita
+        // sotto un prefisso. Se non lo e', resta letterale: con le virgolette
+        // doppie annidate era JavaScript non valido e lo script si fermava.
+        (function () {
+            var raw = '{{env "BASE_PATH"}}';
+            window.IZS_BASE_PATH = raw.indexOf('{{') === 0 ? '' : raw.replace(/\/$/, '');
+        })();
     </script>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>Pipeline Drawer — Cohesive LLM</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=25">
     <style>
         html.auth-pending body { visibility: hidden; }
 
@@ -20,6 +27,70 @@
             height: calc(100vh - 56px);
             overflow: hidden;
         }
+
+        /* Disegni salvati: colonna propria a destra, cosi' la palette resta
+           dedicata ai componenti e il canvas non perde larghezza utile. */
+        .drawer-drawings {
+            width: 260px;
+            flex-shrink: 0;
+            background: #f8fafc;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.18s ease, opacity 0.18s ease;
+        }
+        .drawer-drawings.collapsed {
+            width: 0;
+            opacity: 0;
+            border-right: none;
+        }
+        .drawings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+        .drawings-collapse {
+            border: none; background: transparent; cursor: pointer;
+            color: var(--text-muted); font-size: 13px; padding: 4px 6px; border-radius: 6px;
+        }
+        .drawings-collapse:hover { background: var(--primary-light); color: var(--primary); }
+        .drawings-list { flex: 1; overflow-y: auto; padding: 4px 8px 8px; }
+
+        /* stessa grammatica della lista conversazioni: azione in cima, poi i recenti */
+        .drawings-actions { padding: 12px 12px 4px; }
+        .drawings-new {
+            width: 100%;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 12px;
+            border: none; border-radius: 8px;
+            background: var(--primary, #01679c); color: #fff;
+            font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .drawings-new:hover { filter: brightness(1.08); }
+        .drawings-label {
+            padding: 12px 12px 4px;
+            font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+            text-transform: uppercase; color: var(--text-muted, #64748b);
+        }
+
+        /* quando e' chiusa resta una linguetta per riaprirla */
+        .drawings-reopen {
+            display: none;
+            position: absolute; top: 12px; left: 12px; z-index: 5;
+            border: 1px solid var(--border); background: #fff; cursor: pointer;
+            color: var(--text-muted); font-size: 13px; padding: 8px 10px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .drawings-reopen:hover { color: var(--primary); border-color: var(--primary); }
+        .drawings-reopen.visible { display: block; }
 
         /* Component palette */
         .drawer-palette {
@@ -68,7 +139,7 @@
         }
 
         .palette-domain {
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .palette-domain-label {
@@ -80,11 +151,41 @@
             color: var(--text-muted);
         }
 
+        /* Gruppi richiudibili: con ~50 componenti una lista piatta riempie
+           tutta la colonna e il disegno diventa secondario. */
+        .palette-group-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 7px 10px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-align: left;
+        }
+        .palette-group-head:hover { background: var(--primary-light); color: var(--primary); }
+        .palette-group-head .chev { font-size: 9px; transition: transform 0.15s; flex-shrink: 0; }
+        .palette-group[open] > .palette-group-head .chev { transform: rotate(90deg); }
+        .palette-group-head .name { flex: 1; min-width: 0; }
+        .palette-group-head .count {
+            font-size: 10px; font-weight: 600; color: var(--text-muted);
+            background: var(--border); border-radius: 10px; padding: 1px 7px;
+        }
+        .palette-group-body { padding: 2px 0 6px; }
+
         .palette-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             margin: 2px 0;
             border-radius: 8px;
             cursor: grab;
@@ -113,6 +214,9 @@
             font-weight: 600;
             color: var(--primary);
         }
+        /* i canali servono mentre colleghi, non mentre cerchi: si mostrano al passaggio */
+        .palette-item .chan { font-size: 9px; color: var(--text-muted); display: none; }
+        .palette-item:hover .chan { display: block; }
 
         /* Canvas */
         .drawer-canvas {
@@ -367,24 +471,43 @@
             </div>
             <div class="top-header-right">
                 <a href="./" class="toolbar-btn secondary" style="text-decoration:none; padding:6px 14px; font-size:13px;">
-                    <i class="fas fa-comments"></i> Chat
+                    <i class="fas fa-comments"></i> <span data-i18n="chat">Chat</span>
                 </a>
+                <div class="user-chip">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="userLabel">…</span>
+                </div>
+                <button id="logoutBtn" class="logout-btn" title="Sign out">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span data-i18n="logout">Logout</span>
+                </button>
             </div>
         </header>
 
         <div class="drawer-layout">
+            <aside class="drawer-drawings" id="drawingsPanel">
+                <div class="drawings-header">
+                    <span><i class="fas fa-folder-open"></i> <span data-i18n="saved_drawings">Saved drawings</span></span>
+                    <button class="drawings-collapse" id="drawingsCollapse" title="Hide" data-i18n-title="hide">
+                        <i class="fas fa-angles-left"></i>
+                    </button>
+                </div>
+                <div class="drawings-actions">
+                    <button class="drawings-new" id="newDrawingBtn">
+                        <i class="fas fa-plus"></i> <span data-i18n="new_drawing">New drawing</span>
+                    </button>
+                </div>
+                <div class="drawings-label" data-i18n="recent">Recent</div>
+                <div id="drawingsList" class="drawings-list"></div>
+            </aside>
             <div class="drawer-palette">
                 <div class="palette-header">
-                    <i class="fas fa-puzzle-piece"></i> Components
+                    <i class="fas fa-puzzle-piece"></i> <span data-i18n="components">Components</span>
                 </div>
                 <div class="palette-search">
-                    <input type="text" id="paletteSearch" placeholder="Search components...">
+                    <input type="text" id="paletteSearch" placeholder="Search components..." data-i18n-placeholder="search_components">
                 </div>
                 <div class="palette-list" id="paletteList"></div>
-                <div style="border-top:1px solid var(--border); padding:8px;">
-                    <div class="palette-domain-label">Saved Drawings</div>
-                    <div id="drawingsList" style="max-height:200px; overflow-y:auto;"></div>
-                </div>
             </div>
 
             <div class="drawer-canvas">
@@ -397,25 +520,32 @@
                         <span style="margin-left:8px; font-weight:500;" id="drawingTitle">Untitled</span>
                     </span>
                     <button class="toolbar-btn secondary" id="saveBtn">
-                        <i class="fas fa-save"></i> Save
+                        <i class="fas fa-save"></i> <span data-i18n="save">Save</span>
                     </button>
                     <button class="toolbar-btn secondary" id="exportBtn">
-                        <i class="fas fa-download"></i> Export
+                        <i class="fas fa-download"></i> <span data-i18n="export">Export</span>
                     </button>
                     <button class="toolbar-btn danger" id="clearBtn">
-                        <i class="fas fa-trash"></i> Clear
+                        <i class="fas fa-trash"></i> <span data-i18n="clear">Clear</span>
                     </button>
                     <button class="toolbar-btn primary" id="generateBtn">
-                        <i class="fas fa-bolt"></i> Generate Pipeline
+                        <i class="fas fa-bolt"></i> <span data-i18n="generate_pipeline">Generate Pipeline</span>
                     </button>
                 </div>
+
+                <button class="drawings-reopen" id="drawingsReopen" title="Show saved drawings" data-i18n-title="show_drawings">
+                    <i class="fas fa-folder-open"></i>
+                </button>
 
                 <div class="drawer-result" id="resultPanel">
                     <div class="drawer-result-header">
                         <h3><i class="fas fa-code" style="color:var(--primary); margin-right:8px;"></i>Generated Pipeline</h3>
                         <div style="display:flex; gap:8px;">
-                            <button class="validate-btn" id="validateDrawerBtn" title="Validate with Nextflow">
-                                <i class="fas fa-play-circle"></i> Validate
+                            <button class="validate-btn" id="validateDrawerBtn" title="Validate with Nextflow" data-i18n-title="validate_title">
+                                <i class="fas fa-play-circle"></i> <span data-i18n="validate">Validate</span>
+                            </button>
+                            <button class="validate-btn" id="proposeDrawerBtn" title="Propose this pipeline as a Pull Request on the framework">
+                                <i class="fas fa-code-branch"></i> <span data-i18n="propose">Propose</span>
                             </button>
                             <button class="control-btn" id="copyResultBtn" title="Copy code">
                                 <i class="fas fa-copy"></i>
@@ -430,11 +560,22 @@
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
-    <script type="module" src="js/modal.js?v=19"></script>
-    <script type="module" src="js/drawer.js?v=19"></script>
+    <script type="module" src="js/modal.js?v=25"></script>
+    <script type="module">
+        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=25';
+        applyTranslations();
+        // il selettore va in coda all'intestazione, dopo gli altri controlli
+        const host = document.querySelector('.top-header-right') || document.querySelector('.top-header') || document.body;
+        mountLanguagePicker(host);
+        // le parti disegnate dal JS applicativo arrivano dopo: si ritraduce
+        window.addEventListener('load', () => setTimeout(applyTranslations, 400));
+        document.addEventListener('izs:langchange', () => setTimeout(applyTranslations, 50));
+    </script>
+    <script type="module" src="js/drawer.js?v=25"></script>
 </body>
 </html>

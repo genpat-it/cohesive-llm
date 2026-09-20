@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- un chip: il modello gira in casa, su una GPU dell'istituto -->
+  <rect x="14" y="14" width="36" height="36" rx="6" fill="#0B5A8E"/>
+  <!-- due filamenti di DNA intrecciati dentro il chip -->
+  <g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M25 22 C 39 30, 25 34, 39 42"/>
+    <path d="M39 22 C 25 30, 39 34, 25 42"/>
+    <path d="M27 26 H 37 M27 38 H 37"/>
+  </g>
+  <!-- i piedini -->
+  <g stroke="#0B5A8E" stroke-width="4" stroke-linecap="round">
+    <path d="M23 14 V 7 M32 14 V 7 M41 14 V 7"/>
+    <path d="M23 50 V 57 M32 50 V 57 M41 50 V 57"/>
+    <path d="M14 23 H 7 M14 32 H 7 M14 41 H 7"/>
+    <path d="M50 23 H 57 M50 32 H 57 M50 41 H 57"/>
+  </g>
+</svg>

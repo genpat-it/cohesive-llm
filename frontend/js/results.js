@@ -1,6 +1,6 @@
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.esm.min.mjs';
-import { validatePipeline } from './api.js?v=11';
-import { confirmDialog } from './modal.js?v=2';
+import { validatePipeline, publishPipeline } from './api.js?v=25';
+import { confirmDialog, promptDialog } from './modal.js?v=25';
 
 // Initialize Mermaid with updated configuration
 mermaid.initialize({
@@ -41,6 +41,73 @@ export function initResultsUi() {
     const copyMermaidBtn = document.getElementById('copyMermaidBtn');
 
     const validateBtn = document.getElementById('validateBtn');
+    const publishBtn = document.getElementById('publishBtn');
+
+    if (publishBtn) {
+        publishBtn.addEventListener('click', async () => {
+            if (!rawNextflowData) return;
+
+            // The reviewer needs to know whether it validates: run it first.
+            publishBtn.disabled = true;
+            publishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+            const validation = await validatePipeline(rawNextflowData);
+
+            const suggested = (window.__lastUserQuery || 'pipeline')
+                .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+            const name = await promptDialog({
+                title: 'Name the module',
+                message: 'The pipeline will be committed as <code>modules/module_&lt;name&gt;.nf</code> on a new branch.',
+                placeholder: 'e.g. listeria_typing',
+                initialValue: suggested || 'pipeline',
+                confirmText: 'Open pull request',
+                icon: 'fa-code-branch',
+                maxLength: 40,
+            });
+            if (!name) {
+                publishBtn.disabled = false;
+                publishBtn.innerHTML = '<i class="fas fa-code-branch"></i> Propose';
+                return;
+            }
+
+            publishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening PR...';
+            const result = await publishPipeline({
+                nextflow_code: rawNextflowData,
+                name: name,
+                description: window.__lastUserQuery || name,
+                user_query: window.__lastUserQuery || '',
+                components: window.__lastComponents || [],
+                validation: validation,
+                model: window.__llmModel || '',
+                plugin: window.__activePlugin || '',
+            });
+
+            publishBtn.disabled = false;
+            if (result.error) {
+                publishBtn.innerHTML = '<i class="fas fa-times-circle"></i> Failed';
+                publishBtn.classList.add('validate-fail');
+                confirmDialog({
+                    title: 'Could not open the pull request',
+                    message: `<code style="display:block;padding:6px 10px;background:#fef2f2;border-radius:6px;font-size:12px;color:#991b1b;word-break:break-word;">${String(result.error).replace(/</g, '&lt;')}</code>`,
+                    confirmText: 'OK', cancelText: '', danger: true, icon: 'fa-times-circle',
+                });
+            } else {
+                publishBtn.innerHTML = '<i class="fas fa-check-circle"></i> Proposed';
+                publishBtn.classList.add('validate-pass');
+                confirmDialog({
+                    title: 'Pipeline proposed',
+                    message: `A draft pull request was opened on the framework. It has not been merged and nothing runs until a reviewer approves it.<br><br>
+                        <a href="${result.pull_request_url}" target="_blank" rel="noopener" style="display:block;padding:8px 12px;background:#f0fdf4;border-radius:6px;color:#166534;word-break:break-all;">${result.pull_request_url}</a>
+                        <br><code style="font-size:12px;color:#475569;">branch ${result.branch}<br>commit ${result.commit_sha.slice(0, 10)}</code>`,
+                    confirmText: 'OK', cancelText: '', icon: 'fa-code-branch',
+                });
+            }
+            setTimeout(() => {
+                publishBtn.innerHTML = '<i class="fas fa-code-branch"></i> Propose';
+                publishBtn.classList.remove('validate-pass', 'validate-fail');
+            }, 8000);
+        });
+    }
+
 
     const openMermaidLiveBtn = document.getElementById('openMermaidLiveBtn');
 

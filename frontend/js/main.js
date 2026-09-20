@@ -1,7 +1,7 @@
-import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=19';
-import { initChatUi } from './chat.js?v=19';
-import { initResultsUi } from './results.js?v=19';
-import { initSidebar } from './sidebar.js?v=19';
+import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=25';
+import { initChatUi } from './chat.js?v=25';
+import { initResultsUi } from './results.js?v=25';
+import { initSidebar } from './sidebar.js?v=25';
 
 // Auth guard: redirect to /login.html if no valid session.
 // The <html> element has the `auth-pending` class set very early in <head>,
@@ -57,6 +57,7 @@ const handleSendMessage = async (text) => {
     chatUi.setStatus('active', 'Thinking...');
 
     try {
+        if (text) window.__lastUserQuery = text;
         const response = await sendChatMessage(currentSessionId, text);
         const elapsedMs = chatUi.removeTypingIndicator();
 
@@ -107,7 +108,8 @@ const handleSendMessage = async (text) => {
                                     onClick: () => { resultsContainer.classList.add('open'); },
                                 },
                             });
-                            if (proceedRes.nextflow_code) resultsUi.renderNextflow(proceedRes.nextflow_code);
+                            window.__lastComponents = (proceedRes.selected_components || []); window.__lastUserQuery = window.__lastUserQuery || '';
+            if (proceedRes.nextflow_code) resultsUi.renderNextflow(proceedRes.nextflow_code);
                             if (proceedRes.mermaid_code) resultsUi.renderMermaid(proceedRes.mermaid_code);
                             resultsContainer.classList.add('open');
                             chatUi.setStatus('active', 'Pipeline Generated');
@@ -140,6 +142,7 @@ const handleSendMessage = async (text) => {
                     onClick: () => { resultsContainer.classList.add('open'); },
                 },
             });
+            window.__lastComponents = (response.selected_components || []); window.__lastUserQuery = window.__lastUserQuery || '';
             if (response.nextflow_code) resultsUi.renderNextflow(response.nextflow_code);
             if (response.mermaid_code) resultsUi.renderMermaid(response.mermaid_code);
             resultsContainer.classList.add('open');
@@ -194,7 +197,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const chatParam = urlParams.get('chat');
 if (chatParam) {
     // Find the conversation by session_id and load it
-    const { listConversations: listConvs, getConversation: getConv } = await import('./api.js?v=11');
+    const { listConversations: listConvs, getConversation: getConv } = await import('./api.js?v=25');
     const convs = await listConvs();
     const match = convs.find(c => c.session_id === chatParam);
     if (match) {
@@ -229,6 +232,10 @@ async function refreshStats() {
     if (!el) return;
     try {
         const info = await fetchSystemInfo();
+        if (info && typeof info === 'object') {
+            window.__llmModel = info.llm_model || '';
+            window.__activePlugin = info.active_plugin || '';
+        }
         if (!info || typeof info !== 'object') {
             el.innerHTML = '';
             return;
@@ -282,3 +289,36 @@ refreshStats();
 setInterval(refreshStats, 10000);
 
 console.log('IZS AI chat generator loaded for user:', currentUser.username);
+
+
+// --- Esempi a comparsa -------------------------------------------------
+// Sono un punto di partenza: restano aperti su una conversazione vuota e si
+// richiudono da soli al primo messaggio, quando lo spazio serve alla chat.
+(() => {
+    const toggle = document.getElementById('examplesToggle');
+    const box = document.getElementById('examplesContainer');
+    if (!toggle || !box) return;
+
+    const count = box.querySelectorAll('.example-btn').length;
+    const badge = toggle.querySelector('.examples-count');
+    if (badge) badge.textContent = count;
+
+    function setOpen(open, remember = true) {
+        box.classList.toggle('collapsed', !open);
+        toggle.classList.toggle('collapsed', !open);
+        if (remember) {
+            try { localStorage.setItem('izs_examples', open ? 'open' : 'closed'); } catch (e) {}
+        }
+    }
+
+    toggle.addEventListener('click', () => setOpen(box.classList.contains('collapsed')));
+
+    let pref = 'open';
+    try { pref = localStorage.getItem('izs_examples') || 'open'; } catch (e) {}
+    const hasConversation = !!document.querySelector('#chatHistory .message-user, #chatHistory .user-message');
+    setOpen(pref !== 'closed' && !hasConversation, false);
+
+    // al primo invio si tolgono di mezzo, senza sovrascrivere la scelta esplicita
+    const send = document.getElementById('sendMessageBtn');
+    if (send) send.addEventListener('click', () => setOpen(false, false), { once: true });
+})();

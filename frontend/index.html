@@ -11,9 +11,16 @@
     <base href="{{env "BASE_PATH"}}">
     <script>
         // Same value, without trailing slash, exposed to ES modules.
-        window.IZS_BASE_PATH = "{{env "BASE_PATH"}}".replace(/\/$/, '');
+        // Il segnaposto viene sostituito dal server quando l'app e' servita
+        // sotto un prefisso. Se non lo e', resta letterale: con le virgolette
+        // doppie annidate era JavaScript non valido e lo script si fermava.
+        (function () {
+            var raw = '{{env "BASE_PATH"}}';
+            window.IZS_BASE_PATH = raw.indexOf('{{') === 0 ? '' : raw.replace(/\/$/, '');
+        })();
     </script>
 
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>Cohesive LLM</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@300;400&display=swap" rel="stylesheet">
@@ -23,7 +30,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=19">
+    <link rel="stylesheet" href="style.css?v=25">
     <style>
         /* Hide everything until the auth check decides whether to render or
            redirect to /login.html — prevents the chat UI from flashing for
@@ -45,7 +52,7 @@
             </div>
             <div class="top-header-right">
                 <a href="drawer" class="action-badge" style="text-decoration:none; font-size:12px; padding:5px 12px;" title="Visual Pipeline Drawer">
-                    <i class="fas fa-project-diagram"></i> Drawer
+                    <i class="fas fa-project-diagram"></i> <span data-i18n="drawer">Drawer</span>
                 </a>
                 <div class="user-chip">
                     <i class="fas fa-user-circle"></i>
@@ -53,7 +60,7 @@
                 </div>
                 <button id="logoutBtn" class="logout-btn" title="Sign out">
                     <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
+                    <span data-i18n="logout">Logout</span>
                 </button>
             </div>
         </header>
@@ -64,7 +71,7 @@
                 <div class="sidebar-header">
                     <button class="new-chat-btn" id="newChatBtn">
                         <i class="fas fa-plus"></i>
-                        <span>New chat</span>
+                        <span data-i18n="new_chat">New chat</span>
                     </button>
                 </div>
                 <div class="sidebar-section-label">Recent</div>
@@ -77,7 +84,13 @@
         <!-- Chat Section -->
         <div class="chat-section full-width" id="chatSection">
             <div class="chat-header">
-                <div class="examples-container">
+                <button class="examples-toggle" id="examplesToggle"
+                        title="Show or hide the example pipelines">
+                    <i class="fas fa-chevron-down chev"></i>
+                    <span data-i18n="examples">Examples</span>
+                    <span class="examples-count">6</span>
+                </button>
+                <div class="examples-container" id="examplesContainer">
                     <button class="example-btn" data-example="Design a sequential bioinformatics workflow for the Covid Emergency pipeline that starts with trimmed FASTQ reads and the SARS-CoV-2 reference genome (NC_045512.2, Wuhan-Hu-1). The pipeline should: 1. Map the reads to the reference and call variants using iVar, producing a consensus FASTA sequence. 2. Pass that consensus FASTA directly to Pangolin to assign a viral lineage. 3. Output the final Pangolin lineage report (CSV) and retain the consensus FASTA.">Covid Emergency</button>
                     <button class="example-btn" data-example="Design a Nextflow workflow for segmented viruses that takes pre-processed FASTQ reads and user-provided reference genomes, maps reads to each reference using iVar, and outputs per-segment consensus FASTA files plus a consolidated multifasta. The workflow should pair each sample with all references using and be structured as a reusable module.">Mapping for Segmented Viruses</button>
                     <button class="example-btn" data-example="Design a Nextflow workflow for a 'Depletion & de novo' pipeline that starts with trimmed FASTQ reads and an optional host reference genome. The workflow first removes host reads using Bowtie, then performs de novo assembly of the depleted (or original, if no host provided) reads with SPAdes. The pipeline supports samples with or without a host reference and emits both the depleted reads and final assemblies.">Depletion and de novo</button>
@@ -90,7 +103,7 @@
             <div class="chat-history" id="chatHistory">
                 <!-- Welcome Message -->
                 <div class="chat-bubble ai mt-auto">
-                    Welcome! I am your Bioinformatics Pipeline Assistant. Describe the pipeline you'd like to build, or choose one of the examples above.
+                    <span data-i18n="welcome">Welcome! I am your Bioinformatics Pipeline Assistant. Describe the pipeline you'd like to build, or choose one of the examples above.</span>
                 </div>
             </div>
 
@@ -98,11 +111,11 @@
                 <div class="quick-actions" id="quickActions" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                     <div style="flex-grow: 1;"></div>
                     <button class="action-badge reset" id="resetChatBtn" title="Reset Context">
-                        <i class="fas fa-sync-alt"></i> Reset
+                        <i class="fas fa-sync-alt"></i> <span data-i18n="reset">Reset</span>
                     </button>
                 </div>
                 <div class="input-wrapper">
-                    <textarea id="userInput" placeholder="Message your Bioinformatics Pipeline Assistant..."></textarea>
+                    <textarea id="userInput" placeholder="Message your Bioinformatics Pipeline Assistant..." data-i18n-placeholder="msg_placeholder"></textarea>
                     <button id="sendMessageBtn">
                         <i class="fas fa-arrow-up"></i>
                     </button>
@@ -113,7 +126,7 @@
                 <div class="chat-footer">
                     <div class="status-indicator">
                         <div class="status-dot" id="statusDot"></div>
-                        <span id="statusText">Ready</span>
+                        <span id="statusText" data-i18n="ready">Ready</span>
                     </div>
                     <div class="system-stats" id="systemStats"></div>
                 </div>
@@ -125,7 +138,7 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <i class="fas fa-project-diagram"></i>
-                        <span>Mermaid Diagram</span>
+                        <span data-i18n="mermaid_diagram">Mermaid Diagram</span>
                     </div>
                     <div class="panel-controls">
                         <div class="panel-status">
@@ -150,7 +163,7 @@
                 <div class="panel-content">
                     <div class="empty-state" id="mermaidEmpty" style="display: none;">
                         <i class="fas fa-diagram-project"></i>
-                        <h3>Mermaid Diagram</h3>
+                        <h3 data-i18n="mermaid_diagram">Mermaid Diagram</h3>
                         <p>Workflow visualization will appear here</p>
                     </div>
                     <div id="mermaidContainer" style="display: flex;">
@@ -164,7 +177,7 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <i class="fas fa-code"></i>
-                        <span>Nextflow Code</span>
+                        <span data-i18n="nextflow_code">Nextflow Code</span>
                     </div>
                     <div class="panel-controls">
                         <div class="panel-status">
@@ -173,6 +186,9 @@
                         </div>
                         <button class="validate-btn" id="validateBtn" title="Validate with Nextflow">
                             <i class="fas fa-play-circle"></i> Validate
+                        </button>
+                        <button class="validate-btn" id="publishBtn" title="Propose this pipeline as a Pull Request on the framework">
+                            <i class="fas fa-code-branch"></i> <span data-i18n="propose">Propose</span>
                         </button>
                         <button class="control-btn" id="copyNextflowBtn" title="Copy Nextflow Code">
                             <i class="fas fa-copy"></i>
@@ -194,6 +210,16 @@
     </div>
 
     <!-- Switch to ES module entrypoint -->
-    <script type="module" src="js/main.js?v=19"></script>
+    <script type="module">
+        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=25';
+        applyTranslations();
+        // il selettore va in coda all'intestazione, dopo gli altri controlli
+        const host = document.querySelector('.top-header-right') || document.querySelector('.top-header') || document.body;
+        mountLanguagePicker(host);
+        // le parti disegnate dal JS applicativo arrivano dopo: si ritraduce
+        window.addEventListener('load', () => setTimeout(applyTranslations, 400));
+        document.addEventListener('izs:langchange', () => setTimeout(applyTranslations, 50));
+    </script>
+    <script type="module" src="js/main.js?v=25"></script>
 </body>
 </html>
