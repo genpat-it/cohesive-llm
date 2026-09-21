@@ -5,8 +5,8 @@ import {
     deleteAllConversations,
     renameConversation,
     showToast,
-} from './api.js?v=25';
-import { confirmDialog, promptDialog } from './modal.js?v=25';
+} from './api.js?v=29';
+import { confirmDialog, promptDialog } from './modal.js?v=29';
 
 export function initSidebar({ onSelect, onNewChat }) {
     const listEl = document.getElementById('conversationsList');

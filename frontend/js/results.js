@@ -1,6 +1,6 @@
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.esm.min.mjs';
-import { validatePipeline, publishPipeline } from './api.js?v=25';
-import { confirmDialog, promptDialog } from './modal.js?v=25';
+import { validatePipeline, publishPipeline } from './api.js?v=29';
+import { confirmDialog, promptDialog } from './modal.js?v=29';
 
 // Initialize Mermaid with updated configuration
 mermaid.initialize({

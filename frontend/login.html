@@ -97,10 +97,64 @@
             display: none;
         }
         .error.visible { display: block; }
+
+        /* Language picker. This page carries its own <style> and does not load
+           style.css, so the rules are repeated here — and made specific enough
+           to beat the generic `button { width: 100% }` above. On a dark ground
+           the pill is translucent white rather than institutional blue. */
+        .login-stack { display: flex; flex-direction: column; align-items: stretch; }
+        .login-lang { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+
+        .login-links {
+            margin-top: 1.25rem; padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+            text-align: center; font-size: 0.8rem; color: #9ca3af;
+        }
+        .login-links a { color: #6b7280; text-decoration: none; }
+        .login-links a:hover { color: #1e40af; text-decoration: underline; }
+        .login-links .sep { margin: 0 8px; color: #d1d5db; }
+        .lang-picker { position: relative; }
+        .login-lang .lang-current {
+            display: inline-flex; align-items: center; gap: 7px;
+            width: auto; padding: 6px 13px; margin: 0;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.28);
+            border-radius: 20px;
+            font-family: inherit; font-size: 12px; font-weight: 500;
+            color: #fff; cursor: pointer; transition: background .2s ease;
+        }
+        .login-lang .lang-current:hover { background: rgba(255,255,255,0.24); }
+        .login-lang .lang-chev { transition: transform .2s ease; opacity: .75; }
+        .login-lang .lang-picker.open .lang-chev { transform: rotate(180deg); }
+
+        .login-lang .lang-menu {
+            display: none; position: absolute; top: calc(100% + 6px); right: 0;
+            min-width: 172px; background: #fff; border: 1px solid #e2e8f0;
+            border-radius: 10px; box-shadow: 0 10px 28px rgba(15,23,42,.28);
+            padding: 4px;
+        }
+        .login-lang .lang-picker.open .lang-menu { display: block; }
+        .login-lang .lang-option {
+            display: flex; align-items: center; gap: 8px;
+            width: 100%; margin: 0; padding: 8px 10px;
+            background: transparent; border: none; border-radius: 7px;
+            font-family: inherit; font-size: 13px; font-weight: 400;
+            color: #2b3440; cursor: pointer; text-align: left;
+        }
+        .login-lang .lang-option:hover { background: #e6f2f8; }
+        .login-lang .lang-option .lang-name { flex: 1; }
+        .login-lang .lang-option .lang-iso {
+            font-size: 10px; font-weight: 600; color: #919399; letter-spacing: .4px;
+        }
+        .login-lang .lang-check { color: #00679c; opacity: 0; }
+        .login-lang .lang-option.active .lang-check { opacity: 1; }
+        .login-lang .lang-option.active .lang-name { font-weight: 600; color: #00679c; }
     </style>
 </head>
 <body>
-    <div class="card">
+    <div class="login-stack">
+        <div class="login-lang" id="loginLang"></div>
+        <div class="card">
         <div class="logo">
             <img src="logo-izs-blue.jpg" alt="IZS">
         </div>
@@ -120,12 +174,43 @@
 
             <button type="submit" id="submitBtn" data-i18n="sign_in">Sign in</button>
         </form>
+
+        <div class="login-links">
+            <a href="#" id="forgotLink" data-i18n="forgot_password">Forgot your password?</a>
+            <span class="sep">·</span>
+            <a href="#" id="helpLink" data-i18n="need_help">Need help?</a>
+        </div>
     </div>
+    </div>
+
+    <script type="module">
+        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=29';
+        applyTranslations();
+        mountLanguagePicker(document.getElementById('loginLang'));
+    </script>
 
     <script>
         const BASE = window.IZS_BASE_PATH || '';
         const API_BASE = (window.location.port === '9000' || window.location.port === '3000' || window.location.port === '5500') ? 'http://localhost:8080' : (BASE || '');
         const APP_HOME = BASE + '/';
+
+        // Placeholders: password recovery is not wired to anything yet. They
+        // say so rather than silently doing nothing, which reads as broken.
+        for (const [id, msg] of [
+            ['forgotLink', 'Password recovery is not enabled on this instance. Ask the platform administrator to reset it.'],
+            ['helpLink',   'For help with the platform, contact bioinformatica@izs.it.'],
+        ]) {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', (e) => {
+                e.preventDefault();
+                const box = document.getElementById('error');
+                box.textContent = msg;
+                box.style.display = 'block';
+                box.style.background = '#f1f5f9';
+                box.style.color = '#475569';
+                box.style.borderColor = '#cbd5e1';
+            });
+        }
 
         document.getElementById('togglePwd').addEventListener('click', () => {
             const pwd = document.getElementById('password');

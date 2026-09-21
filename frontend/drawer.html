@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=29">
     <style>
         html.auth-pending body { visibility: hidden; }
 
@@ -496,6 +496,10 @@
                     <button class="drawings-new" id="newDrawingBtn">
                         <i class="fas fa-plus"></i> <span data-i18n="new_drawing">New drawing</span>
                     </button>
+                    <button class="delete-all-btn" id="deleteAllDrawingsBtn"
+                            data-i18n-title="delete_all_drawings">
+                        <i class="fas fa-trash"></i> <span data-i18n="delete_all">Delete all</span>
+                    </button>
                 </div>
                 <div class="drawings-label" data-i18n="recent">Recent</div>
                 <div id="drawingsList" class="drawings-list"></div>
@@ -565,9 +569,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
-    <script type="module" src="js/modal.js?v=25"></script>
+    <script type="module" src="js/modal.js?v=29"></script>
     <script type="module">
-        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=25';
+        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=29';
         applyTranslations();
         // il selettore va in coda all'intestazione, dopo gli altri controlli
         const host = document.querySelector('.top-header-right') || document.querySelector('.top-header') || document.body;
@@ -576,6 +580,6 @@
         window.addEventListener('load', () => setTimeout(applyTranslations, 400));
         document.addEventListener('izs:langchange', () => setTimeout(applyTranslations, 50));
     </script>
-    <script type="module" src="js/drawer.js?v=25"></script>
+    <script type="module" src="js/drawer.js?v=29"></script>
 </body>
 </html>

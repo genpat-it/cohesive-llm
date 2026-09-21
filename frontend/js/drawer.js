@@ -1,5 +1,5 @@
-import { checkSession, showToast } from './api.js?v=25';
-import { confirmDialog, promptDialog } from './modal.js?v=25';
+import { checkSession, showToast } from './api.js?v=29';
+import { confirmDialog, promptDialog } from './modal.js?v=29';
 
 const BASE_PATH = (typeof window !== 'undefined' && window.IZS_BASE_PATH && !window.IZS_BASE_PATH.includes('{{')) ? window.IZS_BASE_PATH : '';
 const API_BASE = (typeof window !== 'undefined' && window.IZS_API_BASE) || 
@@ -865,6 +865,44 @@ document.getElementById('newDrawingBtn').addEventListener('click', () => {
 // log out, as in the chat
 const logoutEl = document.getElementById('logoutBtn');
 if (logoutEl) logoutEl.addEventListener('click', async () => {
-    const { logout } = await import('./api.js?v=25');
+    const { logout } = await import('./api.js?v=29');
     logout();
+});
+
+
+// Delete all drawings, mirroring the conversation sidebar. There is no bulk
+// endpoint, so the deletions are issued one by one and the list is refreshed
+// once at the end rather than after each call.
+document.getElementById('deleteAllDrawingsBtn').addEventListener('click', async () => {
+    const res = await apiFetch('/drawings');
+    const all = res.ok ? await res.json() : [];
+    if (!all.length) {
+        showToast('No saved drawings to delete');
+        return;
+    }
+    const confirmed = await confirmDialog({
+        title: 'Delete all drawings?',
+        message: `${all.length} saved drawing${all.length > 1 ? 's' : ''} will be permanently removed. This cannot be undone.`,
+        confirmText: 'Delete all',
+        cancelText: 'Cancel',
+        danger: true,
+        icon: 'fa-trash',
+    });
+    if (!confirmed) return;
+
+    let failed = 0;
+    for (const d of all) {
+        try {
+            const r = await apiFetch(`/drawings/${d.id}`, { method: 'DELETE' });
+            if (!r.ok) failed++;
+        } catch (e) { failed++; }
+    }
+    // the canvas may be showing one of the drawings just removed
+    currentDrawingId = null;
+    editor.clear();
+    Object.keys(nodeDataMap).forEach(k => delete nodeDataMap[k]);
+    updateTitle('Untitled');
+    updateNodeCount();
+    refreshDrawingsList();
+    showToast(failed ? `${all.length - failed} deleted, ${failed} failed` : `${all.length} drawings deleted`);
 });

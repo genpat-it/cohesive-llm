@@ -30,7 +30,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=29">
     <style>
         /* Hide everything until the auth check decides whether to render or
            redirect to /login.html — prevents the chat UI from flashing for
@@ -211,7 +211,7 @@
 
     <!-- Switch to ES module entrypoint -->
     <script type="module">
-        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=25';
+        import { applyTranslations, mountLanguagePicker } from './js/i18n.js?v=29';
         applyTranslations();
         // il selettore va in coda all'intestazione, dopo gli altri controlli
         const host = document.querySelector('.top-header-right') || document.querySelector('.top-header') || document.body;
@@ -220,6 +220,6 @@
         window.addEventListener('load', () => setTimeout(applyTranslations, 400));
         document.addEventListener('izs:langchange', () => setTimeout(applyTranslations, 50));
     </script>
-    <script type="module" src="js/main.js?v=25"></script>
+    <script type="module" src="js/main.js?v=29"></script>
 </body>
 </html>

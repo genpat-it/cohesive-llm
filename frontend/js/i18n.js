@@ -29,6 +29,7 @@ const DICT = {
         search_components: 'Search components...',
         saved_drawings: 'Saved drawings',
         new_drawing: 'New drawing',
+        delete_all_drawings: 'Delete all saved drawings',
         generate_pipeline: 'Generate Pipeline',
         save: 'Save',
         export: 'Export',
@@ -39,6 +40,8 @@ const DICT = {
         username: 'Username',
         password: 'Password',
         sign_in: 'Sign in',
+        forgot_password: 'Forgot your password?',
+        need_help: 'Need help?',
         language: 'Language',
     },
     it: {
@@ -66,6 +69,7 @@ const DICT = {
         search_components: 'Cerca componenti...',
         saved_drawings: 'Disegni salvati',
         new_drawing: 'Nuovo disegno',
+        delete_all_drawings: 'Elimina tutti i disegni salvati',
         generate_pipeline: 'Genera pipeline',
         save: 'Salva',
         export: 'Esporta',
@@ -76,6 +80,8 @@ const DICT = {
         username: 'Nome utente',
         password: 'Password',
         sign_in: 'Accedi',
+        forgot_password: 'Password dimenticata?',
+        need_help: 'Serve aiuto?',
         language: 'Lingua',
     },
     fr: {
@@ -103,6 +109,7 @@ const DICT = {
         search_components: 'Rechercher des composants...',
         saved_drawings: 'Schémas enregistrés',
         new_drawing: 'Nouveau schéma',
+        delete_all_drawings: 'Supprimer tous les schémas enregistrés',
         generate_pipeline: 'Générer le pipeline',
         save: 'Enregistrer',
         export: 'Exporter',
@@ -113,6 +120,8 @@ const DICT = {
         username: "Nom d'utilisateur",
         password: 'Mot de passe',
         sign_in: 'Se connecter',
+        forgot_password: 'Mot de passe oublié ?',
+        need_help: "Besoin d'aide ?",
         language: 'Langue',
     },
     es: {
@@ -140,6 +149,7 @@ const DICT = {
         search_components: 'Buscar componentes...',
         saved_drawings: 'Diagramas guardados',
         new_drawing: 'Nuevo diagrama',
+        delete_all_drawings: 'Eliminar todos los diagramas guardados',
         generate_pipeline: 'Generar pipeline',
         save: 'Guardar',
         export: 'Exportar',
@@ -150,6 +160,8 @@ const DICT = {
         username: 'Usuario',
         password: 'Contraseña',
         sign_in: 'Iniciar sesión',
+        forgot_password: '¿Olvidaste tu contraseña?',
+        need_help: '¿Necesitas ayuda?',
         language: 'Idioma',
     },
 };
@@ -169,13 +181,25 @@ export const LANGS = [
 
 const STORAGE_KEY = 'izs_lang';
 
+export function detectLang() {
+    // navigator.languages is the ordered preference list the browser also
+    // sends as Accept-Language: 'fr-CA' before 'en-GB' means French first.
+    const wanted = (navigator.languages && navigator.languages.length)
+        ? navigator.languages
+        : [navigator.language || 'en'];
+    for (const tag of wanted) {
+        const base = String(tag).slice(0, 2).toLowerCase();
+        if (DICT[base]) return base;
+    }
+    return 'en';
+}
+
 export function currentLang() {
+    // an explicit choice always wins over detection
     let saved = null;
     try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
     if (saved && DICT[saved]) return saved;
-    // start from the browser language when it is one we cover
-    const nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
-    return DICT[nav] ? nav : 'en';
+    return detectLang();
 }
 
 export function t(key, lang = currentLang()) {
@@ -235,8 +259,7 @@ export function mountLanguagePicker(container) {
 
     function paint() {
         const cur = currentLang();
-        btn.innerHTML = '<i class="fas fa-globe lang-globe"></i>' + label(cur)
-                      + '<i class="fas fa-chevron-down lang-chev"></i>';
+        btn.innerHTML = '<svg class="lang-globe" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1.6 8h12.8M8 1.6c1.8 2 1.8 10.8 0 12.8M8 1.6c-1.8 2-1.8 10.8 0 12.8" fill="none" stroke="currentColor" stroke-width="1.1"/></svg>' + label(cur) + '<svg class="lang-chev" viewBox="0 0 12 12" width="9" height="9" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         btn.title = t('language');
         menu.querySelectorAll('.lang-option').forEach(o => {
             o.classList.toggle('active', o.dataset.lang === cur);
@@ -250,7 +273,7 @@ export function mountLanguagePicker(container) {
         o.className = 'lang-option';
         o.dataset.lang = code;
         o.setAttribute('role', 'option');
-        o.innerHTML = label(code, true) + '<i class="fas fa-check lang-check"></i>';
+        o.innerHTML = label(code, true) + '<svg class="lang-check" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2 6.3 4.8 9 10 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         o.addEventListener('click', () => {
             setLang(code);
             wrap.classList.remove('open');

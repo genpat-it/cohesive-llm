@@ -59,7 +59,7 @@ export function initChatUi(onSendMessage) {
     // Reset Context (uses the stylized modal)
     if (resetChatBtn) {
         resetChatBtn.addEventListener('click', async () => {
-            const { confirmDialog } = await import('./modal.js?v=25');
+            const { confirmDialog } = await import('./modal.js?v=29');
             const ok = await confirmDialog({
                 title: 'Reset chat?',
                 message: 'This will refresh the page and clear the current conversation.',

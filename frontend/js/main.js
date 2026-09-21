@@ -1,7 +1,7 @@
-import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=25';
-import { initChatUi } from './chat.js?v=25';
-import { initResultsUi } from './results.js?v=25';
-import { initSidebar } from './sidebar.js?v=25';
+import { sendChatMessage, checkSession, logout, fetchSystemInfo } from './api.js?v=29';
+import { initChatUi } from './chat.js?v=29';
+import { initResultsUi } from './results.js?v=29';
+import { initSidebar } from './sidebar.js?v=29';
 
 // Auth guard: redirect to /login.html if no valid session.
 // The <html> element has the `auth-pending` class set very early in <head>,
@@ -197,7 +197,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const chatParam = urlParams.get('chat');
 if (chatParam) {
     // Find the conversation by session_id and load it
-    const { listConversations: listConvs, getConversation: getConv } = await import('./api.js?v=25');
+    const { listConversations: listConvs, getConversation: getConv } = await import('./api.js?v=29');
     const convs = await listConvs();
     const match = convs.find(c => c.session_id === chatParam);
     if (match) {
@@ -313,10 +313,11 @@ console.log('IZS AI chat generator loaded for user:', currentUser.username);
 
     toggle.addEventListener('click', () => setOpen(box.classList.contains('collapsed')));
 
-    let pref = 'open';
-    try { pref = localStorage.getItem('izs_examples') || 'open'; } catch (e) {}
-    const hasConversation = !!document.querySelector('#chatHistory .message-user, #chatHistory .user-message');
-    setOpen(pref !== 'closed' && !hasConversation, false);
+    // closed by default: the examples are a way in, not something to look at
+    // every time you open the app. Only an explicit choice keeps them open.
+    let pref = 'closed';
+    try { pref = localStorage.getItem('izs_examples') || 'closed'; } catch (e) {}
+    setOpen(pref === 'open', false);
 
     // step aside on the first send, without overriding an explicit choice
     const send = document.getElementById('sendMessageBtn');
