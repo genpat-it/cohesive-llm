@@ -124,6 +124,14 @@ def register_workflow(
     user: User = Depends(get_current_user),
 ) -> RegisterResponse:
     params = req.json_params or _derive_params(req.components)
+
+    # A pipeline built on multi_* components consumes many samples in one
+    # execution; a single-sample one is fanned out by the platform, one run
+    # per sample. Getting this wrong means the launch form offers the wrong
+    # thing, so it is read from the components rather than left to the caller.
+    multi = req.multi_sample_input or any(
+        c.startswith("multi_") for c in req.components
+    )
     notes = {
         "source": "cohesive-llm",
         "commit_sha": req.commit_sha,
@@ -137,7 +145,7 @@ def register_workflow(
         "Description": req.description,
         "script": req.module,
         "json_params": json.dumps(params) if params else None,
-        "multi_sample_input": req.multi_sample_input,
+        "multi_sample_input": multi,
         # without this the results stay in the working directory and never
         # come back into the platform: no datasets, no folder under the
         # sample. Every production pipeline has it set to true.
@@ -209,6 +217,29 @@ def register_workflow(
     )
 
 
+# Multi-sample components are not steps: they have no m_step card, so there is
+# nothing to read their input types from. What they consume is written in their
+# name — a clustering module on alleles eats allelic profiles, one on an
+# alignment eats FASTA. The production `reportree` module declares exactly these
+# four, one per variant.
+_MULTI_INPUT_TYPES = {
+    "alleles": ["chewbbaca_allelic_profile", "allelic_profile"],
+    "alignment": ["fasta"],
+    "vcf": ["vcf"],
+    "snippycore": ["fasta"],
+    "grapetree": ["chewbbaca_allelic_profile"],
+    "cfsan": ["fastq_trimmed"],
+    "ksnp3": ["fasta_scaffolds"],
+}
+
+
+def _multi_input_types(component: str) -> List[str]:
+    for key, types in _MULTI_INPUT_TYPES.items():
+        if component.endswith(key) or f"__{key}" in component:
+            return types
+    return []
+
+
 def _step_types(client: httpx.Client, code: str) -> Dict[str, List[Dict[str, Any]]]:
     """What a step consumes and produces, as declared in CMDBuild."""
     r = client.get(
@@ -246,12 +277,28 @@ def _declare_inputs(client: httpx.Client, card_id: Any, components: List[str]) -
     pipeline is satisfied internally, so only the unsatisfied ones surface.
     """
     types = {c: _step_types(client, c) for c in components}
+
+    # a multi_* component declares nothing as a step: resolve it by name
+    for comp in components:
+        if comp.startswith("multi_") and not types[comp]["in"]:
+            names = _multi_input_types(comp)
+            if names:
+                types[comp]["in"] = [{"id": None, "code": n} for n in names]
     produced = {t["code"] for v in types.values() for t in v["out"]}
     external: Dict[Any, str] = {}
     for spec in types.values():
         if spec["in"] and not any(t["code"] in produced for t in spec["in"]):
             for t in spec["in"]:
                 external[t["id"]] = t["code"]
+
+    # i tipi risolti per nome vanno tradotti in identificativi
+    unresolved = [c for i, c in external.items() if i is None]
+    if unresolved:
+        r = client.get(f"{CMDB_URL}/services/rest/v3/classes/m_result_type/cards",
+                       params={"limit": 200})
+        byname = {c["Code"]: c["_id"] for c in (r.json().get("data") or [])}
+        external = {(i if i is not None else byname.get(c)): c
+                    for i, c in external.items() if i is not None or c in byname}
 
     declared = []
     for type_id, code in external.items():

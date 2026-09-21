@@ -40,6 +40,23 @@ def _token() -> str:
     )
 
 
+
+def _components_from_code(code: str) -> List[str]:
+    """Which components a module uses, read from the code itself.
+
+    The caller passes the list the model reported, but the model does not
+    always report one — and then the pull request goes out with no components,
+    the reviewer cannot see what it composes, and registration cannot derive
+    the input types. The include lines always say the truth.
+    """
+    found = []
+    for path in re.findall(r"include\s*\{[^}]*\}\s*from\s*'\.\./(?:steps|multi)/([^']+)'", code):
+        name = path.rsplit("/", 1)[-1].removesuffix(".nf")
+        if name not in found:
+            found.append(name)
+    return found
+
+
 def _slug(text: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "_", (text or "").lower()).strip("_")
     return (s or "pipeline")[:40]
@@ -64,6 +81,21 @@ class PublishResponse(BaseModel):
     module_path: str
     commit_sha: str
 
+
+
+def _title(req: "PublishRequest", slug: str) -> str:
+    """A pull request title a reviewer can scan in a list.
+
+    The description defaults to the user's request, which is often a paragraph
+    written in the first person. GitHub shows titles on one line, so that turns
+    into an unreadable wall starting with "I have...". A short description is
+    used as-is; anything longer falls back to the module name the author chose,
+    and the full request stays in the body where a reviewer wants it.
+    """
+    text = re.sub(r"\s+", " ", (req.description or "").strip())
+    if 0 < len(text) <= 60 and not text.lower().startswith(("i have", "i need", "i want")):
+        return f"Add pipeline: {text}"
+    return f"Add pipeline: {slug.replace('_', ' ')}"
 
 def _body(req: PublishRequest, module_path: str) -> str:
     """PR description: what a reviewer needs in order to judge it."""
@@ -118,6 +150,10 @@ def publish_pipeline(
     if not req.nextflow_code.strip():
         raise HTTPException(status_code=400, detail="nextflow_code is empty")
 
+    # trust the code, not the report: see _components_from_code
+    if not req.components:
+        req.components = _components_from_code(req.nextflow_code)
+
     slug = _slug(req.name)
     branch = f"llm/{slug}-{int(time.time())}"
     module_path = f"modules/module_{slug}.nf"
@@ -155,7 +191,7 @@ def publish_pipeline(
         r = c.post(
             f"{base}/pulls",
             json={
-                "title": f"Add pipeline: {req.description or slug}",
+                "title": _title(req, slug),
                 "head": branch,
                 "base": GIT_BASE,
                 "body": _body(req, module_path),

@@ -133,6 +133,57 @@ def render_mermaid_from_json(data: Any) -> str:  # noqa: C901
 
     return "\n".join(lines)
 
+
+_PLAIN_OPERATORS = {
+    # What these do to the biology, not what they are called in Nextflow
+    'collect':  'all samples together',
+    'toList':   'all samples together',
+    'mix':      'merge sources',
+    'concat':   'merge sources',
+    'combine':  'pair up',
+    'join':     'match by sample',
+    'filter':   'keep matching',
+    'flatten':  'one per item',
+    'first':    'first only',
+    'unique':   'drop duplicates',
+}
+
+
+def _summarise_closure(closure: str) -> str:
+    """A readable label for a .map closure.
+
+    Truncating Groovy at 30 characters cuts mid-literal and leaves unbalanced
+    brackets on screen — `[ it[0], it[1], 'Bacteria', '-` — which reads as a
+    bug rather than as a channel adaptation. Most maps in these pipelines just
+    pad a tuple to the shape a step expects, so the useful thing to show is
+    what is being added, not the Groovy.
+    """
+    body = re.sub(r'\s+', ' ', (closure or '')).strip()
+    if not body:
+        return ''
+
+    # tuple reshaping: [ it[0], it[1], 'Bacteria', '-', '-', getEmpty() ]
+    if body.startswith('[') and body.endswith(']'):
+        inner = body[1:-1]
+        added = re.findall(r"'([^']+)'|\"([^\"]+)\"", inner)
+        added = [a or b for a, b in added if (a or b) not in ('-', '')]
+        calls = re.findall(r'\b(get\w+)\s*\(', inner)
+        parts = added + [f'{c}()' for c in calls]
+        if parts:
+            return 'reshape +' + ', '.join(parts[:2])
+        return 'reshape'
+
+    # anything else: cut on a separator, never mid-token
+    if len(body) <= 28:
+        return body.replace('"', "'")
+    cut = body[:28]
+    for sep in (',', ' ', '.'):
+        i = cut.rfind(sep)
+        if i > 12:
+            cut = cut[:i]
+            break
+    return cut.replace('"', "'") + '…'
+
 class MermaidRenderer:
     """High-fidelity Nextflow DSL2 AST to Mermaid diagram compiler.
     Deconstructs workflows, subworkflows, helper functions, and all operator chains
@@ -503,8 +554,16 @@ class MermaidRenderer:
                 continue
 
             if op_name in ('map', 'flatMap'):
-                clean_body = re.sub(r'\s+', ' ', op_closure)[:30].replace('"', "'")
-                op_lbl = f".{op_name}{{{clean_body}}}"
+                summary = _summarise_closure(op_closure)
+                # Pure plumbing: a map that only pads a tuple to the shape the
+                # next step expects is not a step of the analysis. Showing it as
+                # a box makes a four-tool pipeline look like a seven-box one.
+                # The information rides on the edge instead.
+                if summary.startswith('reshape'):
+                    extra = summary[len('reshape'):].lstrip(' +')
+                    curr_label = f"{curr_label} + {extra}".strip(' +') if extra else curr_label
+                    continue
+                op_lbl = f".{op_name}{{{summary}}}"
                 op_id = self._get_unique_id(op_name, scope)
                 self._add_node(op_id, op_lbl, "operator", scope)
                 self.edges.append((curr_id, op_id, curr_label))
@@ -519,10 +578,12 @@ class MermaidRenderer:
                 continue
 
             if op_name in ('collect', 'toList', 'mix', 'concat', 'combine', 'join', 'filter', 'flatten', 'first', 'unique'):
-                op_lbl = f".{op_name}()"
+                # plain language for the operators that do change the meaning
+                op_lbl = _PLAIN_OPERATORS.get(op_name, f".{op_name}()")
                 if op_args.strip():
-                    clean_args = re.sub(r'\s+', ' ', op_args.strip())[:30].replace('"', "'")
-                    op_lbl = f".{op_name}({clean_args})"
+                    clean_args = _summarise_closure(op_args.strip())
+                    if clean_args:
+                        op_lbl = f"{op_lbl} ({clean_args})"
                 op_id = self._get_unique_id(op_name, scope)
                 self._add_node(op_id, op_lbl, "operator", scope)
                 self.edges.append((curr_id, op_id, curr_label))

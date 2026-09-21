@@ -97,16 +97,10 @@ def generate_imports_for_code(all_code: str, defined_sws: set) -> dict:
         helper_imports = {}
 
     for func in used_callables:
-        # The plugin's declared helper imports come first. The registry's export
-        # map is built by scanning for `def name(`, so it maps a function to the
-        # last file that happens to define it: getInput is declared in
-        # functions/parameters.nf but also defined inside the grapetree
-        # clustering module, and importing that one makes a single-sample
-        # pipeline demand the clustering parameters at launch.
-        if func in helper_imports:
-            path = helper_imports[func]
-        elif registry.get_function_import_path(func):
+        if registry.get_function_import_path(func):
             path = registry.get_function_import_path(func)
+        elif func in helper_imports:
+            path = helper_imports[func]
         else:
             path = registry.get_import_path(func)
 

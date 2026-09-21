@@ -1,7 +1,5 @@
-import hashlib
 import json
 import re
-from collections import OrderedDict
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -53,47 +51,19 @@ def _detect_explicit_build_request(messages: list) -> bool:
     return False
 
 
-# Intent depends only on the concatenated user text, so the same conversation
-# always yields the same classification. Approving a plan re-runs this node with
-# the user messages unchanged, which used to spend a second GPU round trip on an
-# answer already known. Bounded because a process serves many sessions.
-_INTENT_CACHE: "OrderedDict[str, PipelineIntentClassification]" = OrderedDict()
-_INTENT_CACHE_MAX = 64
-_CONTROL_WORDS = {"approve", "approved", "build", "generate", "proceed",
-                  "yes", "ok", "okay", "go", "run", "confirm"}
-
-
 def _classify_intent_with_llm(messages: list) -> PipelineIntentClassification:
     """Classify the user intent semantically using LLM structured output without brittle regexes."""
-    parts = []
+    combined_text = ""
     for m in messages:
         if isinstance(m, HumanMessage):
             content = m.content
             if isinstance(content, list):
-                parts.append(" ".join(c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"))
+                combined_text += " " + " ".join(c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text")
             elif isinstance(content, str):
-                parts.append(content)
-
-    # A message that is nothing but a control word ("approve") carries no
-    # scientific intent, so it is dropped whole — never word by word, which
-    # would maim a real sentence like "run MLST". This keeps the classification
-    # identical across a plan/approve pair, so the second turn reuses the first
-    # turn's answer instead of paying a GPU round trip for it again.
-    def _is_control(text: str) -> bool:
-        words = [w.strip(".,!?").lower() for w in text.split() if w.strip(".,!?")]
-        return bool(words) and all(w in _CONTROL_WORDS for w in words)
-
-    combined_text = " ".join(p for p in parts if p and not _is_control(p))
+                combined_text += " " + content
 
     if not combined_text.strip():
         return PipelineIntentClassification()
-
-    key = hashlib.sha256(combined_text.strip().encode("utf-8")).hexdigest()
-    cached = _INTENT_CACHE.get(key)
-    if cached is not None:
-        _INTENT_CACHE.move_to_end(key)
-        logger.info("--- [NODE] CONSULTANT intent classification served from cache")
-        return cached
 
     try:
         llm = get_llm()
@@ -118,12 +88,7 @@ def _classify_intent_with_llm(messages: list) -> PipelineIntentClassification:
         ])
         classifier = llm.with_structured_output(PipelineIntentClassification, method="json_schema", include_raw=False)
         chain = prompt | classifier
-        logger.info("--- [NODE] CONSULTANT intent classification (LLM call)")
-        result = chain.invoke({"query": combined_text.strip()})
-        _INTENT_CACHE[key] = result
-        while len(_INTENT_CACHE) > _INTENT_CACHE_MAX:
-            _INTENT_CACHE.popitem(last=False)
-        return result
+        return chain.invoke({"query": combined_text.strip()})
     except Exception as e:
         logger.warning(f"intent_classification_fallback: {e}")
         return PipelineIntentClassification()

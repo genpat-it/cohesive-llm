@@ -12,18 +12,6 @@ _llm_cache: dict[str, BaseChatModel] = {}
 _judge_cache: dict[str, BaseChatModel] = {}
 
 
-
-def _parallel_tools() -> bool:
-    """Whether the model may ask for several tools in one message.
-
-    Forcing one tool per message turns a single user turn into a dozen
-    sequential round trips: LangGraph's ToolNode would run them concurrently,
-    but it never receives more than one. Kept off by default because the
-    planner's prompt was written for one-at-a-time reasoning; set
-    PARALLEL_TOOL_CALLS=true to let them batch.
-    """
-    return os.environ.get("PARALLEL_TOOL_CALLS", "false").lower() in ("1", "true", "yes")
-
 def _resolve_api_key(*env_vars: str) -> str:
     """Return the first non-empty env var value, or fallback if base_url is set."""
     for var in env_vars:
@@ -62,7 +50,7 @@ def get_llm() -> BaseChatModel:
         base_url = os.environ.get("OPENAI_BASE_URL") or None
         if base_url:
             kwargs["base_url"] = base_url
-        kwargs["model_kwargs"] = {"parallel_tool_calls": _parallel_tools()}
+        kwargs["model_kwargs"] = {"parallel_tool_calls": False}
         kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
         kwargs["max_tokens"] = max_completion
         kwargs["timeout"] = 300
@@ -72,7 +60,7 @@ def get_llm() -> BaseChatModel:
         kwargs["max_tokens"] = max_completion
     elif provider == "local":
         kwargs["base_url"] = os.environ.get("LOCAL_LLM_URL", "http://localhost:8000/v1").strip()
-        kwargs["model_kwargs"] = {"parallel_tool_calls": _parallel_tools()}
+        kwargs["model_kwargs"] = {"parallel_tool_calls": False}
         kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
         kwargs["max_tokens"] = max_completion
     elif provider == "google":
@@ -101,15 +89,15 @@ def get_judge_llm(temperature: float = 0.0) -> BaseChatModel:
         base_url = settings.JUDGE_BASE_URL or os.environ.get("OPENAI_BASE_URL") or None
         if base_url:
             kwargs["base_url"] = base_url
-            kwargs["model_kwargs"] = {"parallel_tool_calls": _parallel_tools()}
+            kwargs["model_kwargs"] = {"parallel_tool_calls": False}
             kwargs["extra_body"] = {"chat_template_kwargs": {"preserve_thinking": True}}
         else:
-            kwargs["model_kwargs"] = {"parallel_tool_calls": _parallel_tools()}
+            kwargs["model_kwargs"] = {"parallel_tool_calls": False}
     elif provider == "anthropic":
         kwargs["api_key"] = _resolve_api_key("JUDGE_API_KEY", "TEMP_API_KEY", "ANTHROPIC_API_KEY")
     elif provider == "local":
         kwargs["base_url"] = settings.JUDGE_BASE_URL or os.environ.get("LOCAL_LLM_URL", "http://localhost:8000/v1").strip()
-        kwargs["model_kwargs"] = {"parallel_tool_calls": _parallel_tools()}
+        kwargs["model_kwargs"] = {"parallel_tool_calls": False}
         kwargs["extra_body"] = {"chat_template_kwargs": {"preserve_thinking": True}}
     elif provider == "google":
         kwargs["api_key"] = _resolve_api_key("JUDGE_API_KEY", "TEMP_API_KEY", "GOOGLE_API_KEY")

@@ -240,12 +240,6 @@ def _component_to_text(comp: dict) -> str:
         str(comp.get("domain") or ""),
         str(comp.get("description") or ""),
     ]
-    # Keywords sit in the catalogue precisely to be searched, yet they were never
-    # embedded: a component could only be found through its description. That is
-    # why a virulence query missed abricate, whose keywords name the concept.
-    keywords = comp.get("keywords") or []
-    if keywords:
-        parts.append(" ".join(str(k) for k in keywords))
     inputs = comp.get("input_channels") or []
     outputs = comp.get("output_channels") or []
     if inputs:
